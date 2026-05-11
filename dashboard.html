@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard PPI — FFN DTN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --navy:#0B1F5C; --navy-2:#142B7B; --blue:#00AEEF; --blue-d:#0080BE;
+  --blue-bg:#E8F6FD; --red:#D7282F; --green:#6CB33F; --ocre:#C98A3C;
+  --violet:#663F9E; --pink:#FF6B9D;
+  --text:#0E1A3C; --text-2:#4A5478; --muted:#7C88A6;
+  --line:#E3EAF2; --line-2:#EFF3F8; --bg:#F0F4F9;
+  --card:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* ── LOGIN ── */
+#login-screen {
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 60%,#1a3a8a 100%);
+}
+.login-box {
+  background:#fff;border-radius:16px;padding:40px 44px;width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.login-logo {
+  text-align:center;margin-bottom:28px;
+}
+.login-logo .ffn-badge {
+  display:inline-flex;align-items:center;justify-content:center;
+  width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,var(--navy),var(--blue));
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;
+  color:#fff;margin-bottom:12px;
+}
+.login-logo h1 {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--navy);
+}
+.login-logo p {
+  font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;
+}
+.login-field {margin-bottom:16px}
+.login-field label {
+  display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px;
+}
+.login-field input {
+  width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:8px;
+  font-family:'Barlow',sans-serif;font-size:14px;color:var(--text);
+  transition:border-color .2s;outline:none;
+}
+.login-field input:focus{border-color:var(--blue)}
+.login-btn {
+  width:100%;padding:12px;background:var(--navy);color:#fff;border:none;
+  border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  transition:background .2s;margin-top:8px;
+}
+.login-btn:hover{background:var(--navy-2)}
+.login-error {
+  background:#FDECEA;border:1px solid #F5C6C6;border-radius:6px;
+  padding:10px 12px;font-size:12px;color:var(--red);margin-top:12px;display:none;
+}
+
+/* ── APP LAYOUT ── */
+#app {display:none;min-height:100vh;flex-direction:column}
+
+/* Header */
+.app-header {
+  background:linear-gradient(135deg,var(--navy),var(--navy-2));
+  color:#fff;padding:14px 28px;display:flex;align-items:center;gap:16px;
+  border-bottom:3px solid var(--blue);position:sticky;top:0;z-index:100;
+}
+.app-header .ffn-badge {
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;flex-shrink:0;
+}
+.app-header h1 {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;
+  text-transform:uppercase;letter-spacing:.04em;flex:1;
+}
+.app-header .eyebrow {
+  font-size:8px;letter-spacing:.25em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);margin-bottom:1px;
+}
+.search-bar {
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:6px 14px;
+}
+.search-bar input {
+  background:none;border:none;outline:none;color:#fff;
+  font-family:'Barlow',sans-serif;font-size:13px;width:200px;
+}
+.search-bar input::placeholder{color:rgba(255,255,255,.4)}
+.search-bar svg{opacity:.5;flex-shrink:0}
+.disc-filter {display:flex;gap:6px}
+.disc-chip {
+  padding:4px 12px;border-radius:999px;border:1.5px solid rgba(255,255,255,.25);
+  background:transparent;color:rgba(255,255,255,.6);cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;transition:all .2s;
+}
+.disc-chip.active,.disc-chip:hover{background:var(--blue);border-color:var(--blue);color:#fff}
+.logout-btn {
+  padding:6px 14px;border:1.5px solid rgba(255,255,255,.25);border-radius:999px;
+  background:transparent;color:rgba(255,255,255,.7);cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;transition:all .2s;
+}
+.logout-btn:hover{background:rgba(255,255,255,.1)}
+
+/* Main body */
+.app-body {flex:1;display:flex;overflow:hidden;height:calc(100vh - 67px)}
+
+/* ── NAGEUR LIST ── */
+.nageur-list {
+  width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);
+  overflow-y:auto;display:flex;flex-direction:column;
+}
+.list-header {
+  padding:14px 16px;border-bottom:1px solid var(--line);
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.list-count {
+  background:var(--blue-bg);color:var(--blue-d);
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:11px;
+  padding:2px 8px;border-radius:999px;
+}
+.nageur-card {
+  padding:14px 16px;border-bottom:1px solid var(--line-2);cursor:pointer;
+  transition:background .15s;display:flex;gap:12px;align-items:center;
+}
+.nageur-card:hover{background:var(--blue-bg)}
+.nageur-card.active{background:var(--blue-bg);border-left:3px solid var(--blue)}
+.nageur-avatar {
+  width:40px;height:40px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;color:#fff;
+}
+.nageur-card-info .name {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;
+  color:var(--navy);text-transform:uppercase;letter-spacing:.02em;
+}
+.nageur-card-info .sub {font-size:11px;color:var(--muted);margin-top:1px}
+.nageur-card-info .badges {display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.badge {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+  letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;
+}
+.badge-disc{background:var(--navy);color:#fff}
+.badge-club{background:var(--line-2);color:var(--text-2)}
+
+/* ── FICHE NAGEUR ── */
+.fiche-container {
+  flex:1;overflow-y:auto;padding:24px 28px;
+  background:var(--bg);
+}
+.fiche-empty {
+  display:flex;align-items:center;justify-content:center;height:100%;
+  flex-direction:column;gap:12px;color:var(--muted);
+}
+.fiche-empty .ico {font-size:48px;opacity:.3}
+.fiche-empty p {font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase}
+
+/* Sections */
+.fiche-section {margin-bottom:20px}
+.fiche-section-title {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;
+  text-transform:uppercase;letter-spacing:.15em;color:var(--navy);
+  padding-bottom:8px;border-bottom:2px solid var(--navy);
+  margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.fiche-section-title .num {
+  width:22px;height:22px;background:var(--navy);color:#fff;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;flex-shrink:0;
+}
+
+/* Cards */
+.card {background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+.card-title {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:11px;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--navy);
+  margin-bottom:12px;padding-bottom:6px;border-bottom:1px dashed var(--line);
+}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* Identity header */
+.identity-header {
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+  border-radius:12px;padding:20px 24px;display:grid;
+  grid-template-columns:auto 1fr auto;gap:20px;align-items:center;
+  margin-bottom:20px;
+}
+.identity-avatar {
+  width:64px;height:64px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;color:#fff;
+  border:3px solid rgba(255,255,255,.3);
+}
+.identity-name {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;
+  text-transform:uppercase;letter-spacing:.02em;color:#fff;line-height:1;
+}
+.identity-disc {
+  display:inline-block;margin-top:6px;padding:3px 10px;border-radius:3px;
+  background:var(--blue);font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#fff;
+}
+.identity-meta {display:flex;flex-direction:column;gap:4px}
+.identity-meta-row {
+  display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.7);
+}
+.identity-meta-row strong{color:#fff;font-weight:600}
+.identity-right {text-align:right}
+.identity-licence {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
+  letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.5);
+}
+.identity-licence span {
+  display:block;font-size:16px;color:#fff;letter-spacing:.05em;margin-top:2px;
+}
+.updated-at {font-size:10px;color:rgba(255,255,255,.4);margin-top:8px}
+
+/* Field display */
+.field-row {display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.field-row:last-child{margin-bottom:0}
+.field-label {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+}
+.field-value {font-size:13px;color:var(--text);font-weight:500;line-height:1.4}
+.field-value.empty{color:var(--muted);font-style:italic}
+
+/* Staff cards */
+.staff-grid{display:flex;flex-wrap:wrap;gap:10px}
+.staff-card {
+  background:var(--blue-bg);border:1px solid #BEE6F7;border-radius:8px;
+  padding:10px 14px;flex:1;min-width:160px;
+}
+.staff-card .role {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--blue-d);margin-bottom:4px;
+}
+.staff-card .staff-name {font-weight:600;font-size:13px;color:var(--navy)}
+.staff-card .staff-contact {font-size:11px;color:var(--muted);margin-top:2px}
+.staff-card.lead {background:var(--navy);border-color:var(--navy)}
+.staff-card.lead .role{color:rgba(255,255,255,.6)}
+.staff-card.lead .staff-name,.staff-card.lead .staff-contact{color:#fff}
+
+/* Bilan bars */
+.bilan-bar-row {margin-bottom:10px}
+.bilan-bar-row:last-child{margin-bottom:0}
+.bilan-bar-header {
+  display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;
+}
+.bilan-bar-label {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
+  text-transform:uppercase;letter-spacing:.12em;color:var(--text-2);
+}
+.bilan-bar-val {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;color:var(--navy);
+}
+.bilan-bar-track {
+  height:10px;background:var(--line);border-radius:5px;overflow:hidden;
+}
+.bilan-bar-fill {
+  height:100%;border-radius:5px;
+  background:linear-gradient(90deg,var(--blue-d),var(--blue));
+}
+
+/* Semaine type */
+.semaine-grid {display:flex;flex-direction:column;gap:6px}
+.semaine-row {display:grid;grid-template-columns:44mm 1fr 16mm;gap:8px;align-items:center}
+.semaine-label {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);
+}
+.semaine-bar-track {height:10px;background:var(--line-2);border-radius:5px;overflow:hidden}
+.semaine-bar-fill {height:100%;border-radius:5px}
+.semaine-val {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;
+  color:var(--navy);text-align:right;
+}
+
+/* Séparation */
+.sep-grid {display:grid;grid-template-columns:auto 1fr 1fr;gap:0}
+.sep-horizon {
+  grid-column:1;padding:12px 16px 12px 0;
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10px;
+  text-transform:uppercase;letter-spacing:.12em;color:var(--navy);
+  border-right:3px solid var(--navy);display:flex;align-items:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+}
+.sep-cell {
+  padding:10px 14px;border-bottom:1px solid var(--line-2);
+  border-right:1px solid var(--line-2);
+}
+.sep-cell:nth-child(3n){border-right:none}
+.sep-cell-label {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;
+}
+.sep-cell.entrain{background:#E8F6FD}
+.sep-cell.environ{background:#FFF8E1}
+.sep-val {font-size:12px;color:var(--text);line-height:1.4}
+
+/* Dimensions */
+.dims-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.dim-card {
+  border-radius:10px;overflow:hidden;border:1px solid var(--line);
+}
+.dim-card-header {
+  padding:12px 14px;display:flex;align-items:center;gap:10px;
+}
+.dim-num {
+  font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;
+  font-size:28px;color:#fff;line-height:1;min-width:24px;
+}
+.dim-name {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;color:#fff;
+}
+.dim-card-body {padding:12px 14px;background:#fff}
+.dim-section-label {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;
+}
+.dim-action {font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.4}
+.dim-attendus {
+  font-size:11px;color:var(--text-2);font-style:italic;line-height:1.4;
+  padding-top:8px;border-top:1px dashed var(--line);
+}
+
+/* Timeline projection */
+.proj-timeline {display:flex;gap:0;position:relative;padding:20px 0 10px;overflow-x:auto}
+.proj-timeline::before {
+  content:'';position:absolute;top:32px;left:20px;right:20px;height:3px;
+  background:linear-gradient(90deg,var(--green),var(--blue) 50%,var(--red));
+  border-radius:2px;
+}
+.proj-year {
+  flex:1;min-width:80px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;position:relative;
+}
+.proj-year-num {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;
+  color:var(--navy);line-height:1;
+}
+.proj-year.jo .proj-year-num{color:var(--red)}
+.proj-dot {
+  width:14px;height:14px;border-radius:50%;background:var(--blue);
+  border:3px solid #fff;box-shadow:0 0 0 2px var(--blue);z-index:1;
+}
+.proj-year.jo .proj-dot{background:var(--red);box-shadow:0 0 0 2px var(--red)}
+.proj-comp {
+  font-size:10px;text-align:center;color:var(--text-2);line-height:1.3;
+  font-weight:500;max-width:90px;
+}
+.proj-epreuves {display:flex;flex-direction:column;gap:2px;align-items:center}
+.proj-epreuve {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
+  color:var(--blue-d);letter-spacing:.04em;
+}
+
+/* Compétitions objectif */
+.comp-cards {display:flex;flex-wrap:wrap;gap:10px}
+.comp-card {
+  flex:1;min-width:180px;background:#fff;border:1px solid var(--line);
+  border-radius:8px;overflow:hidden;
+}
+.comp-card-header {
+  padding:8px 12px;display:flex;align-items:center;gap:8px;
+}
+.comp-prio {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:8px;
+  letter-spacing:.15em;text-transform:uppercase;padding:2px 6px;border-radius:3px;
+}
+.comp-prio-a{background:var(--red);color:#fff}
+.comp-prio-b{background:var(--ocre);color:#fff}
+.comp-prio-c{background:var(--green);color:#fff}
+.comp-card-name {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;
+  color:var(--navy);text-transform:uppercase;
+}
+.comp-card-dates {font-size:10px;color:var(--muted);padding:0 12px 8px}
+.comp-card-epreuves {
+  border-top:1px solid var(--line-2);padding:8px 12px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.comp-epreuve-row {
+  display:flex;justify-content:space-between;font-size:11px;
+}
+.comp-epreuve-name{color:var(--text-2)}
+.comp-epreuve-perf{font-weight:600;color:var(--navy)}
+
+/* FullCalendar overrides */
+.fc {font-family:'Barlow',sans-serif;font-size:12px}
+.fc-toolbar-title {
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--navy);
+}
+.fc-button {
+  background:var(--navy) !important;border-color:var(--navy) !important;
+  font-family:'Barlow Condensed',sans-serif !important;font-weight:700 !important;
+  font-size:10px !important;letter-spacing:.1em !important;text-transform:uppercase !important;
+}
+.fc-button:hover{background:var(--navy-2) !important;border-color:var(--navy-2) !important}
+.fc-event {border-radius:3px !important;border:none !important;font-size:10px !important}
+.fc-daygrid-event-dot{display:none}
+
+/* Charte */
+.charte-signataires {display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.signataire {
+  background:var(--blue-bg);border:1px solid #BEE6F7;border-radius:8px;
+  padding:12px 14px;text-align:center;
+}
+.signataire-role {
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--blue-d);margin-bottom:6px;
+}
+.signataire-name {font-weight:600;font-size:13px;color:var(--navy)}
+.signataire-date {font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Loading */
+.loading {
+  display:flex;align-items:center;justify-content:center;
+  height:200px;gap:10px;color:var(--muted);
+}
+.spinner {
+  width:20px;height:20px;border:2px solid var(--line);
+  border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="ffn-badge">FFN</div>
+      <h1>Dashboard PPI</h1>
+      <p>Direction Technique Nationale</p>
+    </div>
+    <div class="login-field">
+      <label>Adresse email</label>
+      <input type="email" id="login-email" placeholder="prenom.nom@ffnatation.fr" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Se connecter</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="ffn-badge">FFN</div>
+    <div>
+      <div class="eyebrow">Direction Technique Nationale</div>
+      <h1>Plans de Performance Individuels · Saison 2026</h1>
+    </div>
+    <div class="search-bar">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search-input" placeholder="Rechercher un nageur..." oninput="filterNageurs()">
+    </div>
+    <div class="disc-filter" id="disc-filter">
+      <button class="disc-chip active" data-disc="all" onclick="setDiscFilter(this,'all')">Tous</button>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Déconnexion</button>
+  </header>
+
+  <!-- Body -->
+  <div class="app-body">
+    <!-- Liste nageurs -->
+    <div class="nageur-list">
+      <div class="list-header">
+        Nageurs <span class="list-count" id="list-count">0</span>
+      </div>
+      <div id="nageur-list-items">
+        <div class="loading"><div class="spinner"></div> Chargement...</div>
+      </div>
+    </div>
+
+    <!-- Fiche nageur -->
+    <div class="fiche-container" id="fiche-container">
+      <div class="fiche-empty">
+        <div class="ico">👤</div>
+        <p>Sélectionnez un nageur</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ CONFIG SUPABASE ══
+const SUPABASE_URL  = 'https://nyasokzqnuhngfwpnmhg.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXNva3pxbnVobmdmd3BubWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0OTQyMDQsImV4cCI6MjA5NDA3MDIwNH0.f5nx3-17vGrF9BrqbnezvzSgFCJiu--O5gr2yIlDiHw';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let allNageurs = [];
+let currentDisc = 'all';
+let calendarInstance = null;
+
+// ══ AUTH ══
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    errEl.textContent = 'Email ou mot de passe incorrect.';
+    errEl.style.display = 'block';
+  } else {
+    showApp();
+  }
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('fiche-container').innerHTML = '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
+}
+
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  await loadNageurs();
+}
+
+// Vérifier session existante
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) showApp();
+});
+
+// ══ DONNÉES ══
+async function loadNageurs() {
+  const { data, error } = await sb
+    .from('ppi_nageurs')
+    .select('*')
+    .order('nom', { ascending: true });
+
+  if (error) { console.error(error); return; }
+
+  allNageurs = data || [];
+  buildDiscFilter();
+  renderList(allNageurs);
+}
+
+function buildDiscFilter() {
+  const discs = [...new Set(allNageurs.map(n => n.discipline_label).filter(Boolean))];
+  const bar = document.getElementById('disc-filter');
+  bar.innerHTML = `<button class="disc-chip active" data-disc="all" onclick="setDiscFilter(this,'all')">Tous</button>`;
+  discs.forEach(d => {
+    const key = allNageurs.find(n => n.discipline_label === d)?.discipline || d;
+    bar.innerHTML += `<button class="disc-chip" data-disc="${key}" onclick="setDiscFilter(this,'${key}')">${d}</button>`;
+  });
+}
+
+function setDiscFilter(btn, disc) {
+  document.querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentDisc = disc;
+  filterNageurs();
+}
+
+function filterNageurs() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = allNageurs.filter(n => {
+    const matchDisc = currentDisc === 'all' || n.discipline === currentDisc;
+    const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''}`.toLowerCase().includes(q);
+    return matchDisc && matchQ;
+  });
+  renderList(filtered);
+}
+
+function renderList(nageurs) {
+  const el = document.getElementById('nageur-list-items');
+  document.getElementById('list-count').textContent = nageurs.length;
+
+  if (nageurs.length === 0) {
+    el.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--muted);font-size:12px">Aucun nageur trouvé</div>';
+    return;
+  }
+
+  const colors = ['#0B1F5C','#00AEEF','#D7282F','#6CB33F','#C98A3C','#663F9E','#FF6B9D'];
+  el.innerHTML = nageurs.map((n, i) => {
+    const initials = `${(n.prenom||'')[0]||''}${(n.nom||'')[0]||''}`.toUpperCase();
+    const color = colors[i % colors.length];
+    return `<div class="nageur-card" onclick="selectNageur('${n.licence}')" id="card-${n.licence}">
+      <div class="nageur-avatar" style="background:${color}">${initials}</div>
+      <div class="nageur-card-info">
+        <div class="name">${n.prenom || ''} ${n.nom || ''}</div>
+        <div class="sub">${n.entraineur_nom || 'Entraîneur non renseigné'}</div>
+        <div class="badges">
+          ${n.discipline_label ? `<span class="badge badge-disc">${n.discipline_label}</span>` : ''}
+          ${n.club ? `<span class="badge badge-club">${n.club}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ FICHE NAGEUR ══
+function selectNageur(licence) {
+  document.querySelectorAll('.nageur-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById(`card-${licence}`);
+  if (card) card.classList.add('active');
+
+  const n = allNageurs.find(x => x.licence === licence);
+  if (!n) return;
+  renderFiche(n);
+}
+
+function renderFiche(n) {
+  const el = document.getElementById('fiche-container');
+  const colors = ['#0B1F5C','#00AEEF','#D7282F','#6CB33F','#C98A3C','#663F9E','#FF6B9D'];
+  const color = colors[Math.abs(n.licence?.charCodeAt(0) || 0) % colors.length];
+  const initials = `${(n.prenom||'')[0]||''}${(n.nom||'')[0]||''}`.toUpperCase();
+  const updated = n.updated_at ? new Date(n.updated_at).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : '—';
+
+  el.innerHTML = `
+  <!-- IDENTITÉ -->
+  <div class="identity-header">
+    <div class="identity-avatar" style="background:${color}">${initials}</div>
+    <div>
+      <div class="identity-name">${n.prenom || ''} ${n.nom || ''}</div>
+      ${n.discipline_label ? `<span class="identity-disc">${n.discipline_label}</span>` : ''}
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">
+        <div class="identity-meta-row">📧 <strong>${n.email || '—'}</strong></div>
+        <div class="identity-meta-row">📱 <strong>${n.telephone || '—'}</strong></div>
+        <div class="identity-meta-row">🏊 <strong>${n.club || '—'}</strong>${n.structure_nom ? ` · ${n.structure_nom}` : ''}</div>
+        <div class="identity-meta-row">📅 <strong>${n.date_naissance ? new Date(n.date_naissance).toLocaleDateString('fr-FR') : '—'}</strong></div>
+      </div>
+    </div>
+    <div class="identity-right">
+      <div class="identity-licence">N° Licence<span>${n.licence || '—'}</span></div>
+      <div class="updated-at">Mis à jour le ${updated}</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1 : ENVIRONNEMENT & STAFF -->
+  ${renderSection(1, 'Environnement & Staff', renderStaff(n))}
+
+  <!-- SECTION 2 : BILAN SAISON -->
+  ${renderSection(2, 'Bilan saison 2025', renderBilan(n))}
+
+  <!-- SECTION 3 : SEMAINE TYPE -->
+  ${renderSection(3, 'Semaine type', renderSemaineType(n))}
+
+  <!-- SECTION 4 : CE QUI ME SÉPARE -->
+  ${renderSection(4, 'Ce qui me sépare de la performance', renderSeparation(n))}
+
+  <!-- SECTION 5 : PROJECTION LONG TERME -->
+  ${renderSection(5, 'Projection long terme 2026–2032', renderProjection(n))}
+
+  <!-- SECTION 6 : COMPÉTITIONS SAISON 2026 -->
+  ${renderSection(6, 'Compétitions saison 2026', renderCompetitions(n))}
+
+  <!-- SECTION 7 : ACTIONS CLÉS & DIMENSIONS -->
+  ${renderSection(7, 'Actions clés & Dimensions de développement', renderDimensions(n))}
+
+  <!-- SECTION 8 : CALENDRIER -->
+  ${renderSection(8, 'Calendrier', '<div id="calendar-container" style="min-height:400px"></div>')}
+
+  <!-- SECTION 9 : CHARTE D\'ENGAGEMENT -->
+  ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
+  `;
+
+  // Initialiser le calendrier après injection du DOM
+  requestAnimationFrame(() => initCalendar(n));
+}
+
+function renderSection(num, title, content) {
+  return `<div class="fiche-section">
+    <div class="fiche-section-title">
+      <div class="num">${num}</div>${title}
+    </div>
+    ${content}
+  </div>`;
+}
+
+function f(val, fallback='—') {
+  return (val && String(val).trim()) ? val : `<span class="empty">${fallback}</span>`;
+}
+
+function field(label, val) {
+  const v = (val && String(val).trim()) ? val : null;
+  return `<div class="field-row">
+    <div class="field-label">${label}</div>
+    <div class="field-value${v ? '' : ' empty'}">${v || '—'}</div>
+  </div>`;
+}
+
+// ── Staff ──
+function renderStaff(n) {
+  const staff = n.staff_data || [];
+  const members = Array.isArray(staff) ? staff : [];
+
+  let html = `<div class="staff-grid">
+    <div class="staff-card lead">
+      <div class="role">Entraîneur principal</div>
+      <div class="staff-name">${n.entraineur_nom || '—'}</div>
+      <div class="staff-contact">${[n.entraineur_email, n.entraineur_tel].filter(Boolean).join(' · ') || '—'}</div>
+    </div>`;
+
+  members.forEach(m => {
+    if (!m.nom) return;
+    html += `<div class="staff-card">
+      <div class="role">${m.type || 'Staff'}</div>
+      <div class="staff-name">${m.nom}</div>
+    </div>`;
+  });
+
+  html += '</div>';
+
+  if (n.commentaire_programme) {
+    html += `<div class="card" style="margin-top:12px">
+      <div class="card-title">Programme d'entraînement</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5">${n.commentaire_programme}</div>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ── Bilan ──
+function renderBilan(n) {
+  const bars = [
+    { label: 'Satisfaction globale', val: n.bq_satisfaction },
+    { label: 'État de forme en fin de saison', val: n.bq_forme },
+    { label: 'Entraînabilité', val: n.bq_entrainabilite },
+  ];
+
+  const barsHtml = bars.map(b => {
+    const pct = b.val ? Math.round(b.val * 10) : 0;
+    return `<div class="bilan-bar-row">
+      <div class="bilan-bar-header">
+        <span class="bilan-bar-label">${b.label}</span>
+        <span class="bilan-bar-val">${pct}%</span>
+      </div>
+      <div class="bilan-bar-track"><div class="bilan-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  return `<div class="grid-2">
+    <div class="card">
+      <div class="card-title">Ressenti global</div>
+      ${barsHtml}
+    </div>
+    <div class="card">
+      <div class="card-title">Points forts / Points à améliorer</div>
+      <div style="background:#EDF7E6;border-radius:6px;padding:10px 12px;margin-bottom:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:#2e7d32;margin-bottom:4px">+ Points forts</div>
+        <div style="font-size:12px;line-height:1.5">${n.bq_points_forts || '—'}</div>
+      </div>
+      <div style="background:#FFF3E0;border-radius:6px;padding:10px 12px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:#e65100;margin-bottom:4px">! Points à améliorer</div>
+        <div style="font-size:12px;line-height:1.5">${n.bq_points_ameliorer || '—'}</div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-3" style="margin-top:12px">
+    <div class="card">${field('Meilleur moment', n.bq_meilleur_moment)}</div>
+    <div class="card">${field('Moment difficile', n.bq_moment_difficile)}</div>
+    <div class="card">${field('Ce que je ferais différemment', n.bq_ferais_differemment)}</div>
+  </div>
+  ${n.bq_blessures ? `<div class="card" style="margin-top:0">${field('Blessures / contraintes physiques', n.bq_blessures)}</div>` : ''}`;
+}
+
+// ── Semaine type ──
+function renderSemaineType(n) {
+  const data = n.semaine_type_data || {};
+  const counts = { eau:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
+  Object.values(data).forEach(t => { if (t && counts[t] !== undefined) counts[t]++; });
+  const volumes = Object.fromEntries(Object.entries(counts).map(([k,v]) => [k, v*0.5]));
+  const total = Object.values(volumes).reduce((a,b)=>a+b,0);
+  const maxV = Math.max(...Object.values(volumes), 1);
+
+  const cats = [
+    { id:'eau',      label:'Entraînement eau',     color:'linear-gradient(90deg,#0080BE,#00AEEF)', major:true },
+    { id:'physique', label:'Préparation physique',  color:'linear-gradient(90deg,#D7282F,#E55A60)', major:true },
+    { id:'scolaire', label:'Scolaire / Pro',         color:'linear-gradient(90deg,#6CB33F,#8DCB6E)', major:true },
+    { id:'recup',    label:'Récupération',           color:'#7C88A6', major:false },
+    { id:'kine',     label:'Kiné / Ostéo',           color:'#7C88A6', major:false },
+    { id:'mental',   label:'Préparation mentale',    color:'#7C88A6', major:false },
+  ];
+
+  const rows = cats.map(c => {
+    const h = volumes[c.id].toFixed(1);
+    const pct = Math.round(volumes[c.id] / maxV * 100);
+    return `<div class="semaine-row">
+      <div class="semaine-label" style="font-weight:${c.major?'800':'600'}">${c.label}</div>
+      <div class="semaine-bar-track">
+        <div class="semaine-bar-fill" style="width:${pct}%;${c.color.startsWith('linear') ? 'background-image:'+c.color : 'background-color:'+c.color}"></div>
+      </div>
+      <div class="semaine-val">${h}h</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card">
+    <div style="display:flex;gap:20px;align-items:center">
+      <div class="semaine-grid" style="flex:1">${rows}</div>
+      <div style="text-align:center;flex-shrink:0">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue-d);margin-bottom:6px">Volume total</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:36px;color:var(--navy);line-height:1">${total.toFixed(1)}h</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">/ semaine</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Séparation ──
+function renderSeparation(n) {
+  const horizons = [
+    { label:'Court terme', e: n.sep_ct_entrainement, env: n.sep_ct_environnement },
+    { label:'Moyen terme', e: n.sep_mt_entrainement, env: n.sep_mt_environnement },
+    { label:'Long terme',  e: n.sep_lt_entrainement, env: n.sep_lt_environnement },
+  ];
+
+  return `<div class="card">
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden">
+      <div style="background:var(--navy);display:flex;align-items:center;justify-content:center;padding:0 8px">
+        <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.5)">Horizon</div>
+      </div>
+      <div style="background:#E8F6FD;padding:8px 12px;border-bottom:1px solid var(--line);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--blue-d)">Entraînement</div>
+      <div style="background:#FFF8E1;padding:8px 12px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#7a5200">Environnement</div>
+      ${horizons.map((h,i) => `
+        <div style="background:var(--navy);display:flex;align-items:center;justify-content:center;padding:6px 10px;${i>0?'border-top:1px solid rgba(255,255,255,.1)':''}">
+          <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#fff;white-space:nowrap">${h.label}</div>
+        </div>
+        <div style="padding:10px 14px;background:#E8F6FD;${i>0?'border-top:1px solid var(--line)':''}font-size:12px;line-height:1.5;color:var(--text)">${h.e || '<span style="color:var(--muted)">—</span>'}</div>
+        <div style="padding:10px 14px;background:#FFF8E1;border-left:1px solid var(--line);${i>0?'border-top:1px solid var(--line)':''}font-size:12px;line-height:1.5;color:var(--text)">${h.env || '<span style="color:var(--muted)">—</span>'}</div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+// ── Projection ──
+function renderProjection(n) {
+  const SAISONS = [2026,2027,2028,2029,2030,2031,2032];
+  const JO = [2028,2032];
+  const saisons = SAISONS.map(s => ({
+    year: s,
+    comp: n[`proj_competition_${s}`] || '',
+    isJO: JO.includes(s),
+  }));
+
+  let last = -1;
+  saisons.forEach((s,i) => { if (s.comp) last = i; });
+  const toShow = last >= 0 ? saisons.slice(0, last+1) : saisons.slice(0,3);
+
+  return `<div class="card">
+    <div class="proj-timeline">
+      ${toShow.map(s => `
+        <div class="proj-year ${s.isJO ? 'jo' : ''}">
+          <div class="proj-year-num">${s.year}${s.isJO ? ' 🔴' : ''}</div>
+          <div class="proj-dot"></div>
+          <div class="proj-comp">${s.comp || '<span style="color:#ccc">—</span>'}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── Compétitions ──
+function renderCompetitions(n) {
+  const comps = n.competitions_calendrier || [];
+  const list = Array.isArray(comps) ? comps.filter(c => c.type === 'objectif-competition') : [];
+
+  if (list.length === 0) {
+    return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune compétition objectif renseignée</div></div>`;
+  }
+
+  const sorted = [...list].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+
+  return `<div class="comp-cards">
+    ${sorted.map(c => {
+      const prioClass = c.priorite === 'A' ? 'comp-prio-a' : c.priorite === 'B' ? 'comp-prio-b' : 'comp-prio-c';
+      const debut = c.startDate ? new Date(c.startDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+      const fin   = c.endDate   ? new Date(c.endDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div class="comp-card">
+        <div class="comp-card-header" style="background:${c.priorite==='A'?'#FDECEA':c.priorite==='B'?'#FFF3E0':'#EDF7E6'}">
+          <span class="comp-prio ${prioClass}">Priorité ${c.priorite||'A'}</span>
+          <span class="comp-card-name">${c.nom || 'Compétition'}</span>
+        </div>
+        ${debut||fin ? `<div class="comp-card-dates">${debut}${fin?' → '+fin:''}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Dimensions ──
+function renderDimensions(n) {
+  const rankings = n.rankings_by_seasons || {};
+  const dims2026 = (rankings[2026] || []).filter(Boolean).slice(0,3);
+  const actions = [
+    { comment: n.action1_comment, attendus: n.action1_attendus },
+    { comment: n.action2_comment, attendus: n.action2_attendus },
+    { comment: n.action3_comment, attendus: n.action3_attendus },
+  ];
+  const colors = ['#0B1F5C','#00AEEF','#C98A3C'];
+
+  if (dims2026.length === 0 && !actions[0].comment) {
+    return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune dimension ou action renseignée pour 2026</div></div>`;
+  }
+
+  return `<div class="dims-grid">
+    ${[0,1,2].map(i => {
+      const dim = dims2026[i] || '';
+      const act = actions[i];
+      const col = colors[i];
+      return `<div class="dim-card">
+        <div class="dim-card-header" style="background:${col}">
+          <div class="dim-num">${i+1}</div>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px">Priorité ${i+1}</div>
+            <div class="dim-name">${dim || '—'}</div>
+          </div>
+        </div>
+        <div class="dim-card-body">
+          <div class="dim-section-label">Action</div>
+          <div class="dim-action">${act.comment || '<span style="color:var(--muted);font-style:italic">Non renseignée</span>'}</div>
+          <div class="dim-section-label">Résultats attendus</div>
+          <div class="dim-attendus">${act.attendus || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- Classements par saison -->
+  ${Object.keys(rankings).length > 0 ? `
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">Classement des dimensions par saison</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 10px;background:var(--navy);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase">Priorité</th>
+            ${Object.keys(rankings).map(s=>`<th style="padding:6px 10px;background:var(--navy);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;text-align:center">${s}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${[0,1,2,3,4].map(i=>`
+            <tr style="background:${i%2===0?'var(--line-2)':'#fff'}">
+              <td style="padding:6px 10px;font-weight:700;color:var(--navy)">Priorité ${i+1}</td>
+              ${Object.values(rankings).map(dims=>`<td style="padding:6px 10px;text-align:center;color:var(--text-2)">${dims[i]||'—'}</td>`).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>` : ''}`;
+}
+
+// ── Calendrier FullCalendar ──
+function initCalendar(n) {
+  const el = document.getElementById('calendar-container');
+  if (!el) return;
+  if (calendarInstance) { calendarInstance.destroy(); calendarInstance = null; }
+
+  const colorMap = {
+    'competition-eaulibre': '#00AEEF',
+    'competition-bassin':   '#0B1F5C',
+    'objectif-competition': '#D7282F',
+    'stage':                '#6CB33F',
+    'vacances':             '#C98A3C',
+    'scolaire':             '#663F9E',
+    'personnel':            '#FF6B9D',
+    'coupure':              '#7C88A6',
+  };
+  const labelMap = {
+    'competition-eaulibre': 'Compét. Eau libre',
+    'competition-bassin':   'Compét. Bassin',
+    'objectif-competition': 'Compét. objectif',
+    'stage':  'Stage',
+    'vacances':'Vacances / Coupure',
+    'scolaire':'Scolaire / Pro',
+    'personnel':'Évt. personnel',
+    'coupure': 'Coupure',
+  };
+
+  const allEvents = [...(n.calendrier || []), ...(n.competitions_calendrier || [])];
+  const fcEvents = allEvents.map(ev => ({
+    title:           ev.nom || ev.comment || labelMap[ev.type] || ev.type,
+    start:           ev.startDate,
+    end:             ev.endDate ? (() => { const d = new Date(ev.endDate); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]; })() : ev.startDate,
+    backgroundColor: ev.color || colorMap[ev.type] || '#7C88A6',
+    borderColor:     'transparent',
+    extendedProps:   { type: ev.type, comment: ev.comment },
+  }));
+
+  calendarInstance = new FullCalendar.Calendar(el, {
+    initialView:   'dayGridMonth',
+    locale:        'fr',
+    firstDay:       1,
+    initialDate:   '2026-01-01',
+    headerToolbar: { left:'prev,next today', center:'title', right:'dayGridMonth,listMonth' },
+    events:         fcEvents,
+    height:        'auto',
+    eventClick(info) {
+      const p = info.event.extendedProps;
+      info.el.title = p.comment || info.event.title;
+    },
+  });
+
+  calendarInstance.render();
+}
+
+// ── Charte ──
+function renderCharte(n) {
+  const signataires = [
+    { role:'Athlète',    nom: n.nom_nageur_signe,     date: n.date_nageur,     engagement: n.engagement_nageur },
+    { role:'Entraîneur', nom: n.nom_entraineur_signe, date: n.date_entraineur, engagement: n.engagement_entraineur },
+    { role:'Fédération', nom: n.nom_federation,        date: n.date_federation, engagement: n.engagement_federation },
+  ];
+
+  return `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Engagements</div>
+    <div class="grid-3">
+      ${signataires.map(s => `
+        <div>
+          <div class="field-label">${s.role}</div>
+          <div style="font-size:12px;line-height:1.5;color:var(--text-2);margin-top:4px">${s.engagement || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>`).join('')}
+    </div>
+  </div>
+  <div class="charte-signataires">
+    ${signataires.map(s => `
+      <div class="signataire">
+        <div class="signataire-role">${s.role}</div>
+        <div class="signataire-name">${s.nom || '—'}</div>
+        <div class="signataire-date">${s.date ? new Date(s.date).toLocaleDateString('fr-FR') : 'Non signé'}</div>
+      </div>`).join('')}
+  </div>`;
+}
+</script>
+</body>
+</html>
