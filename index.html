@@ -469,6 +469,10 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
       <label>Adresse email</label>
       <input type="email" id="login-email" placeholder="prenom.nom@ffnatation.fr" autocomplete="email">
     </div>
+    <div class="login-field">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
     <button class="login-btn" onclick="doLogin()">Se connecter</button>
     <div class="login-error" id="login-error"></div>
   </div>
@@ -490,7 +494,7 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
     <div class="disc-filter" id="disc-filter">
       <button class="disc-chip active" data-disc="all" onclick="setDiscFilter(this,'all')">Tous</button>
     </div>
-    <span id="user-role-label" style="font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.05em"></span>
+    <span id="user-role-label" style="font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.05em;margin-right:8px"></span>
     <button class="logout-btn" onclick="doLogout()">Déconnexion</button>
   </header>
 
@@ -517,73 +521,99 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 </div>
 
 <script>
+/*
+ * PROCÉDURE D'INVITATION D'UN ENTRAÎNEUR :
+ * 1. Supabase → Authentication → Users → "Invite user" → saisir l'email
+ * 2. L'entraîneur reçoit un mail et crée son mot de passe
+ * 3. Récupérer son UUID dans Authentication → Users
+ * 4. Exécuter dans SQL Editor :
+ *    INSERT INTO utilisateurs (id, email, role)
+ *    VALUES ('<uuid>', 'email@club.fr', 'entraineur');
+ * 5. L'entraîneur verra uniquement les nageurs dont il est l'entraîneur principal.
+ *
+ * PROCÉDURE D'INVITATION DTN :
+ * Même chose mais avec role = 'dtn' → accès à tous les nageurs.
+ */
+
 // ══ CONFIG SUPABASE ══
 const SUPABASE_URL  = 'https://nyasokzqnuhngfwpnmhg.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXNva3pxbnVobmdmd3BubWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0OTQyMDQsImV4cCI6MjA5NDA3MDIwNH0.f5nx3-17vGrF9BrqbnezvzSgFCJiu--O5gr2yIlDiHw';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let allNageurs = [];
-let allNagueursByKey = {};  // groupés par nageur_key (nom_lower_datenaissance)
+let allNagueursByKey = {};
 let currentDisc = 'all';
 let calendarInstance = null;
-let currentUser = null;      // { email, role } — role = 'dtn' | 'entraineur'
+let currentUser = null;  // { email, role: 'dtn'|'entraineur' }
 let selectedNageurKey = null;
 
 // ══ AUTH ══
 async function doLogin() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
 
-  if (!email) {
-    errEl.textContent = 'Veuillez saisir votre adresse email.';
+  if (!email || !pass) {
+    errEl.textContent = 'Veuillez saisir votre email et mot de passe.';
     errEl.style.display = 'block';
     return;
   }
 
-  // Vérifier si l'email existe dans ppi_nageurs comme entraîneur ou est DTN
-  const DTN_EMAILS = ['dtn@ffnatation.fr']; // ← ajouter ici les emails DTN
-
-  const isDTN = DTN_EMAILS.includes(email);
-
-  if (!isDTN) {
-    // Vérifier que cet email est entraîneur d'au moins un nageur
-    const { data, error } = await sb
-      .from('ppi_nageurs')
-      .select('licence')
-      .ilike('entraineur_email', email)
-      .limit(1);
-
-    if (error || !data || data.length === 0) {
-      errEl.textContent = 'Aucun nageur associé à cet email. Accès refusé.';
-      errEl.style.display = 'block';
-      return;
-    }
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    errEl.textContent = 'Email ou mot de passe incorrect.';
+    errEl.style.display = 'block';
+    return;
   }
 
-  currentUser = { email, role: isDTN ? 'dtn' : 'entraineur' };
+  await initSession();
+}
+
+async function initSession() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+
+  // Récupérer le rôle depuis la table utilisateurs
+  const { data: userData, error } = await sb
+    .from('utilisateurs')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !userData) {
+    // Pas de rôle configuré → refuser l'accès
+    await sb.auth.signOut();
+    const errEl = document.getElementById('login-error');
+    if (errEl) {
+      errEl.textContent = 'Compte non autorisé. Contactez la DTN.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  currentUser = { email: user.email, role: userData.role };
   showApp();
 }
 
-document.getElementById('login-email').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-
 async function doLogout() {
+  await sb.auth.signOut();
   currentUser = null;
   allNageurs = [];
   allNagueursByKey = {};
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-email').value = '';
-  document.getElementById('fiche-container').innerHTML = '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
+  document.getElementById('login-password').value = '';
+  document.getElementById('fiche-container').innerHTML =
+    '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
 }
 
 async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
-  // Afficher le rôle dans le header
+  // Afficher rôle et email dans le header
   const roleEl = document.getElementById('user-role-label');
   if (roleEl) {
     roleEl.textContent = currentUser.role === 'dtn'
@@ -594,17 +624,27 @@ async function showApp() {
   await loadNageurs();
 }
 
+// Vérifier session existante au chargement
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) initSession();
+});
+
+// ══ DONNÉES ══
 function makeNageurKey(nom, dateNaissance) {
-  const n = (nom || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const n = (nom || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+    .replace(/\s+/g, '_');
   const d = (dateNaissance || '').trim();
   return `${n}_${d}`;
 }
 
-// ══ DONNÉES ══
 async function loadNageurs() {
-  let query = sb.from('ppi_nageurs').select('*').order('date_export', { ascending: false });
+  let query = sb
+    .from('ppi_nageurs')
+    .select('*')
+    .order('date_export', { ascending: false });
 
-  // Filtrer par email entraîneur si pas DTN
+  // Entraîneur : filtrer sur son email uniquement
   if (currentUser.role !== 'dtn') {
     query = query.ilike('entraineur_email', currentUser.email);
   }
@@ -614,8 +654,7 @@ async function loadNageurs() {
 
   const rows = data || [];
 
-  // Grouper par nageur_key (nom normalisé + date_naissance)
-  // La première ligne de chaque groupe est la plus récente (order date_export DESC)
+  // Grouper par nageur_key : 1 groupe = 1 nageur, trié du plus récent au plus ancien
   allNagueursByKey = {};
   rows.forEach(r => {
     const key = makeNageurKey(r.nom, r.date_naissance);
@@ -623,9 +662,10 @@ async function loadNageurs() {
     allNagueursByKey[key].push(r);
   });
 
-  // allNageurs = une entrée par nageur (la plus récente)
-  allNageurs = Object.values(allNagueursByKey).map(versions => versions[0]);
-  allNageurs.sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+  // Une entrée par nageur = la version la plus récente
+  allNageurs = Object.values(allNagueursByKey)
+    .map(versions => versions[0])
+    .sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
 
   buildDiscFilter();
   renderList(allNageurs);
@@ -701,28 +741,36 @@ function selectNageur(nageurKey) {
 }
 
 async function deleteVersion(id, nageurKey) {
-  const confirmed = confirm('Supprimer définitivement cette version du PPI ? Cette action est irréversible.');
-  if (!confirmed) return;
+  const versions = allNagueursByKey[nageurKey] || [];
+  const n = versions.find(v => v.id === id);
+  const label = n
+    ? `le PPI du ${new Date(n.date_export).toLocaleDateString('fr-FR')} de ${n.prenom} ${n.nom}`
+    : 'cette version';
+
+  if (!confirm(`Supprimer définitivement ${label} ?\n\nCette action est irréversible.`)) return;
 
   const { error } = await sb.from('ppi_nageurs').delete().eq('id', id);
   if (error) { alert('Erreur lors de la suppression : ' + error.message); return; }
 
-  // Retirer du cache local
-  if (allNagueursByKey[nageurKey]) {
-    allNagueursByKey[nageurKey] = allNagueursByKey[nageurKey].filter(v => v.id !== id);
-    if (allNagueursByKey[nageurKey].length === 0) {
-      delete allNagueursByKey[nageurKey];
-      allNageurs = allNageurs.filter(n => makeNageurKey(n.nom, n.date_naissance) !== nageurKey);
-      renderList(allNageurs);
-      document.getElementById('fiche-container').innerHTML = '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
-    } else {
-      allNageurs = allNageurs.map(n =>
-        makeNageurKey(n.nom, n.date_naissance) === nageurKey
-          ? allNagueursByKey[nageurKey][0]
-          : n
-      );
-      selectNageur(nageurKey);
-    }
+  // Mettre à jour le cache local
+  allNagueursByKey[nageurKey] = versions.filter(v => v.id !== id);
+
+  if (allNagueursByKey[nageurKey].length === 0) {
+    // Plus aucune version : retirer le nageur de la liste
+    delete allNagueursByKey[nageurKey];
+    allNageurs = allNageurs.filter(n => makeNageurKey(n.nom, n.date_naissance) !== nageurKey);
+    renderList(allNageurs);
+    document.getElementById('fiche-container').innerHTML =
+      '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
+  } else {
+    // Mettre à jour la version affichée dans allNageurs
+    allNageurs = allNageurs.map(n =>
+      makeNageurKey(n.nom, n.date_naissance) === nageurKey
+        ? allNagueursByKey[nageurKey][0]
+        : n
+    );
+    renderList(allNageurs);
+    selectNageur(nageurKey);
   }
 }
 
@@ -731,34 +779,49 @@ function renderFiche(n, versions) {
   const colors = ['#0B1F5C','#00AEEF','#D7282F','#6CB33F','#C98A3C','#663F9E','#FF6B9D'];
   const color = colors[Math.abs(n.licence?.charCodeAt(0) || 0) % colors.length];
   const initials = `${(n.prenom||'')[0]||''}${(n.nom||'')[0]||''}`.toUpperCase();
-  const updated = n.date_export ? new Date(n.date_export).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : '—';
+  const updated = n.date_export
+    ? new Date(n.date_export).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'})
+    : '—';
   const nageurKey = makeNageurKey(n.nom, n.date_naissance);
+  const allVersions = versions || allNagueursByKey[nageurKey] || [n];
 
-  // Sélecteur de versions + bouton suppression
-  const versionsHtml = (versions && versions.length > 1) ? `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:var(--line-2);border-radius:8px;border:1px solid var(--line)">
-      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Version :</span>
-      <select onchange="renderFiche(allNagueursByKey['${nageurKey}'][this.value], allNagueursByKey['${nageurKey}'])"
-        style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:6px">
-        ${versions.map((v, i) => {
-          const d = v.date_export ? new Date(v.date_export).toLocaleDateString('fr-FR', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : `Version ${i+1}`;
-          return `<option value="${i}" ${i===0?'selected':''}>${i===0?'✦ Dernière — ':''} ${d}</option>`;
+  const versionsBar = allVersions.length > 1 ? `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;
+                padding:10px 14px;background:var(--line-2);border-radius:8px;
+                border:1px solid var(--line)">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);
+                   text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">
+        Version :
+      </span>
+      <select style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--line);
+                     border-radius:6px;background:#fff"
+        onchange="renderFiche(allNagueursByKey['${nageurKey}'][this.value], allNagueursByKey['${nageurKey}'])">
+        ${allVersions.map((v, i) => {
+          const d = v.date_export
+            ? new Date(v.date_export).toLocaleDateString('fr-FR',
+                {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+            : `Version ${i + 1}`;
+          return `<option value="${i}">${i === 0 ? '✦ Dernière — ' : ''}${d}</option>`;
         }).join('')}
       </select>
       <button onclick="deleteVersion('${n.id}','${nageurKey}')"
-        style="padding:4px 10px;background:#FDECEA;color:var(--red);border:1px solid #F5C6C6;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+        style="padding:4px 10px;background:#FDECEA;color:var(--red);
+               border:1px solid #F5C6C6;border-radius:6px;
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
         🗑 Supprimer
       </button>
-    </div>` : versions && versions.length === 1 ? `
+    </div>` : `
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button onclick="deleteVersion('${n.id}','${nageurKey}')"
-        style="padding:4px 10px;background:#FDECEA;color:var(--red);border:1px solid #F5C6C6;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+        style="padding:4px 10px;background:#FDECEA;color:var(--red);
+               border:1px solid #F5C6C6;border-radius:6px;
+               font-size:11px;font-weight:700;cursor:pointer">
         🗑 Supprimer ce PPI
       </button>
-    </div>` : '';
+    </div>`;
 
   el.innerHTML = `
-  ${versionsHtml}
+  ${versionsBar}
   <!-- IDENTITÉ -->
   <div class="identity-header">
     <div class="identity-avatar" style="background:${color}">${initials}</div>
