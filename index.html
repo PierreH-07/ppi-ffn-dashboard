@@ -1262,7 +1262,7 @@ function renderSemaineType(n) {
   Object.entries(data).forEach(([key, type]) => {
     if (!type) return;
     const [di, si] = key.split('_').map(Number);
-    if (isNaN(di) || isNaN(si) || di < 0 || di > 6 || si < 0 || si > 31) return;
+    if (isNaN(di) || isNaN(si) || di < 0 || di > 6 || si < 0 || si > 47) return;
     activeDaySet.add(di);
     activeSlotSet.add(si);
     cellMap[key] = type;
