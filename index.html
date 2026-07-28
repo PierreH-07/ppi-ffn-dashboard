@@ -958,7 +958,7 @@ function selectNageur(nageurKey) {
   selectedNageurKey = nageurKey;
   const versions = allNagueursByKey[nageurKey] || [];
   if (!versions.length) return;
-  renderFiche(versions[0], versions);
+  renderFiche(versions[0], versions, 0);
 }
 
 async function deleteVersion(id, nageurKey) {
@@ -995,11 +995,11 @@ async function deleteVersion(id, nageurKey) {
     const card = document.getElementById(`card-${nageurKey}`);
     if (card) card.classList.add('active');
     // Afficher la version la plus récente
-    renderFiche(remaining[0], remaining);
+    renderFiche(remaining[0], remaining, 0);
   }
 }
 
-function renderFiche(n, versions) {
+function renderFiche(n, versions, selectedIndex) {
   const el = document.getElementById('fiche-container');
   const colors = ['#0B1F5C','#00AEEF','#D7282F','#6CB33F','#C98A3C','#663F9E','#FF6B9D'];
   const color = colors[Math.abs(n.licence?.charCodeAt(0) || 0) % colors.length];
@@ -1027,7 +1027,7 @@ function renderFiche(n, versions) {
               ? new Date(v.date_export).toLocaleDateString('fr-FR',
                   {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
               : `Version ${i + 1}`;
-            const isSelected = v.id === n.id;
+            const isSelected = selectedIndex !== undefined ? i === selectedIndex : v.id === n.id;
             return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}</option>`;
           }).join('')}
         </select>` : ''}
@@ -1095,9 +1095,9 @@ function renderFiche(n, versions) {
     if (selector) {
       selector.addEventListener('change', () => {
         const idx = parseInt(selector.value);
-        const versions = allNagueursByKey[nageurKey];
-        if (versions && versions[idx]) {
-          renderFiche(versions[idx], versions);
+        const vers = allNagueursByKey[nageurKey];
+        if (vers && vers[idx]) {
+          renderFiche(vers[idx], vers, idx);
         }
       });
     }
