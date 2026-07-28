@@ -1256,12 +1256,12 @@ function renderSemaineType(n) {
     if (!type) return;
     const underIdx = key.indexOf('_');
     if (underIdx < 0) return;
-    const day = key.substring(0, underIdx);
+    const day = key.substring(0, underIdx).toLowerCase();
     const time = key.substring(underIdx + 1);
     if (DAYS.includes(day)) {
       timeSet.add(time);
       daySet.add(day);
-      cellMap[key] = type;
+      cellMap[`${day}_${time}`] = type;
     }
   });
 
@@ -1488,10 +1488,10 @@ function renderCalendrierSynthetique(n) {
   if (relevant.length === 0) return '';
 
   const typeInfo = {
-    'stage':                { label:'Stage',             code:'D',  color:'#6CB33F', bg:'#EDF7E6' },
-    'objectif-competition': { label:'Compét. objectif',  code:'R★', color:'#D7282F', bg:'#FDECEA' },
-    'competition-bassin':   { label:'Compét. bassin',    code:'R',  color:'#0B1F5C', bg:'#EEF2FA' },
-    'competition-eaulibre': { label:'Compét. eau libre', code:'R',  color:'#00AEEF', bg:'#E8F6FD' },
+    'stage':                { label:'Stage',                    code:'Stage', color:'#6CB33F', bg:'#EDF7E6' },
+    'objectif-competition': { label:'Compét. de résultat',      code:'R',     color:'#D7282F', bg:'#FDECEA' },
+    'competition-bassin':   { label:'Compét. de développement', code:'D',     color:'#00AEEF', bg:'#E8F6FD' },
+    'competition-eaulibre': { label:'Compét. de développement', code:'D',     color:'#0080BE', bg:'#E0F4FF' },
   };
 
   const sorted = [...relevant].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
@@ -1557,18 +1557,18 @@ function renderCalendrierSynthetique(n) {
     <div style="display:flex;gap:12px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)">
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
-                     color:#fff;background:#6CB33F;border-radius:2px;padding:1px 5px">D</span>
-        <span style="font-size:11px;color:var(--text-2)">Développement — stages</span>
+                     color:#fff;background:#6CB33F;border-radius:2px;padding:1px 5px">Stage</span>
+        <span style="font-size:11px;color:var(--text-2)">Stage d'entraînement</span>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
-                     color:#fff;background:#D7282F;border-radius:2px;padding:1px 5px">R★</span>
-        <span style="font-size:11px;color:var(--text-2)">Résultat — compétition objectif</span>
+                     color:#fff;background:#D7282F;border-radius:2px;padding:1px 5px">R</span>
+        <span style="font-size:11px;color:var(--text-2)">Compétition de résultat</span>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
-                     color:#fff;background:#0B1F5C;border-radius:2px;padding:1px 5px">R</span>
-        <span style="font-size:11px;color:var(--text-2)">Résultat — compétition</span>
+                     color:#fff;background:#00AEEF;border-radius:2px;padding:1px 5px">D</span>
+        <span style="font-size:11px;color:var(--text-2)">Compétition de développement</span>
       </div>
     </div>
   </div>`;
