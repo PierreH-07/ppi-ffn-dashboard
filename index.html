@@ -628,48 +628,78 @@ async function showApp() {
 // ══ GESTION RESET PASSWORD ══
 // Détecter si l'URL contient un token de type "recovery" (lien reset Supabase)
 async function handleAuthRedirect() {
-  const hash = window.location.hash;
-  if (!hash) return false;
+  // Format 1 : ?code=xxx (mode PKCE — le plus courant)
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
 
-  const params = new URLSearchParams(hash.substring(1));
+  if (code) {
+    const { error } = await sb.auth.exchangeCodeForSession(code);
+    // Nettoyer l'URL
+    window.history.replaceState({}, document.title,
+      window.location.pathname + window.location.hash.replace(/#.*/, ''));
 
-  // Détecter les erreurs Supabase dans l'URL
-  if (params.get('error')) {
-    const code = params.get('error_code') || '';
-    const desc = params.get('error_description') || '';
-    window.location.hash = '';
-
-    const errEl = document.getElementById('login-error');
-    if (errEl) {
-      if (code === 'otp_expired') {
-        errEl.textContent = 'Le lien a expiré. Contactez votre administrateur pour recevoir un nouveau lien.';
-      } else {
-        errEl.textContent = `Erreur d'accès : ${desc.replace(/\+/g,' ')}`;
+    if (error) {
+      const errEl = document.getElementById('login-error');
+      if (errEl) {
+        errEl.textContent = 'Lien invalide ou expiré. Contactez votre administrateur.';
+        errEl.style.display = 'block';
       }
-      errEl.style.display = 'block';
+      return false;
     }
-    return false;
+
+    // Vérifier le type de flow (recovery = reset password)
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user?.recovery_sent_at) {
+      showResetPasswordScreen();
+      return true;
+    }
+
+    // Sinon c'est une invitation → afficher reset password aussi
+    // (premier accès = définir son mot de passe)
+    showResetPasswordScreen();
+    return true;
   }
 
-  const type  = params.get('type');
-  const token = params.get('access_token');
+  // Format 2 : #access_token=xxx (mode implicite — ancien format)
+  const hash = window.location.hash;
+  if (hash) {
+    const params = new URLSearchParams(hash.substring(1));
 
-  if (type !== 'recovery' || !token) return false;
+    if (params.get('error')) {
+      window.location.hash = '';
+      const errEl = document.getElementById('login-error');
+      if (errEl) {
+        const code = params.get('error_code') || '';
+        errEl.textContent = code === 'otp_expired'
+          ? 'Le lien a expiré. Contactez votre administrateur pour en recevoir un nouveau.'
+          : `Erreur : ${(params.get('error_description') || '').replace(/\+/g, ' ')}`;
+        errEl.style.display = 'block';
+      }
+      return false;
+    }
 
-  // Établir la session avec le token reçu
-  const { error } = await sb.auth.setSession({
-    access_token:  token,
-    refresh_token: params.get('refresh_token') || ''
-  });
-
-  if (error) {
-    alert('Lien expiré ou invalide. Veuillez refaire une demande de réinitialisation.');
-    return false;
+    const type  = params.get('type');
+    const token = params.get('access_token');
+    if (type === 'recovery' && token) {
+      const { error } = await sb.auth.setSession({
+        access_token:  token,
+        refresh_token: params.get('refresh_token') || ''
+      });
+      window.location.hash = '';
+      if (error) {
+        const errEl = document.getElementById('login-error');
+        if (errEl) {
+          errEl.textContent = 'Lien expiré. Contactez votre administrateur.';
+          errEl.style.display = 'block';
+        }
+        return false;
+      }
+      showResetPasswordScreen();
+      return true;
+    }
   }
 
-  // Afficher le formulaire de nouveau mot de passe
-  showResetPasswordScreen();
-  return true;
+  return false;
 }
 
 function showResetPasswordScreen() {
