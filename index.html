@@ -1212,7 +1212,6 @@ function renderBilan(n) {
 
 // ── Semaine type ──
 function renderSemaineType(n) {
-  console.log('[PPI] semaine_type_data brut:', n.semaine_type_data, '| type:', typeof n.semaine_type_data);
   let raw = n.semaine_type_data;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { raw = {}; } }
   const data = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
