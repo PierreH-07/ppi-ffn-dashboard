@@ -1245,32 +1245,33 @@ function renderSemaineType(n) {
   }).join('');
 
   // ── Grille emploi du temps ──
-  const DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+  // Format réel : clé = "dayIndex_slotIndex"
+  // dayIndex 0–6 (0=Lun … 6=Dim), slotIndex 0–31 (0=06h00, 1=06h30 … 31=21h30)
   const DAY_LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const slotToLabel = s => {
+    const min = 6 * 60 + s * 30;
+    return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+  };
 
-  const timeSet = new Set();
-  const daySet = new Set();
+  const activeDaySet = new Set();
+  const activeSlotSet = new Set();
   const cellMap = {};
 
   Object.entries(data).forEach(([key, type]) => {
     if (!type) return;
-    const underIdx = key.indexOf('_');
-    if (underIdx < 0) return;
-    const day = key.substring(0, underIdx).toLowerCase();
-    const time = key.substring(underIdx + 1);
-    if (DAYS.includes(day)) {
-      timeSet.add(time);
-      daySet.add(day);
-      cellMap[`${day}_${time}`] = type;
-    }
+    const [di, si] = key.split('_').map(Number);
+    if (isNaN(di) || isNaN(si) || di < 0 || di > 6 || si < 0 || si > 31) return;
+    activeDaySet.add(di);
+    activeSlotSet.add(si);
+    cellMap[key] = type;
   });
 
-  const times = [...timeSet].sort();
-  const activeDays = DAYS.filter(d => daySet.has(d));
-  const activeDayLabels = activeDays.map(d => DAY_LABELS[DAYS.indexOf(d)]);
-  const activeTimes = times.filter(t => activeDays.some(d => cellMap[`${d}_${t}`]));
+  const activeDayIndices = [...activeDaySet].sort((a,b) => a-b);
+  const activeSlots     = [...activeSlotSet]
+    .filter(s => activeDayIndices.some(d => cellMap[`${d}_${s}`]))
+    .sort((a,b) => a-b);
 
-  const timetableHtml = activeTimes.length > 0 ? `
+  const timetableHtml = activeSlots.length > 0 ? `
     <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
                   letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">
@@ -1283,23 +1284,23 @@ function renderSemaineType(n) {
               <th style="padding:4px 8px;background:var(--navy);color:rgba(255,255,255,.5);
                          font-family:'Barlow Condensed',sans-serif;font-size:8px;
                          text-align:left;min-width:44px;border-right:2px solid rgba(255,255,255,.15)"></th>
-              ${activeDays.map((d,i) => `
+              ${activeDayIndices.map(di => `
                 <th style="padding:4px 6px;background:var(--navy);color:#fff;
                            font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:800;
                            letter-spacing:.08em;text-transform:uppercase;text-align:center;
-                           min-width:56px;border-right:1px solid rgba(255,255,255,.1)">${activeDayLabels[i]}</th>
+                           min-width:56px;border-right:1px solid rgba(255,255,255,.1)">${DAY_LABELS[di]}</th>
               `).join('')}
             </tr>
           </thead>
           <tbody>
-            ${activeTimes.map((t, ri) => {
+            ${activeSlots.map((s, ri) => {
               const rowBg = ri % 2 === 0 ? 'var(--line-2)' : '#fff';
               return `<tr>
                 <td style="padding:2px 8px 2px 6px;font-family:'Barlow Condensed',sans-serif;
                            font-size:8px;font-weight:700;color:var(--muted);background:${rowBg};
-                           white-space:nowrap;border-right:2px solid var(--line)">${t.replace('h',':')}</td>
-                ${activeDays.map(d => {
-                  const type = cellMap[`${d}_${t}`] || null;
+                           white-space:nowrap;border-right:2px solid var(--line)">${slotToLabel(s)}</td>
+                ${activeDayIndices.map(di => {
+                  const type = cellMap[`${di}_${s}`] || null;
                   if (!type) return `<td style="padding:2px 3px;background:${rowBg};border-right:1px solid var(--line-2)"></td>`;
                   const col = colorById[type] || '#aaa';
                   const lbl = shortById[type] || type.toUpperCase().slice(0,3);
@@ -1481,17 +1482,25 @@ function renderDimensions(n) {
 
 // ── Calendrier synthétique annuel ──
 function renderCalendrierSynthetique(n) {
-  const allEvents = [...(n.calendrier || []), ...(n.competitions_calendrier || [])];
+  // Stages : dans n.calendrier, type = 'stage'
+  // Compétitions : dans n.competitions_calendrier, type = 'objectif-competition'
+  //   priorite = 'resultats'    → R (rouge)
+  //   priorite = 'developpement' → D (bleu)
+  const stages = (n.calendrier || [])
+    .filter(ev => ev.type === 'stage' && ev.startDate)
+    .map(ev => ({ ...ev, _cat: 'stage' }));
 
-  const RELEVANT = ['stage','objectif-competition','competition-bassin','competition-eaulibre'];
-  const relevant = allEvents.filter(ev => RELEVANT.includes(ev.type) && ev.startDate);
+  const comps = (n.competitions_calendrier || [])
+    .filter(ev => ev.startDate)
+    .map(ev => ({ ...ev, _cat: ev.priorite === 'developpement' ? 'dev' : 'res' }));
+
+  const relevant = [...stages, ...comps];
   if (relevant.length === 0) return '';
 
   const typeInfo = {
-    'stage':                { label:'Stage',                    code:'Stage', color:'#6CB33F', bg:'#EDF7E6' },
-    'objectif-competition': { label:'Compét. de résultat',      code:'R',     color:'#D7282F', bg:'#FDECEA' },
-    'competition-bassin':   { label:'Compét. de développement', code:'D',     color:'#00AEEF', bg:'#E8F6FD' },
-    'competition-eaulibre': { label:'Compét. de développement', code:'D',     color:'#0080BE', bg:'#E0F4FF' },
+    'stage': { label:'Stage',                    code:'Stage', color:'#6CB33F', bg:'#EDF7E6' },
+    'res':   { label:'Compét. de résultat',      code:'R',     color:'#D7282F', bg:'#FDECEA' },
+    'dev':   { label:'Compét. de développement', code:'D',     color:'#00AEEF', bg:'#E8F6FD' },
   };
 
   const sorted = [...relevant].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
@@ -1507,7 +1516,7 @@ function renderCalendrierSynthetique(n) {
       const hasEvents = monthEvents.length > 0;
 
       const evHtml = monthEvents.map(ev => {
-        const ti = typeInfo[ev.type];
+        const ti = typeInfo[ev._cat] || typeInfo['res'];
         const startD = new Date(ev.startDate);
         const endD = ev.endDate ? new Date(ev.endDate) : startD;
         const days = Math.round((endD - startD) / 86400000) + 1;
@@ -1563,7 +1572,7 @@ function renderCalendrierSynthetique(n) {
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
                      color:#fff;background:#D7282F;border-radius:2px;padding:1px 5px">R</span>
-        <span style="font-size:11px;color:var(--text-2)">Compétition de résultat</span>
+        <span style="font-size:11px;color:var(--text-2)">Compétition de résultat <em style="color:var(--muted)">(objectif résultats)</em></span>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
