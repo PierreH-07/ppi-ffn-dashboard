@@ -975,8 +975,9 @@ async function deleteVersion(id, nageurKey) {
 
   // Mettre à jour le cache local
   allNagueursByKey[nageurKey] = versions.filter(v => v.id !== id);
+  const remaining = allNagueursByKey[nageurKey];
 
-  if (allNagueursByKey[nageurKey].length === 0) {
+  if (remaining.length === 0) {
     // Plus aucune version : retirer le nageur de la liste
     delete allNagueursByKey[nageurKey];
     allNageurs = allNageurs.filter(n => makeNageurKey(n.nom, n.date_naissance) !== nageurKey);
@@ -984,14 +985,17 @@ async function deleteVersion(id, nageurKey) {
     document.getElementById('fiche-container').innerHTML =
       '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
   } else {
-    // Mettre à jour la version affichée dans allNageurs
-    allNageurs = allNageurs.map(n =>
-      makeNageurKey(n.nom, n.date_naissance) === nageurKey
-        ? allNagueursByKey[nageurKey][0]
-        : n
+    // Mettre à jour la version de référence dans allNageurs (toujours la plus récente)
+    allNageurs = allNageurs.map(x =>
+      makeNageurKey(x.nom, x.date_naissance) === nageurKey ? remaining[0] : x
     );
+    // Re-rendre la liste et la fiche avec la version la plus récente
     renderList(allNageurs);
-    selectNageur(nageurKey);
+    // Réactiver la card
+    const card = document.getElementById(`card-${nageurKey}`);
+    if (card) card.classList.add('active');
+    // Afficher la version la plus récente
+    renderFiche(remaining[0], remaining);
   }
 }
 
@@ -1006,40 +1010,34 @@ function renderFiche(n, versions) {
   const nageurKey = makeNageurKey(n.nom, n.date_naissance);
   const allVersions = versions || allNagueursByKey[nageurKey] || [n];
 
-  const versionsBar = allVersions.length > 1 ? `
+  const versionsBar = allVersions.length >= 1 ? `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;
                 padding:10px 14px;background:var(--line-2);border-radius:8px;
                 border:1px solid var(--line)">
-      <span style="font-size:11px;font-weight:700;color:var(--muted);
-                   text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">
-        Version :
-      </span>
-      <select style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--line);
-                     border-radius:6px;background:#fff"
-        onchange="renderFiche(allNagueursByKey['${nageurKey}'][this.value], allNagueursByKey['${nageurKey}'])">
-        ${allVersions.map((v, i) => {
-          const d = v.date_export
-            ? new Date(v.date_export).toLocaleDateString('fr-FR',
-                {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
-            : `Version ${i + 1}`;
-          return `<option value="${i}">${i === 0 ? '✦ Dernière — ' : ''}${d}</option>`;
-        }).join('')}
-      </select>
-      <button onclick="deleteVersion('${n.id}','${nageurKey}')"
+      ${allVersions.length > 1 ? `
+        <span style="font-size:11px;font-weight:700;color:var(--muted);
+                     text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">
+          Version :
+        </span>
+        <select id="version-selector"
+          style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--line);
+                 border-radius:6px;background:#fff">
+          ${allVersions.map((v, i) => {
+            const d = v.date_export
+              ? new Date(v.date_export).toLocaleDateString('fr-FR',
+                  {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+              : `Version ${i + 1}`;
+            const isSelected = v.id === n.id;
+            return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}</option>`;
+          }).join('')}
+        </select>` : ''}
+      <button id="btn-delete-version"
         style="padding:4px 10px;background:#FDECEA;color:var(--red);
                border:1px solid #F5C6C6;border-radius:6px;
-               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-        🗑 Supprimer
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto">
+        🗑 ${allVersions.length > 1 ? 'Supprimer cette version' : 'Supprimer ce PPI'}
       </button>
-    </div>` : `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button onclick="deleteVersion('${n.id}','${nageurKey}')"
-        style="padding:4px 10px;background:#FDECEA;color:var(--red);
-               border:1px solid #F5C6C6;border-radius:6px;
-               font-size:11px;font-weight:700;cursor:pointer">
-        🗑 Supprimer ce PPI
-      </button>
-    </div>`;
+    </div>` : '';
 
   el.innerHTML = `
   ${versionsBar}
@@ -1090,8 +1088,29 @@ function renderFiche(n, versions) {
   ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
   `;
 
-  // Initialiser le calendrier après injection du DOM
-  requestAnimationFrame(() => initCalendar(n));
+  // Listeners versions et suppression (après injection HTML)
+  requestAnimationFrame(() => {
+    // Sélecteur de versions
+    const selector = document.getElementById('version-selector');
+    if (selector) {
+      selector.addEventListener('change', () => {
+        const idx = parseInt(selector.value);
+        const versions = allNagueursByKey[nageurKey];
+        if (versions && versions[idx]) {
+          renderFiche(versions[idx], versions);
+        }
+      });
+    }
+
+    // Bouton suppression
+    const btnDelete = document.getElementById('btn-delete-version');
+    if (btnDelete) {
+      btnDelete.addEventListener('click', () => deleteVersion(n.id, nageurKey));
+    }
+
+    // Calendrier
+    initCalendar(n);
+  });
 }
 
 function renderSection(num, title, content) {
