@@ -625,8 +625,103 @@ async function showApp() {
 }
 
 // Vérifier session existante au chargement
-sb.auth.getSession().then(({ data: { session } }) => {
-  if (session) initSession();
+// ══ GESTION RESET PASSWORD ══
+// Détecter si l'URL contient un token de type "recovery" (lien reset Supabase)
+async function handleAuthRedirect() {
+  const hash = window.location.hash;
+  if (!hash) return false;
+
+  const params = new URLSearchParams(hash.substring(1));
+  const type   = params.get('type');
+  const token  = params.get('access_token');
+
+  if (type !== 'recovery' || !token) return false;
+
+  // Établir la session avec le token reçu
+  const { error } = await sb.auth.setSession({
+    access_token:  token,
+    refresh_token: params.get('refresh_token') || ''
+  });
+
+  if (error) {
+    alert('Lien expiré ou invalide. Veuillez refaire une demande de réinitialisation.');
+    return false;
+  }
+
+  // Afficher le formulaire de nouveau mot de passe
+  showResetPasswordScreen();
+  return true;
+}
+
+function showResetPasswordScreen() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display        = 'none';
+
+  const screen = document.createElement('div');
+  screen.id = 'reset-screen';
+  screen.style.cssText = `
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 60%,#1a3a8a 100%);
+  `;
+  screen.innerHTML = `
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="ffn-badge">FFN</div>
+        <h1>Nouveau mot de passe</h1>
+        <p>Dashboard PPI · DTN</p>
+      </div>
+      <div class="login-field">
+        <label>Nouveau mot de passe</label>
+        <input type="password" id="reset-pass-1" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="login-field">
+        <label>Confirmer le mot de passe</label>
+        <input type="password" id="reset-pass-2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div id="reset-error" class="login-error"></div>
+      <button class="login-btn" onclick="doResetPassword()">Enregistrer le mot de passe</button>
+    </div>
+  `;
+  document.body.appendChild(screen);
+}
+
+async function doResetPassword() {
+  const p1    = document.getElementById('reset-pass-1').value;
+  const p2    = document.getElementById('reset-pass-2').value;
+  const errEl = document.getElementById('reset-error');
+  errEl.style.display = 'none';
+
+  if (p1.length < 8) {
+    errEl.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (p1 !== p2) {
+    errEl.textContent = 'Les mots de passe ne correspondent pas.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  if (error) {
+    errEl.textContent = 'Erreur : ' + error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Succès : supprimer l'écran reset, nettoyer l'URL et aller au login
+  document.getElementById('reset-screen')?.remove();
+  window.location.hash = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  alert('Mot de passe mis à jour. Vous pouvez maintenant vous connecter.');
+}
+
+handleAuthRedirect().then(isReset => {
+  if (!isReset) {
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) initSession();
+    });
+  }
 });
 
 // ══ DONNÉES ══
