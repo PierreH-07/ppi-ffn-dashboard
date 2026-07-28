@@ -1212,7 +1212,10 @@ function renderBilan(n) {
 
 // ── Semaine type ──
 function renderSemaineType(n) {
-  const data = n.semaine_type_data || {};
+  // Défense : la colonne peut revenir comme string JSON si elle n'est pas jsonb
+  let raw = n.semaine_type_data;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { raw = {}; } }
+  const data = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
 
   // Volumes par catégorie (comptage des créneaux × 0.5h)
   const counts = { eau:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
@@ -1271,6 +1274,15 @@ function renderSemaineType(n) {
     .filter(s => activeDayIndices.some(d => cellMap[`${d}_${s}`]))
     .sort((a,b) => a-b);
 
+  // Build diagnostic info for when grid is empty
+  const rawKeyCount = Object.keys(data).length;
+  const rawSample   = Object.entries(data).slice(0,4).map(([k,v]) => `"${k}"→"${v}"`).join(', ');
+  const emptyHtml   = rawKeyCount === 0
+    ? `<div style="margin-top:12px;padding:10px 14px;background:var(--line-2);border-radius:6px;font-size:11px;color:var(--muted)">Emploi du temps non renseigné</div>`
+    : `<div style="margin-top:12px;padding:10px 14px;background:#fff3cd;border-radius:6px;font-size:11px;color:#856404">
+         <strong>Format non reconnu</strong> (${rawKeyCount} entrées). Exemples : ${rawSample}
+       </div>`;
+
   const timetableHtml = activeSlots.length > 0 ? `
     <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
@@ -1324,7 +1336,7 @@ function renderSemaineType(n) {
           </div>
         `).join('')}
       </div>
-    </div>` : '';
+    </div>` : emptyHtml;
 
   return `<div class="card">
     <div style="display:flex;gap:20px;align-items:center">
