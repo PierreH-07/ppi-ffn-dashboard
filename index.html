@@ -1082,7 +1082,7 @@ function renderFiche(n, versions, selectedIndex) {
   ${renderSection(7, 'Actions clés & Dimensions de développement', renderDimensions(n))}
 
   <!-- SECTION 8 : CALENDRIER -->
-  ${renderSection(8, 'Calendrier', '<div id="calendar-container" style="min-height:400px"></div>')}
+  ${renderSection(8, 'Calendrier', renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>')}
 
   <!-- SECTION 9 : CHARTE D\'ENGAGEMENT -->
   ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
@@ -1213,42 +1213,128 @@ function renderBilan(n) {
 // ── Semaine type ──
 function renderSemaineType(n) {
   const data = n.semaine_type_data || {};
+
+  // Volumes par catégorie (comptage des créneaux × 0.5h)
   const counts = { eau:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
   Object.values(data).forEach(t => { if (t && counts[t] !== undefined) counts[t]++; });
   const volumes = Object.fromEntries(Object.entries(counts).map(([k,v]) => [k, v*0.5]));
   const total = Object.values(volumes).reduce((a,b)=>a+b,0);
   const maxV = Math.max(...Object.values(volumes), 1);
 
-  const cats = [
-    { id:'eau',      label:'Entraînement eau',     color:'linear-gradient(90deg,#0080BE,#00AEEF)', major:true },
-    { id:'physique', label:'Préparation physique',  color:'linear-gradient(90deg,#D7282F,#E55A60)', major:true },
-    { id:'scolaire', label:'Scolaire / Pro',         color:'linear-gradient(90deg,#6CB33F,#8DCB6E)', major:true },
-    { id:'recup',    label:'Récupération',           color:'#7C88A6', major:false },
-    { id:'kine',     label:'Kiné / Ostéo',           color:'#7C88A6', major:false },
-    { id:'mental',   label:'Préparation mentale',    color:'#7C88A6', major:false },
+  const catConfig = [
+    { id:'eau',      label:'Entraînement eau',    shortLabel:'EAU',      color:'#00AEEF', gradient:'linear-gradient(90deg,#0080BE,#00AEEF)', major:true  },
+    { id:'physique', label:'Préparation physique', shortLabel:'PHYSIQUE', color:'#D7282F', gradient:'linear-gradient(90deg,#D7282F,#E55A60)', major:true  },
+    { id:'scolaire', label:'Scolaire / Pro',        shortLabel:'SCOLAIRE', color:'#6CB33F', gradient:'linear-gradient(90deg,#6CB33F,#8DCB6E)', major:true  },
+    { id:'recup',    label:'Récupération',          shortLabel:'RÉCUP',    color:'#7C88A6', gradient:'#7C88A6',                               major:false },
+    { id:'kine',     label:'Kiné / Ostéo',          shortLabel:'KINÉ',     color:'#663F9E', gradient:'#663F9E',                               major:false },
+    { id:'mental',   label:'Préparation mentale',   shortLabel:'MENTAL',   color:'#C98A3C', gradient:'#C98A3C',                               major:false },
   ];
+  const colorById = Object.fromEntries(catConfig.map(c => [c.id, c.color]));
+  const shortById = Object.fromEntries(catConfig.map(c => [c.id, c.shortLabel]));
 
-  const rows = cats.map(c => {
+  const barRows = catConfig.map(c => {
     const h = volumes[c.id].toFixed(1);
     const pct = Math.round(volumes[c.id] / maxV * 100);
     return `<div class="semaine-row">
       <div class="semaine-label" style="font-weight:${c.major?'800':'600'}">${c.label}</div>
       <div class="semaine-bar-track">
-        <div class="semaine-bar-fill" style="width:${pct}%;${c.color.startsWith('linear') ? 'background-image:'+c.color : 'background-color:'+c.color}"></div>
+        <div class="semaine-bar-fill" style="width:${pct}%;${c.gradient.startsWith('linear') ? 'background-image:'+c.gradient : 'background-color:'+c.gradient}"></div>
       </div>
       <div class="semaine-val">${h}h</div>
     </div>`;
   }).join('');
 
+  // ── Grille emploi du temps ──
+  const DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+  const DAY_LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+  const timeSet = new Set();
+  const daySet = new Set();
+  const cellMap = {};
+
+  Object.entries(data).forEach(([key, type]) => {
+    if (!type) return;
+    const underIdx = key.indexOf('_');
+    if (underIdx < 0) return;
+    const day = key.substring(0, underIdx);
+    const time = key.substring(underIdx + 1);
+    if (DAYS.includes(day)) {
+      timeSet.add(time);
+      daySet.add(day);
+      cellMap[key] = type;
+    }
+  });
+
+  const times = [...timeSet].sort();
+  const activeDays = DAYS.filter(d => daySet.has(d));
+  const activeDayLabels = activeDays.map(d => DAY_LABELS[DAYS.indexOf(d)]);
+  const activeTimes = times.filter(t => activeDays.some(d => cellMap[`${d}_${t}`]));
+
+  const timetableHtml = activeTimes.length > 0 ? `
+    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
+                  letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">
+        Emploi du temps type
+      </div>
+      <div style="overflow-x:auto">
+        <table style="border-collapse:collapse;font-size:10px;width:100%">
+          <thead>
+            <tr>
+              <th style="padding:4px 8px;background:var(--navy);color:rgba(255,255,255,.5);
+                         font-family:'Barlow Condensed',sans-serif;font-size:8px;
+                         text-align:left;min-width:44px;border-right:2px solid rgba(255,255,255,.15)"></th>
+              ${activeDays.map((d,i) => `
+                <th style="padding:4px 6px;background:var(--navy);color:#fff;
+                           font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:800;
+                           letter-spacing:.08em;text-transform:uppercase;text-align:center;
+                           min-width:56px;border-right:1px solid rgba(255,255,255,.1)">${activeDayLabels[i]}</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${activeTimes.map((t, ri) => {
+              const rowBg = ri % 2 === 0 ? 'var(--line-2)' : '#fff';
+              return `<tr>
+                <td style="padding:2px 8px 2px 6px;font-family:'Barlow Condensed',sans-serif;
+                           font-size:8px;font-weight:700;color:var(--muted);background:${rowBg};
+                           white-space:nowrap;border-right:2px solid var(--line)">${t.replace('h',':')}</td>
+                ${activeDays.map(d => {
+                  const type = cellMap[`${d}_${t}`] || null;
+                  if (!type) return `<td style="padding:2px 3px;background:${rowBg};border-right:1px solid var(--line-2)"></td>`;
+                  const col = colorById[type] || '#aaa';
+                  const lbl = shortById[type] || type.toUpperCase().slice(0,3);
+                  return `<td style="padding:2px 3px;background:${col}18;border-right:1px solid ${col}30">
+                    <div style="background:${col};border-radius:3px;padding:2px 4px;
+                                font-family:'Barlow Condensed',sans-serif;font-size:7px;
+                                font-weight:800;color:#fff;text-align:center;
+                                letter-spacing:.04em;text-transform:uppercase">${lbl}</div>
+                  </td>`;
+                }).join('')}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+        ${catConfig.filter(c => volumes[c.id] > 0).map(c => `
+          <div style="display:flex;align-items:center;gap:4px">
+            <div style="width:10px;height:10px;border-radius:2px;background:${c.color};flex-shrink:0"></div>
+            <span style="font-size:10px;color:var(--text-2)">${c.label}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+
   return `<div class="card">
     <div style="display:flex;gap:20px;align-items:center">
-      <div class="semaine-grid" style="flex:1">${rows}</div>
+      <div class="semaine-grid" style="flex:1">${barRows}</div>
       <div style="text-align:center;flex-shrink:0">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue-d);margin-bottom:6px">Volume total</div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:36px;color:var(--navy);line-height:1">${total.toFixed(1)}h</div>
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">/ semaine</div>
       </div>
     </div>
+    ${timetableHtml}
   </div>`;
 }
 
@@ -1391,6 +1477,101 @@ function renderDimensions(n) {
       </table>
     </div>
   </div>` : ''}`;
+}
+
+// ── Calendrier synthétique annuel ──
+function renderCalendrierSynthetique(n) {
+  const allEvents = [...(n.calendrier || []), ...(n.competitions_calendrier || [])];
+
+  const RELEVANT = ['stage','objectif-competition','competition-bassin','competition-eaulibre'];
+  const relevant = allEvents.filter(ev => RELEVANT.includes(ev.type) && ev.startDate);
+  if (relevant.length === 0) return '';
+
+  const typeInfo = {
+    'stage':                { label:'Stage',             code:'D',  color:'#6CB33F', bg:'#EDF7E6' },
+    'objectif-competition': { label:'Compét. objectif',  code:'R★', color:'#D7282F', bg:'#FDECEA' },
+    'competition-bassin':   { label:'Compét. bassin',    code:'R',  color:'#0B1F5C', bg:'#EEF2FA' },
+    'competition-eaulibre': { label:'Compét. eau libre', code:'R',  color:'#00AEEF', bg:'#E8F6FD' },
+  };
+
+  const sorted = [...relevant].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+  const years = [...new Set(sorted.map(ev => new Date(ev.startDate).getFullYear()))].sort();
+  const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+  const yearStrips = years.map(year => {
+    const monthCells = MONTHS.map((mLabel, mi) => {
+      const monthEvents = sorted.filter(ev => {
+        const s = new Date(ev.startDate);
+        return s.getFullYear() === year && s.getMonth() === mi;
+      });
+      const hasEvents = monthEvents.length > 0;
+
+      const evHtml = monthEvents.map(ev => {
+        const ti = typeInfo[ev.type];
+        const startD = new Date(ev.startDate);
+        const endD = ev.endDate ? new Date(ev.endDate) : startD;
+        const days = Math.round((endD - startD) / 86400000) + 1;
+        const name = ev.nom || ti.label;
+        const shortName = name.length > 13 ? name.slice(0,12) + '…' : name;
+        return `<div style="background:${ti.bg};border-left:3px solid ${ti.color};
+                            border-radius:0 3px 3px 0;padding:3px 4px;margin-bottom:2px">
+          <div style="display:flex;align-items:center;gap:3px">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:8px;
+                         color:#fff;background:${ti.color};border-radius:2px;
+                         padding:1px 3px;flex-shrink:0;line-height:1.2">${ti.code}</span>
+            <span style="font-size:9px;font-weight:600;color:var(--text);line-height:1.2;
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${shortName}</span>
+          </div>
+          <div style="font-size:8px;color:var(--muted);margin-top:1px">
+            ${startD.getDate()}–${endD.getDate()} (${days}j)
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div style="flex:1;min-width:0;border-right:1px solid var(--line)">
+        <div style="padding:3px 4px;background:var(--navy);color:rgba(255,255,255,.75);
+                    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;
+                    text-align:center;letter-spacing:.05em;border-bottom:1px solid rgba(255,255,255,.1)">
+          ${mLabel}
+        </div>
+        <div style="padding:2px;min-height:22px;background:${hasEvents?'#fff':'var(--line-2)'}">
+          ${evHtml}
+        </div>
+      </div>`;
+    });
+
+    return `<div style="margin-bottom:10px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:11px;
+                  letter-spacing:.12em;text-transform:uppercase;color:var(--navy);
+                  margin-bottom:5px">${year}</div>
+      <div style="display:flex;border:1px solid var(--line);border-radius:6px;
+                  overflow:hidden;overflow-x:auto">
+        ${monthCells.join('')}
+      </div>
+    </div>`;
+  });
+
+  return `<div class="card" style="margin-bottom:16px">
+    <div class="card-title">Vue synthétique — Stages &amp; Compétitions</div>
+    ${yearStrips.join('')}
+    <div style="display:flex;gap:12px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)">
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
+                     color:#fff;background:#6CB33F;border-radius:2px;padding:1px 5px">D</span>
+        <span style="font-size:11px;color:var(--text-2)">Développement — stages</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
+                     color:#fff;background:#D7282F;border-radius:2px;padding:1px 5px">R★</span>
+        <span style="font-size:11px;color:var(--text-2)">Résultat — compétition objectif</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:9px;
+                     color:#fff;background:#0B1F5C;border-radius:2px;padding:1px 5px">R</span>
+        <span style="font-size:11px;color:var(--text-2)">Résultat — compétition</span>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ── Calendrier FullCalendar ──
