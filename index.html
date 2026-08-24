@@ -528,7 +528,7 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 
 <script>
 /*
- * PROCÉDURE D'INVITATION D'UN ENTRAÎNEUR :
+ * PROCÉDURE D'INVITATION D'UN ENTRAÎNEUR DE CLUB :
  * 1. Supabase → Authentication → Users → "Invite user" → saisir l'email
  * 2. L'entraîneur reçoit un mail et crée son mot de passe
  * 3. Récupérer son UUID dans Authentication → Users
@@ -536,6 +536,13 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
  *    INSERT INTO utilisateurs (id, email, role)
  *    VALUES ('<uuid>', 'email@club.fr', 'entraineur');
  * 5. L'entraîneur verra uniquement les nageurs dont il est l'entraîneur principal.
+ *
+ * PROCÉDURE D'INVITATION D'UN ENTRAÎNEUR NATIONAL :
+ * Même chose mais avec role = 'entraineur_national' et discipline renseignée :
+ *    INSERT INTO utilisateurs (id, email, role, discipline)
+ *    VALUES ('<uuid>', 'email@ffnatation.fr', 'entraineur_national', 'NAT');
+ * La valeur de discipline doit correspondre au champ "discipline" dans ppi_nageurs
+ * (ex : 'NAT', 'WAP', 'OWS', 'PLO'...). L'entraîneur verra tous les PPI de cette discipline.
  *
  * PROCÉDURE D'INVITATION DTN :
  * Même chose mais avec role = 'dtn' → accès à tous les nageurs.
@@ -550,7 +557,7 @@ let allNageurs = [];
 let allNagueursByKey = {};
 let currentDisc = 'all';
 let calendarInstance = null;
-let currentUser = null;  // { email, role: 'dtn'|'entraineur' }
+let currentUser = null;  // { email, role: 'dtn'|'entraineur'|'entraineur_national', discipline?: string }
 let selectedNageurKey = null;
 
 // ══ AUTH ══
@@ -583,7 +590,7 @@ async function initSession() {
   // Récupérer le rôle depuis la table utilisateurs
   const { data: userData, error } = await sb
     .from('utilisateurs')
-    .select('role')
+    .select('role, discipline')
     .eq('id', user.id)
     .single();
 
@@ -598,7 +605,7 @@ async function initSession() {
     return;
   }
 
-  currentUser = { email: user.email, role: userData.role };
+  currentUser = { email: user.email, role: userData.role, discipline: userData.discipline || null };
   showApp();
 }
 
@@ -622,9 +629,13 @@ async function showApp() {
   // Afficher rôle et email dans le header
   const roleEl = document.getElementById('user-role-label');
   if (roleEl) {
-    roleEl.textContent = currentUser.role === 'dtn'
-      ? `DTN · ${currentUser.email}`
-      : `Entraîneur · ${currentUser.email}`;
+    if (currentUser.role === 'dtn') {
+      roleEl.textContent = `DTN · ${currentUser.email}`;
+    } else if (currentUser.role === 'entraineur_national') {
+      roleEl.textContent = `Entr. national${currentUser.discipline ? ' · ' + currentUser.discipline : ''} · ${currentUser.email}`;
+    } else {
+      roleEl.textContent = `Entraîneur · ${currentUser.email}`;
+    }
   }
 
   await loadNageurs();
@@ -865,10 +876,17 @@ async function loadNageurs() {
     .select('*')
     .order('date_export', { ascending: false });
 
-  // Entraîneur : filtrer sur son email uniquement
-  if (currentUser.role !== 'dtn') {
+  // Filtrage selon le rôle
+  if (currentUser.role === 'entraineur') {
+    // Entraîneur de club : uniquement ses nageurs
     query = query.ilike('entraineur_email', currentUser.email);
+  } else if (currentUser.role === 'entraineur_national') {
+    // Entraîneur national : tous les nageurs de sa discipline
+    if (currentUser.discipline) {
+      query = query.eq('discipline', currentUser.discipline);
+    }
   }
+  // dtn : pas de filtre → tous les nageurs
 
   const { data, error } = await query;
   if (error) { console.error(error); return; }
