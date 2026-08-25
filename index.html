@@ -1450,7 +1450,21 @@ function renderCompetitions(n) {
 // ── Dimensions ──
 function renderDimensions(n) {
   const rankings = n.rankings_by_seasons || {};
-  const dims2026 = (rankings[2026] || []).filter(Boolean).slice(0,3);
+
+  // Chercher la clé 2026 quelle que soit sa forme (number, string, "2025-2026"...)
+  let dims2026 = (rankings[2026] || rankings['2026'] || rankings['saison_2026'] || [])
+    .filter(Boolean).slice(0, 3);
+
+  // Fallback : colonnes plates priorite1/priorite2/priorite3 ou dimension1/dimension2/dimension3
+  if (dims2026.length === 0) {
+    const flat = [
+      n.priorite1 || n.dimension1 || n.dimension_1 || n.priorite_1 || '',
+      n.priorite2 || n.dimension2 || n.dimension_2 || n.priorite_2 || '',
+      n.priorite3 || n.dimension3 || n.dimension_3 || n.priorite_3 || '',
+    ];
+    if (flat.some(Boolean)) dims2026 = flat;
+  }
+
   const actions = [
     { comment: n.action1_comment, attendus: n.action1_attendus },
     { comment: n.action2_comment, attendus: n.action2_attendus },
@@ -1462,7 +1476,16 @@ function renderDimensions(n) {
     return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune dimension ou action renseignée pour 2026</div></div>`;
   }
 
-  return `<div class="dims-grid">
+  // Diagnostic : afficher le contenu brut de rankings_by_seasons si les priorités sont toujours vides
+  const diagHtml = (dims2026.length === 0 && Object.keys(rankings).length > 0)
+    ? `<div style="margin-bottom:12px;padding:10px 14px;background:#fff3cd;border-radius:6px;font-size:11px;color:#856404">
+         <strong>Structure rankings_by_seasons non reconnue.</strong>
+         Clés : ${Object.keys(rankings).join(', ')} —
+         Exemple : ${JSON.stringify(Object.values(rankings)[0]).slice(0,120)}
+       </div>`
+    : '';
+
+  return `${diagHtml}<div class="dims-grid">
     ${[0,1,2].map(i => {
       const dim = dims2026[i] || '';
       const act = actions[i];
