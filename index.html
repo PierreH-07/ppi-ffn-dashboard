@@ -1091,10 +1091,10 @@ function renderFiche(n, versions, selectedIndex) {
   ${renderSection(4, 'Ce qui me sépare de la performance', renderSeparation(n))}
 
   <!-- SECTION 5 : PROJECTION LONG TERME -->
-  ${renderSection(5, 'Projection long terme 2026–2032', renderProjection(n))}
+  ${renderSection(5, 'Projection long terme : olympiade', renderProjection(n))}
 
-  <!-- SECTION 6 : COMPÉTITIONS SAISON 2026 -->
-  ${renderSection(6, 'Compétitions saison 2026', renderCompetitions(n))}
+  <!-- SECTION 6 : PROJECTION SAISON EN COURS -->
+  ${renderSection(6, `Projection saison en cours${anneeObjectifPrincipal(n) ? ' ' + anneeObjectifPrincipal(n) : ''}`, renderCompetitions(n))}
 
   <!-- SECTION 7 : ACTIONS CLÉS & DIMENSIONS -->
   ${renderSection(7, 'Actions clés & Dimensions de développement', renderDimensions(n))}
@@ -1418,6 +1418,19 @@ function renderProjection(n) {
         </div>`).join('')}
     </div>
   </div>`;
+}
+
+// Année de l'objectif principal (compétition « résultats » / priorité A) le plus proche d'aujourd'hui
+function anneeObjectifPrincipal(n) {
+  const comps = Array.isArray(n.competitions_calendrier) ? n.competitions_calendrier : [];
+  const dates = comps
+    .filter(c => c.type === 'objectif-competition' && (c.priorite === 'resultats' || c.priorite === 'A') && c.startDate)
+    .map(c => new Date(c.startDate))
+    .filter(d => !isNaN(d));
+  if (dates.length === 0) return '';
+  const now = Date.now();
+  dates.sort((a,b) => Math.abs(a - now) - Math.abs(b - now));
+  return String(dates[0].getFullYear());
 }
 
 // ── Compétitions ──
