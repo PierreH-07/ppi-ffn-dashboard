@@ -1450,7 +1450,9 @@ function renderCompetitions(n) {
 // ── Dimensions ──
 function renderDimensions(n) {
   const rankings = n.rankings_by_seasons || {};
-  const dims2026 = (rankings[2026] || []).filter(Boolean).slice(0,3);
+  // Saison en cours = première saison renseignée (2027 pour les PPI actuels, 2026 pour les anciens)
+  const saisonDims = Object.keys(rankings).sort().find(k => (rankings[k] || []).some(Boolean));
+  const dims2026 = saisonDims ? rankings[saisonDims].filter(Boolean).slice(0,3) : [];
   const actions = [
     { comment: n.action1_comment, attendus: n.action1_attendus },
     { comment: n.action2_comment, attendus: n.action2_attendus },
@@ -1459,7 +1461,7 @@ function renderDimensions(n) {
   const colors = ['#0B1F5C','#00AEEF','#C98A3C'];
 
   if (dims2026.length === 0 && !actions[0].comment) {
-    return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune dimension ou action renseignée pour 2026</div></div>`;
+    return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune dimension ou action renseignée</div></div>`;
   }
 
   return `<div class="dims-grid">
