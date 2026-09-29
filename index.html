@@ -1433,12 +1433,21 @@ function renderCompetitions(n) {
 
   return `<div class="comp-cards">
     ${sorted.map(c => {
-      const prioClass = c.priorite === 'A' ? 'comp-prio-a' : c.priorite === 'B' ? 'comp-prio-b' : 'comp-prio-c';
+      // Formulaire actuel : 'resultats' / 'developpement' ; anciens PPI : 'A' / 'B' / 'C'
+      const PRIO = {
+        resultats:     { cls:'comp-prio-a', bg:'#FDECEA', label:'Objectif de résultats' },
+        developpement: { cls:'comp-prio-c', bg:'#EDF7E6', label:'Objectif de développement' },
+        A: { cls:'comp-prio-a', bg:'#FDECEA', label:'Priorité A' },
+        B: { cls:'comp-prio-b', bg:'#FFF3E0', label:'Priorité B' },
+        C: { cls:'comp-prio-c', bg:'#EDF7E6', label:'Priorité C' },
+      };
+      const prio = PRIO[c.priorite] || PRIO.resultats;
+      const prioClass = prio.cls;
       const debut = c.startDate ? new Date(c.startDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
       const fin   = c.endDate   ? new Date(c.endDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
       return `<div class="comp-card">
-        <div class="comp-card-header" style="background:${c.priorite==='A'?'#FDECEA':c.priorite==='B'?'#FFF3E0':'#EDF7E6'}">
-          <span class="comp-prio ${prioClass}">Priorité ${c.priorite||'A'}</span>
+        <div class="comp-card-header" style="background:${prio.bg}">
+          <span class="comp-prio ${prioClass}">${prio.label}</span>
           <span class="comp-card-name">${c.nom || 'Compétition'}</span>
         </div>
         ${debut||fin ? `<div class="comp-card-dates">${debut}${fin?' → '+fin:''}</div>` : ''}
@@ -1655,7 +1664,7 @@ function initCalendar(n) {
     initialView:   'dayGridMonth',
     locale:        'fr',
     firstDay:       1,
-    initialDate:   '2026-01-01',
+    initialDate:   allEvents.map(ev => ev.startDate).filter(Boolean).sort()[0] || new Date().toISOString().split('T')[0],
     headerToolbar: { left:'prev,next today', center:'title', right:'dayGridMonth,listMonth' },
     events:         fcEvents,
     height:        'auto',
