@@ -1656,10 +1656,10 @@ function renderBilanChiffre(n) {
     }
   });
 
-  // Jours d'entraînement : jours de la semaine type contenant au moins un créneau 'eau' ou 'acro'
+  // Jours d'entraînement : jours de la semaine type contenant au moins un créneau 'eau', 'acro' ou 'physique'
   const trainingDow = new Set();
   Object.entries(semaine).forEach(([key, t]) => {
-    if (t === 'eau' || t === 'acro') trainingDow.add(parseInt(key.split('_')[0]));
+    if (t === 'eau' || t === 'acro' || t === 'physique') trainingDow.add(parseInt(key.split('_')[0]));
   });
   let entrainement = 0;
   for (let d = new Date(SEASON_START); d <= SEASON_END; d = new Date(d.getTime() + 86400000)) {
