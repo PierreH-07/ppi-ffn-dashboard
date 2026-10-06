@@ -514,14 +514,15 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
     <div class="nageur-list">
       <div class="list-header">
         Nageurs <span class="list-count" id="list-count">0</span>
+        <span id="list-genre-count" style="margin-left:auto;margin-right:8px;font-size:10px;letter-spacing:.06em;text-transform:none;font-weight:600"></span>
       </div>
       <div class="list-filters" id="list-filters">
         <select id="lf-disc" onchange="setDiscFromSelect(this.value)"><option value="all">Toutes disciplines</option></select>
         <select id="lf-genre" onchange="filterNageurs()">
           <option value="">Tous genres</option>
           <option value="F">Femmes</option>
-          <option value="M">Hommes</option>
-          <option value="-">Genre non renseigné</option>
+          <option value="H">Hommes</option>
+          <option value="-">Non renseigné</option>
         </select>
         <select id="lf-club" onchange="filterNageurs()"><option value="">Tous les clubs</option></select>
         <select id="lf-structure" onchange="filterNageurs()"><option value="">Toutes les structures</option></select>
@@ -884,6 +885,9 @@ handleAuthRedirect().then(isReset => {
 });
 
 // ══ DONNÉES ══
+// Genre : 'F' = Femme, 'H' = Homme, NULL = non renseigné (fiches antérieures au 06/10/2026)
+const GENRES = { F: 'Femme', H: 'Homme' };
+
 // ── Clé de regroupement des versions d'un même nageur ──
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[-'’]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1003,7 +1007,10 @@ async function loadNageurs() {
 
   // Grouper par nageur_key : 1 groupe = 1 nageur, trié du plus récent au plus ancien
   allNagueursByKey = grouperFiches(rows);
-  Object.entries(allNagueursByKey).forEach(([cle, versions]) => versions.forEach(v => { v._key = cle; }));
+  Object.entries(allNagueursByKey).forEach(([cle, versions]) => {
+    const genre = versions.find(v => v.genre)?.genre || null;
+    versions.forEach(v => { v._key = cle; v._genre = genre; });
+  });
 
   // Une entrée par nageur = la version la plus récente
   allNageurs = Object.values(allNagueursByKey)
@@ -1082,7 +1089,7 @@ function filterNageurs() {
     const genre = val('lf-genre');
     const club = val('lf-club'), structure = val('lf-structure'), entr = val('lf-entraineur'), annee = val('lf-annee');
     const matchFiltres =
-      (!genre || (genre === '-' ? !['F', 'M'].includes(n.genre) : n.genre === genre)) &&
+      (!genre || (genre === '-' ? !n._genre : n._genre === genre)) &&
       (!club || (n.club || '').trim() === club) &&
       (!structure || (n.structure_nom || '').trim() === structure) &&
       (!entr || getEntraineursPrincipaux(n).some(e => (e.nom || '').trim() === entr)) &&
@@ -1096,6 +1103,13 @@ function filterNageurs() {
 function renderList(nageurs) {
   const el = document.getElementById('nageur-list-items');
   document.getElementById('list-count').textContent = nageurs.length;
+  const gc = document.getElementById('list-genre-count');
+  if (gc) {
+    const f = nageurs.filter(n => n._genre === 'F').length;
+    const h = nageurs.filter(n => n._genre === 'H').length;
+    gc.textContent = `F ${f} · H ${h} · NR ${nageurs.length - f - h}`;
+    gc.title = 'Femmes · Hommes · Non renseigné';
+  }
 
   if (nageurs.length === 0) {
     el.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--muted);font-size:12px">Aucun nageur trouvé</div>';
@@ -1227,7 +1241,7 @@ function renderFiche(n, versions, selectedIndex) {
         <div class="identity-meta-row">📧 <strong>${n.email || '—'}</strong></div>
         <div class="identity-meta-row">📱 <strong>${n.telephone || '—'}</strong></div>
         <div class="identity-meta-row">🏊 <strong>${n.club || '—'}</strong>${n.structure_nom ? ` · ${n.structure_nom}` : ''}</div>
-        <div class="identity-meta-row">📅 <strong>${n.date_naissance ? new Date(n.date_naissance).toLocaleDateString('fr-FR') : '—'}</strong>${n.genre === 'F' ? ' · Femme' : n.genre === 'M' ? ' · Homme' : ''}</div>
+        <div class="identity-meta-row">📅 <strong>${n.date_naissance ? new Date(n.date_naissance).toLocaleDateString('fr-FR') : '—'}</strong> · ${GENRES[n._genre !== undefined ? n._genre : n.genre] || '—'}</div>
       </div>
     </div>
     <div class="identity-right">
