@@ -517,6 +517,12 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
       </div>
       <div class="list-filters" id="list-filters">
         <select id="lf-disc" onchange="setDiscFromSelect(this.value)"><option value="all">Toutes disciplines</option></select>
+        <select id="lf-genre" onchange="filterNageurs()">
+          <option value="">Tous genres</option>
+          <option value="F">Femmes</option>
+          <option value="M">Hommes</option>
+          <option value="-">Genre non renseigné</option>
+        </select>
         <select id="lf-club" onchange="filterNageurs()"><option value="">Tous les clubs</option></select>
         <select id="lf-structure" onchange="filterNageurs()"><option value="">Toutes les structures</option></select>
         <select id="lf-entraineur" onchange="filterNageurs()"><option value="">Tous les entraîneurs</option></select>
@@ -1041,7 +1047,7 @@ function setDiscFromSelect(disc) {
 }
 
 function resetListFilters() {
-  ['lf-club', 'lf-structure', 'lf-entraineur', 'lf-annee'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['lf-genre', 'lf-club', 'lf-structure', 'lf-entraineur', 'lf-annee'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const c = document.getElementById('lf-completer'); if (c) c.checked = false;
   const s = document.getElementById('search-input'); if (s) s.value = '';
   setDiscFromSelect('all');
@@ -1073,8 +1079,10 @@ function filterNageurs() {
     const entraineurs = getEntraineursPrincipaux(n).map(e => e.nom || '').join(' ');
     const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''} ${entraineurs}`.toLowerCase().includes(q);
     const val = id => document.getElementById(id)?.value || '';
+    const genre = val('lf-genre');
     const club = val('lf-club'), structure = val('lf-structure'), entr = val('lf-entraineur'), annee = val('lf-annee');
     const matchFiltres =
+      (!genre || (genre === '-' ? !['F', 'M'].includes(n.genre) : n.genre === genre)) &&
       (!club || (n.club || '').trim() === club) &&
       (!structure || (n.structure_nom || '').trim() === structure) &&
       (!entr || getEntraineursPrincipaux(n).some(e => (e.nom || '').trim() === entr)) &&
@@ -1219,7 +1227,7 @@ function renderFiche(n, versions, selectedIndex) {
         <div class="identity-meta-row">📧 <strong>${n.email || '—'}</strong></div>
         <div class="identity-meta-row">📱 <strong>${n.telephone || '—'}</strong></div>
         <div class="identity-meta-row">🏊 <strong>${n.club || '—'}</strong>${n.structure_nom ? ` · ${n.structure_nom}` : ''}</div>
-        <div class="identity-meta-row">📅 <strong>${n.date_naissance ? new Date(n.date_naissance).toLocaleDateString('fr-FR') : '—'}</strong></div>
+        <div class="identity-meta-row">📅 <strong>${n.date_naissance ? new Date(n.date_naissance).toLocaleDateString('fr-FR') : '—'}</strong>${n.genre === 'F' ? ' · Femme' : n.genre === 'M' ? ' · Homme' : ''}</div>
       </div>
     </div>
     <div class="identity-right">
