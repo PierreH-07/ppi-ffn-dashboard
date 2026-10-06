@@ -540,9 +540,10 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
  * PROCÉDURE D'INVITATION D'UN ENTRAÎNEUR NATIONAL :
  * Même chose mais avec role = 'entraineur_national' et discipline renseignée :
  *    INSERT INTO utilisateurs (id, email, role, discipline)
- *    VALUES ('<uuid>', 'email@ffnatation.fr', 'entraineur_national', 'NAT');
- * La valeur de discipline doit correspondre au champ "discipline" dans ppi_nageurs
- * (ex : 'NAT', 'WAP', 'OWS', 'PLO'...). L'entraîneur verra tous les PPI de cette discipline.
+ *    VALUES ('<uuid>', 'email@ffnatation.fr', 'entraineur_national', 'natation-bassin');
+ * La valeur de discipline doit être exactement l'un des codes du questionnaire (contrainte en base) :
+ * 'natation-bassin', 'eau-libre', 'synchro', 'water-polo', 'plongeon'.
+ * L'entraîneur verra tous les PPI de cette discipline.
  *
  * PROCÉDURE D'INVITATION DTN :
  * Même chose mais avec role = 'dtn' → accès à tous les nageurs.
