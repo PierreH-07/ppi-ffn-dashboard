@@ -141,6 +141,10 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
   font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:11px;
   padding:2px 8px;border-radius:999px;
 }
+.list-filters {padding:10px 16px;border-bottom:1px solid var(--line);background:var(--line-2);display:flex;flex-direction:column;gap:6px}
+.list-filters select {width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff;color:var(--text)}
+.list-filters .lf-row {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-2)}
+.list-filters .lf-reset {background:none;border:none;color:var(--blue-d);font-size:11px;font-weight:700;cursor:pointer;padding:0}
 .nageur-card {
   padding:14px 16px;border-bottom:1px solid var(--line-2);cursor:pointer;
   transition:background .15s;display:flex;gap:12px;align-items:center;
@@ -510,6 +514,17 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
     <div class="nageur-list">
       <div class="list-header">
         Nageurs <span class="list-count" id="list-count">0</span>
+      </div>
+      <div class="list-filters" id="list-filters">
+        <select id="lf-disc" onchange="setDiscFromSelect(this.value)"><option value="all">Toutes disciplines</option></select>
+        <select id="lf-club" onchange="filterNageurs()"><option value="">Tous les clubs</option></select>
+        <select id="lf-structure" onchange="filterNageurs()"><option value="">Toutes les structures</option></select>
+        <select id="lf-entraineur" onchange="filterNageurs()"><option value="">Tous les entraîneurs</option></select>
+        <select id="lf-annee" onchange="filterNageurs()"><option value="">Toutes années de naissance</option></select>
+        <div class="lf-row">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="lf-completer" onchange="filterNageurs()"> À compléter seulement</label>
+          <button class="lf-reset" onclick="resetListFilters()">Réinitialiser</button>
+        </div>
       </div>
       <div id="nageur-list-items">
         <div class="loading"><div class="spinner"></div> Chargement...</div>
@@ -990,7 +1005,46 @@ async function loadNageurs() {
     .sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
 
   buildDiscFilter();
-  renderList(allNageurs);
+  buildListFilters();
+  filterNageurs();
+}
+
+// ── Filtres de la colonne nageurs ──
+const anneeNaissance = n => (String(n.date_naissance || '').match(/\d{4}/) || [''])[0];
+
+function buildListFilters() {
+  const fill = (id, values, labelAll, labels) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const keep = el.value;
+    el.innerHTML = `<option value="${id === 'lf-disc' ? 'all' : ''}">${labelAll}</option>` +
+      values.map(v => `<option value="${cleAttr(v)}">${cleAttr(labels ? labels[v] : v)}</option>`).join('');
+    if ([...el.options].some(o => o.value === keep)) el.value = keep;
+  };
+  const uniq = arr => [...new Set(arr.map(v => (v || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+
+  const discLabels = {};
+  allNageurs.forEach(n => { if (n.discipline) discLabels[n.discipline] = n.discipline_label || n.discipline; });
+  fill('lf-disc', Object.keys(discLabels).sort((a, b) => discLabels[a].localeCompare(discLabels[b], 'fr')), 'Toutes disciplines', discLabels);
+  fill('lf-club', uniq(allNageurs.map(n => n.club)), 'Tous les clubs');
+  fill('lf-structure', uniq(allNageurs.map(n => n.structure_nom)), 'Toutes les structures');
+  fill('lf-entraineur', uniq(allNageurs.flatMap(n => getEntraineursPrincipaux(n).map(e => e.nom))), 'Tous les entraîneurs');
+  fill('lf-annee', uniq(allNageurs.map(anneeNaissance)).reverse(), 'Toutes années de naissance');
+  const d = document.getElementById('lf-disc');
+  if (d) d.value = currentDisc;
+}
+
+function setDiscFromSelect(disc) {
+  const chip = document.querySelector(`.disc-chip[data-disc="${CSS.escape(disc)}"]`);
+  if (chip) setDiscFilter(chip, disc);
+  else { currentDisc = disc; filterNageurs(); }
+}
+
+function resetListFilters() {
+  ['lf-club', 'lf-structure', 'lf-entraineur', 'lf-annee'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const c = document.getElementById('lf-completer'); if (c) c.checked = false;
+  const s = document.getElementById('search-input'); if (s) s.value = '';
+  setDiscFromSelect('all');
 }
 
 function buildDiscFilter() {
@@ -1007,6 +1061,8 @@ function setDiscFilter(btn, disc) {
   document.querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentDisc = disc;
+  const sel = document.getElementById('lf-disc');
+  if (sel) sel.value = disc;
   filterNageurs();
 }
 
@@ -1016,7 +1072,15 @@ function filterNageurs() {
     const matchDisc = currentDisc === 'all' || n.discipline === currentDisc;
     const entraineurs = getEntraineursPrincipaux(n).map(e => e.nom || '').join(' ');
     const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''} ${entraineurs}`.toLowerCase().includes(q);
-    return matchDisc && matchQ;
+    const val = id => document.getElementById(id)?.value || '';
+    const club = val('lf-club'), structure = val('lf-structure'), entr = val('lf-entraineur'), annee = val('lf-annee');
+    const matchFiltres =
+      (!club || (n.club || '').trim() === club) &&
+      (!structure || (n.structure_nom || '').trim() === structure) &&
+      (!entr || getEntraineursPrincipaux(n).some(e => (e.nom || '').trim() === entr)) &&
+      (!annee || anneeNaissance(n) === annee) &&
+      (!document.getElementById('lf-completer')?.checked || ficheACompleter(n._key));
+    return matchDisc && matchQ && matchFiltres;
   });
   renderList(filtered);
 }
@@ -1085,7 +1149,7 @@ async function deleteVersion(id, nageurKey) {
     // Plus aucune version : retirer le nageur de la liste
     delete allNagueursByKey[nageurKey];
     allNageurs = allNageurs.filter(n => n._key !== nageurKey);
-    renderList(allNageurs);
+    filterNageurs();
     document.getElementById('fiche-container').innerHTML =
       '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
   } else {
@@ -1094,7 +1158,7 @@ async function deleteVersion(id, nageurKey) {
       x._key === nageurKey ? remaining[0] : x
     );
     // Re-rendre la liste et la fiche avec la version la plus récente
-    renderList(allNageurs);
+    filterNageurs();
     // Réactiver la card
     const card = document.getElementById(cleDomId(nageurKey));
     if (card) card.classList.add('active');
