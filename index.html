@@ -863,47 +863,48 @@ handleAuthRedirect().then(isReset => {
 });
 
 // ══ DONNÉES ══
-// Texte normalisé pour les clés : minuscules, sans accents, tirets = espaces,
-// uniquement [a-z0-9_] (la clé est utilisée dans des attributs HTML / onclick)
-function normCle(txt) {
-  return (txt || '').toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[-\s]+/g, ' ').trim()
-    .replace(/ /g, '_')
-    .replace(/[^a-z0-9_]/g, '');
-}
+// ── Clé de regroupement des versions d'un même nageur ──
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[-'’]/g, ' ').replace(/\s+/g, ' ').trim();
 
-// Numéro de licence exploitable (le questionnaire envoie 'SANS_LICENCE_...' à défaut)
-function licenceNageur(r) {
-  const l = (r.licence || '').trim().toUpperCase().replace(/\s+/g, '');
-  if (!l || l.startsWith('SANS_LICENCE')) return '';
-  return l.replace(/[^A-Z0-9]/g, '');
-}
+// Licence exploitable : sans espaces, en majuscules, et pas la valeur de repli du questionnaire
+const licenceValide = l => {
+  const v = (l || '').replace(/\s/g, '').toUpperCase();
+  return v && !v.startsWith('SANS_LICENCE_') ? v : '';
+};
 
-// Clé de repli : nom + prénom + date de naissance
-function cleRepli(r) {
-  return `np_${normCle(r.nom)}_${normCle(r.prenom)}_${(r.date_naissance || '').trim().replace(/[^0-9-]/g, '')}`;
-}
+const cleIdentite = f => [norm(f.nom), norm(f.prenom), f.date_naissance || ''].join('|');
 
-// Attribue r._key à chaque fiche : licence si renseignée, sinon nom + prénom + date.
-// Une fiche sans licence rejoint la licence d'une autre fiche du même nom/prénom/date
-// si cette correspondance est unique (ex. licence ajoutée dans un envoi ultérieur).
-function attribuerClesNageurs(rows) {
-  const licencesParRepli = {};
-  rows.forEach(r => {
-    const lic = licenceNageur(r);
-    if (!lic) return;
-    const rep = cleRepli(r);
-    (licencesParRepli[rep] = licencesParRepli[rep] || new Set()).add(lic);
+function grouperFiches(fiches) {
+  // 1. Une fiche avec licence suffit à rattacher les fiches sans licence de la même identité
+  const licenceParIdentite = {};
+  fiches.forEach(f => {
+    const l = licenceValide(f.licence);
+    if (l) licenceParIdentite[cleIdentite(f)] = l;
   });
-  rows.forEach(r => {
-    const lic = licenceNageur(r);
-    if (lic) { r._key = `lic_${lic}`; return; }
-    const rep = cleRepli(r);
-    const lics = licencesParRepli[rep];
-    r._key = (lics && lics.size === 1) ? `lic_${[...lics][0]}` : rep;
+
+  // 2. Clé = licence si connue, sinon nom + prénom + date de naissance
+  const groupes = {};
+  fiches.forEach(f => {
+    const l = licenceValide(f.licence) || licenceParIdentite[cleIdentite(f)];
+    const cle = l ? 'L:' + l : 'N:' + cleIdentite(f);
+    (groupes[cle] ||= []).push(f);
   });
+
+  // 3. Versions : la plus récente en premier (date_export, sinon created_at)
+  const t = f => new Date(f.date_export || f.created_at || 0).getTime();
+  Object.values(groupes).forEach(g => g.sort((a, b) => t(b) - t(a)));
+  return groupes;
 }
+
+// Groupe sans licence ni date de naissance : identité incomplète, risque de fusion d'homonymes
+const ficheACompleter = cle => cle.startsWith('N:') && cle.endsWith('|');
+
+// La clé peut contenir espaces, « | », apostrophes… : versions sûres pour le HTML
+const cleAttr = cle => String(cle).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+  .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
+const cleDomId = cle => 'card-' + Array.from(String(cle))
+  .map(c => /[A-Za-z0-9]/.test(c) ? c : '_' + c.codePointAt(0).toString(16) + '_').join('');
 
 // Liste des entraîneurs principaux d'une fiche :
 // entraineurs_principaux (jsonb, NA) si renseigné, sinon colonnes historiques entraineur_*
@@ -980,13 +981,8 @@ async function loadNageurs() {
   rows.forEach(normaliserDimensionsNA);
 
   // Grouper par nageur_key : 1 groupe = 1 nageur, trié du plus récent au plus ancien
-  allNagueursByKey = {};
-  attribuerClesNageurs(rows);
-  rows.forEach(r => {
-    const key = r._key;
-    if (!allNagueursByKey[key]) allNagueursByKey[key] = [];
-    allNagueursByKey[key].push(r);
-  });
+  allNagueursByKey = grouperFiches(rows);
+  Object.entries(allNagueursByKey).forEach(([cle, versions]) => versions.forEach(v => { v._key = cle; }));
 
   // Une entrée par nageur = la version la plus récente
   allNageurs = Object.values(allNagueursByKey)
@@ -1040,7 +1036,7 @@ function renderList(nageurs) {
     const color = colors[i % colors.length];
     const nKey = n._key;
     const vCount = (allNagueursByKey[nKey] || []).length;
-    return `<div class="nageur-card" onclick="selectNageur('${nKey}')" id="card-${nKey}">
+    return `<div class="nageur-card" data-cle="${cleAttr(nKey)}" onclick="selectNageur(this.dataset.cle)" id="${cleDomId(nKey)}">
       <div class="nageur-avatar" style="background:${color}">${initials}</div>
       <div class="nageur-card-info">
         <div class="name">${n.prenom || ''} ${n.nom || ''}</div>
@@ -1049,6 +1045,7 @@ function renderList(nageurs) {
           ${n.discipline_label ? `<span class="badge badge-disc">${n.discipline_label}</span>` : ''}
           ${n.club ? `<span class="badge badge-club">${n.club}</span>` : ''}
           ${vCount > 1 ? `<span class="badge" style="background:#EEF4FF;color:var(--navy-2)">${vCount} versions</span>` : ''}
+          ${ficheACompleter(nKey) ? `<span class="badge" style="background:#FFF3CD;color:#856404" title="Ni licence ni date de naissance : les homonymes (même nom et prénom) sont regroupés">⚠ À compléter</span>` : ''}
         </div>
       </div>
     </div>`;
@@ -1058,7 +1055,7 @@ function renderList(nageurs) {
 // ══ FICHE NAGEUR ══
 function selectNageur(nageurKey) {
   document.querySelectorAll('.nageur-card').forEach(c => c.classList.remove('active'));
-  const card = document.getElementById(`card-${nageurKey}`);
+  const card = document.getElementById(cleDomId(nageurKey));
   if (card) card.classList.add('active');
 
   selectedNageurKey = nageurKey;
@@ -1099,7 +1096,7 @@ async function deleteVersion(id, nageurKey) {
     // Re-rendre la liste et la fiche avec la version la plus récente
     renderList(allNageurs);
     // Réactiver la card
-    const card = document.getElementById(`card-${nageurKey}`);
+    const card = document.getElementById(cleDomId(nageurKey));
     if (card) card.classList.add('active');
     // Afficher la version la plus récente
     renderFiche(remaining[0], remaining, 0);
