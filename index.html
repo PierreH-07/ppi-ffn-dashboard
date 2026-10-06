@@ -870,28 +870,74 @@ function makeNageurKey(nom, dateNaissance) {
   return `${n}_${d}`;
 }
 
-async function loadNageurs() {
-  let query = sb
-    .from('ppi_nageurs')
-    .select('*')
-    .order('date_export', { ascending: false });
-
-  // Filtrage selon le rôle
-  if (currentUser.role === 'entraineur') {
-    // Entraîneur de club : uniquement ses nageurs
-    query = query.ilike('entraineur_email', currentUser.email);
-  } else if (currentUser.role === 'entraineur_national') {
-    // Entraîneur national : tous les nageurs de sa discipline
-    if (currentUser.discipline) {
-      query = query.eq('discipline', currentUser.discipline);
-    }
+// Liste des entraîneurs principaux d'une fiche :
+// entraineurs_principaux (jsonb, NA) si renseigné, sinon colonnes historiques entraineur_*
+function getEntraineursPrincipaux(n) {
+  let list = n.entraineurs_principaux;
+  if (typeof list === 'string') { try { list = JSON.parse(list); } catch(e) { list = null; } }
+  if (Array.isArray(list)) {
+    list = list.filter(e => e && (e.nom || e.email || e.tel));
+    if (list.length) return list;
   }
-  // dtn : pas de filtre → tous les nageurs
+  if (n.entraineur_nom || n.entraineur_email || n.entraineur_tel) {
+    return [{ nom: n.entraineur_nom, email: n.entraineur_email, tel: n.entraineur_tel }];
+  }
+  return [];
+}
 
-  const { data, error } = await query;
+// Fiches NA antérieures : la dimension « Tactique » est devenue « Stratégique »
+function normaliserDimensionsNA(r) {
+  if (r.discipline !== 'synchro') return;
+  let rk = r.rankings_by_seasons;
+  if (typeof rk === 'string') { try { rk = JSON.parse(rk); } catch(e) { rk = null; } }
+  if (rk && typeof rk === 'object') {
+    Object.keys(rk).forEach(saison => {
+      if (Array.isArray(rk[saison])) rk[saison] = rk[saison].map(d => d === 'Tactique' ? 'Stratégique' : d);
+    });
+    r.rankings_by_seasons = rk;
+  }
+  if (typeof r.classement_objectifs === 'string') {
+    r.classement_objectifs = r.classement_objectifs.split(' | ').map(d => d === 'Tactique' ? 'Stratégique' : d).join(' | ');
+  }
+}
+
+async function loadNageurs() {
+  const buildQuery = (avecMultiEntraineurs) => {
+    let query = sb
+      .from('ppi_nageurs')
+      .select('*')
+      .order('date_export', { ascending: false });
+
+    // Filtrage selon le rôle
+    if (currentUser.role === 'entraineur') {
+      // Entraîneur de club : uniquement ses nageurs (entraîneur historique ou l'un des entraîneurs principaux NA)
+      if (avecMultiEntraineurs) {
+        const mails = [...new Set([currentUser.email, (currentUser.email || '').toLowerCase()])];
+        const conds = [`entraineur_email.ilike.${currentUser.email}`]
+          .concat(mails.map(m => `entraineurs_principaux.cs.${JSON.stringify([{ email: m }])}`));
+        query = query.or(conds.join(','));
+      } else {
+        query = query.ilike('entraineur_email', currentUser.email);
+      }
+    } else if (currentUser.role === 'entraineur_national') {
+      // Entraîneur national : tous les nageurs de sa discipline
+      if (currentUser.discipline) {
+        query = query.eq('discipline', currentUser.discipline);
+      }
+    }
+    // dtn : pas de filtre → tous les nageurs
+    return query;
+  };
+
+  let { data, error } = await buildQuery(true);
+  // Colonne entraineurs_principaux pas encore créée (code 42703) → requête historique
+  if (error && error.code === '42703') {
+    ({ data, error } = await buildQuery(false));
+  }
   if (error) { console.error(error); return; }
 
   const rows = data || [];
+  rows.forEach(normaliserDimensionsNA);
 
   // Grouper par nageur_key : 1 groupe = 1 nageur, trié du plus récent au plus ancien
   allNagueursByKey = {};
@@ -931,7 +977,8 @@ function filterNageurs() {
   const q = document.getElementById('search-input').value.toLowerCase();
   const filtered = allNageurs.filter(n => {
     const matchDisc = currentDisc === 'all' || n.discipline === currentDisc;
-    const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''}`.toLowerCase().includes(q);
+    const entraineurs = getEntraineursPrincipaux(n).map(e => e.nom || '').join(' ');
+    const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''} ${entraineurs}`.toLowerCase().includes(q);
     return matchDisc && matchQ;
   });
   renderList(filtered);
@@ -956,7 +1003,7 @@ function renderList(nageurs) {
       <div class="nageur-avatar" style="background:${color}">${initials}</div>
       <div class="nageur-card-info">
         <div class="name">${n.prenom || ''} ${n.nom || ''}</div>
-        <div class="sub">${n.entraineur_nom || 'Entraîneur non renseigné'}</div>
+        <div class="sub">${getEntraineursPrincipaux(n).map(e => e.nom).filter(Boolean).join(' · ') || 'Entraîneur non renseigné'}</div>
         <div class="badges">
           ${n.discipline_label ? `<span class="badge badge-disc">${n.discipline_label}</span>` : ''}
           ${n.club ? `<span class="badge badge-club">${n.club}</span>` : ''}
@@ -1104,6 +1151,9 @@ function renderFiche(n, versions, selectedIndex) {
 
   <!-- SECTION 9 : CHARTE D\'ENGAGEMENT -->
   ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
+
+  <!-- SECTION 10 : BUDGET NA (version B, uniquement si les champs sont présents) -->
+  ${hasBudgetNA(n) ? renderSection(10, 'Budget — postes spécifiques NA', renderBudgetNA(n)) : ''}
   `;
 
   // Listeners versions et suppression (après injection HTML)
@@ -1157,12 +1207,14 @@ function renderStaff(n) {
   const staff = n.staff_data || [];
   const members = Array.isArray(staff) ? staff : [];
 
-  let html = `<div class="staff-grid">
+  const entraineurs = getEntraineursPrincipaux(n);
+  const leads = entraineurs.length ? entraineurs : [{}];
+  let html = `<div class="staff-grid">` + leads.map((e, i) => `
     <div class="staff-card lead">
-      <div class="role">Entraîneur principal</div>
-      <div class="staff-name">${n.entraineur_nom || '—'}</div>
-      <div class="staff-contact">${[n.entraineur_email, n.entraineur_tel].filter(Boolean).join(' · ') || '—'}</div>
-    </div>`;
+      <div class="role">Entraîneur principal${leads.length > 1 ? ' ' + (i + 1) : ''}</div>
+      <div class="staff-name">${e.nom || '—'}</div>
+      <div class="staff-contact">${[e.email, e.tel].filter(Boolean).join(' · ') || '—'}</div>
+    </div>`).join('');
 
   members.forEach(m => {
     if (!m.nom) return;
@@ -1235,7 +1287,7 @@ function renderSemaineType(n) {
   const data = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
 
   // Volumes par catégorie (comptage des créneaux × 0.5h)
-  const counts = { eau:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
+  const counts = { eau:0, acro:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
   Object.values(data).forEach(t => { if (t && counts[t] !== undefined) counts[t]++; });
   const volumes = Object.fromEntries(Object.entries(counts).map(([k,v]) => [k, v*0.5]));
   const total = Object.values(volumes).reduce((a,b)=>a+b,0);
@@ -1243,6 +1295,7 @@ function renderSemaineType(n) {
 
   const catConfig = [
     { id:'eau',      label:'Entraînement eau',    shortLabel:'EAU',      color:'#00AEEF', gradient:'linear-gradient(90deg,#0080BE,#00AEEF)', major:true  },
+    { id:'acro',     label:'Entraînement acro',    shortLabel:'ACRO',     color:'#F28C28', gradient:'#F28C28',                               major:true  },
     { id:'physique', label:'Préparation physique', shortLabel:'PHYSIQUE', color:'#D7282F', gradient:'linear-gradient(90deg,#D7282F,#E55A60)', major:true  },
     { id:'scolaire', label:'Scolaire / Pro',        shortLabel:'SCOLAIRE', color:'#6CB33F', gradient:'linear-gradient(90deg,#6CB33F,#8DCB6E)', major:true  },
     { id:'recup',    label:'Récupération',          shortLabel:'RÉCUP',    color:'#7C88A6', gradient:'#7C88A6',                               major:false },
@@ -1252,7 +1305,8 @@ function renderSemaineType(n) {
   const colorById = Object.fromEntries(catConfig.map(c => [c.id, c.color]));
   const shortById = Object.fromEntries(catConfig.map(c => [c.id, c.shortLabel]));
 
-  const barRows = catConfig.map(c => {
+  // La ligne acro n'apparaît que pour la NA ou si des créneaux acro existent
+  const barRows = catConfig.filter(c => c.id !== 'acro' || volumes.acro > 0 || n.discipline === 'synchro').map(c => {
     const h = volumes[c.id].toFixed(1);
     const pct = Math.round(volumes[c.id] / maxV * 100);
     return `<div class="semaine-row">
@@ -1531,6 +1585,41 @@ function renderDimensions(n) {
       </table>
     </div>
   </div>` : ''}`;
+}
+
+// ── Budget NA (version B) ──
+function hasBudgetNA(n) {
+  if (n.discipline !== 'synchro') return false;
+  return !!(n.b_heb_annuel_type || Number(n.b_heb_annuel) || Number(n.b_transport) || Number(n.b_etudes)
+    || n.b_heb_annuel_detail || n.b_transport_detail || n.b_etudes_detail);
+}
+
+function renderBudgetNA(n) {
+  const eur = v => (Number(v) || 0).toLocaleString('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 });
+  const typeLabel = { interne_insep:'Interne INSEP', externe:'Externe' }[n.b_heb_annuel_type] || 'Non renseigné';
+  const postes = [
+    { label:`Hébergement annuel (${typeLabel})`, montant:n.b_heb_annuel, detail:n.b_heb_annuel_detail },
+    { label:'Transport',                         montant:n.b_transport,  detail:n.b_transport_detail },
+    { label:'Études',                            montant:n.b_etudes,     detail:n.b_etudes_detail },
+  ];
+  const total = postes.reduce((a, p) => a + (Number(p.montant) || 0), 0);
+  return `<div class="card">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tbody>
+        ${postes.map((p, i) => `
+          <tr style="background:${i%2===0?'var(--line-2)':'#fff'}">
+            <td style="padding:6px 10px;font-weight:700;color:var(--navy)">${p.label}</td>
+            <td style="padding:6px 10px;text-align:right;white-space:nowrap">${eur(p.montant)}</td>
+            <td style="padding:6px 10px;color:var(--text-2)">${p.detail || '—'}</td>
+          </tr>`).join('')}
+        <tr>
+          <td style="padding:6px 10px;font-weight:800;color:var(--navy);border-top:2px solid var(--line)">Total postes NA</td>
+          <td style="padding:6px 10px;text-align:right;font-weight:800;border-top:2px solid var(--line)">${eur(total)}</td>
+          <td style="border-top:2px solid var(--line)"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
 }
 
 // ── Calendrier synthétique annuel ──
