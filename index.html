@@ -863,12 +863,46 @@ handleAuthRedirect().then(isReset => {
 });
 
 // ══ DONNÉES ══
-function makeNageurKey(nom, dateNaissance) {
-  const n = (nom || '').toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-    .replace(/\s+/g, '_');
-  const d = (dateNaissance || '').trim();
-  return `${n}_${d}`;
+// Texte normalisé pour les clés : minuscules, sans accents, tirets = espaces,
+// uniquement [a-z0-9_] (la clé est utilisée dans des attributs HTML / onclick)
+function normCle(txt) {
+  return (txt || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-\s]+/g, ' ').trim()
+    .replace(/ /g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+}
+
+// Numéro de licence exploitable (le questionnaire envoie 'SANS_LICENCE_...' à défaut)
+function licenceNageur(r) {
+  const l = (r.licence || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!l || l.startsWith('SANS_LICENCE')) return '';
+  return l.replace(/[^A-Z0-9]/g, '');
+}
+
+// Clé de repli : nom + prénom + date de naissance
+function cleRepli(r) {
+  return `np_${normCle(r.nom)}_${normCle(r.prenom)}_${(r.date_naissance || '').trim().replace(/[^0-9-]/g, '')}`;
+}
+
+// Attribue r._key à chaque fiche : licence si renseignée, sinon nom + prénom + date.
+// Une fiche sans licence rejoint la licence d'une autre fiche du même nom/prénom/date
+// si cette correspondance est unique (ex. licence ajoutée dans un envoi ultérieur).
+function attribuerClesNageurs(rows) {
+  const licencesParRepli = {};
+  rows.forEach(r => {
+    const lic = licenceNageur(r);
+    if (!lic) return;
+    const rep = cleRepli(r);
+    (licencesParRepli[rep] = licencesParRepli[rep] || new Set()).add(lic);
+  });
+  rows.forEach(r => {
+    const lic = licenceNageur(r);
+    if (lic) { r._key = `lic_${lic}`; return; }
+    const rep = cleRepli(r);
+    const lics = licencesParRepli[rep];
+    r._key = (lics && lics.size === 1) ? `lic_${[...lics][0]}` : rep;
+  });
 }
 
 // Liste des entraîneurs principaux d'une fiche :
@@ -947,8 +981,9 @@ async function loadNageurs() {
 
   // Grouper par nageur_key : 1 groupe = 1 nageur, trié du plus récent au plus ancien
   allNagueursByKey = {};
+  attribuerClesNageurs(rows);
   rows.forEach(r => {
-    const key = makeNageurKey(r.nom, r.date_naissance);
+    const key = r._key;
     if (!allNagueursByKey[key]) allNagueursByKey[key] = [];
     allNagueursByKey[key].push(r);
   });
@@ -1003,7 +1038,7 @@ function renderList(nageurs) {
   el.innerHTML = nageurs.map((n, i) => {
     const initials = `${(n.prenom||'')[0]||''}${(n.nom||'')[0]||''}`.toUpperCase();
     const color = colors[i % colors.length];
-    const nKey = makeNageurKey(n.nom, n.date_naissance);
+    const nKey = n._key;
     const vCount = (allNagueursByKey[nKey] || []).length;
     return `<div class="nageur-card" onclick="selectNageur('${nKey}')" id="card-${nKey}">
       <div class="nageur-avatar" style="background:${color}">${initials}</div>
@@ -1052,14 +1087,14 @@ async function deleteVersion(id, nageurKey) {
   if (remaining.length === 0) {
     // Plus aucune version : retirer le nageur de la liste
     delete allNagueursByKey[nageurKey];
-    allNageurs = allNageurs.filter(n => makeNageurKey(n.nom, n.date_naissance) !== nageurKey);
+    allNageurs = allNageurs.filter(n => n._key !== nageurKey);
     renderList(allNageurs);
     document.getElementById('fiche-container').innerHTML =
       '<div class="fiche-empty"><div class="ico">👤</div><p>Sélectionnez un nageur</p></div>';
   } else {
     // Mettre à jour la version de référence dans allNageurs (toujours la plus récente)
     allNageurs = allNageurs.map(x =>
-      makeNageurKey(x.nom, x.date_naissance) === nageurKey ? remaining[0] : x
+      x._key === nageurKey ? remaining[0] : x
     );
     // Re-rendre la liste et la fiche avec la version la plus récente
     renderList(allNageurs);
@@ -1079,7 +1114,7 @@ function renderFiche(n, versions, selectedIndex) {
   const updated = n.date_export
     ? new Date(n.date_export).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'})
     : '—';
-  const nageurKey = makeNageurKey(n.nom, n.date_naissance);
+  const nageurKey = n._key;
   const allVersions = versions || allNagueursByKey[nageurKey] || [n];
 
   const versionsBar = allVersions.length >= 1 ? `
