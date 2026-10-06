@@ -912,10 +912,9 @@ async function loadNageurs() {
     if (currentUser.role === 'entraineur') {
       // Entraîneur de club : uniquement ses nageurs (entraîneur historique ou l'un des entraîneurs principaux NA)
       if (avecMultiEntraineurs) {
-        const mails = [...new Set([currentUser.email, (currentUser.email || '').toLowerCase()])];
-        const conds = [`entraineur_email.ilike.${currentUser.email}`]
-          .concat(mails.map(m => `entraineurs_principaux.cs.${JSON.stringify([{ email: m }])}`));
-        query = query.or(conds.join(','));
+        // Le filtre jsonb (@>) est sensible aux majuscules : on charge les fiches ayant
+        // des entraîneurs principaux, puis on compare les e-mails sans casse (voir plus bas)
+        query = query.or(`entraineur_email.ilike.${currentUser.email},entraineurs_principaux.not.is.null`);
       } else {
         query = query.ilike('entraineur_email', currentUser.email);
       }
@@ -936,7 +935,13 @@ async function loadNageurs() {
   }
   if (error) { console.error(error); return; }
 
-  const rows = data || [];
+  let rows = data || [];
+  if (currentUser.role === 'entraineur') {
+    const moi = (currentUser.email || '').trim().toLowerCase();
+    rows = rows.filter(r =>
+      (r.entraineur_email || '').trim().toLowerCase() === moi ||
+      getEntraineursPrincipaux(r).some(e => (e.email || '').trim().toLowerCase() === moi));
+  }
   rows.forEach(normaliserDimensionsNA);
 
   // Grouper par nageur_key : 1 groupe = 1 nageur, trié du plus récent au plus ancien
