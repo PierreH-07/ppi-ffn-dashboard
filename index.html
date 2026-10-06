@@ -1040,8 +1040,9 @@ async function deleteVersion(id, nageurKey) {
 
   if (!confirm(`Supprimer définitivement ${label} ?\n\nCette action est irréversible.`)) return;
 
-  const { error } = await sb.from('ppi_nageurs').delete().eq('id', id);
+  const { data: deleted, error } = await sb.from('ppi_nageurs').delete().eq('id', id).select('id');
   if (error) { alert('Erreur lors de la suppression : ' + error.message); return; }
+  if (!deleted || deleted.length === 0) { alert('Suppression refusée : réservée à la DTN.'); return; }
 
   // Mettre à jour le cache local
   allNagueursByKey[nageurKey] = versions.filter(v => v.id !== id);
@@ -1178,7 +1179,9 @@ function renderFiche(n, versions, selectedIndex) {
     // Bouton suppression
     const btnDelete = document.getElementById('btn-delete-version');
     if (btnDelete) {
-      btnDelete.addEventListener('click', () => deleteVersion(n.id, nageurKey));
+      // Suppression réservée à la DTN (règle Supabase ppi_delete_dtn)
+      if (currentUser.role !== 'dtn') btnDelete.remove();
+      else btnDelete.addEventListener('click', () => deleteVersion(n.id, nageurKey));
     }
 
     // Calendrier
