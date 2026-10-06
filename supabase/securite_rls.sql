@@ -16,6 +16,22 @@
 
 BEGIN;
 
+-- 0. Codes discipline : utilisateurs.discipline doit être identique à ppi_nageurs.discipline
+--    Codes du questionnaire : natation-bassin | eau-libre | synchro | water-polo | plongeon
+UPDATE public.utilisateurs SET discipline = CASE upper(trim(discipline))
+    WHEN 'NAT' THEN 'natation-bassin' WHEN 'NATATION-BASSIN' THEN 'natation-bassin' WHEN 'NC' THEN 'natation-bassin'
+    WHEN 'OWS' THEN 'eau-libre'       WHEN 'EAU-LIBRE' THEN 'eau-libre'             WHEN 'EL' THEN 'eau-libre'
+    WHEN 'NA'  THEN 'synchro'         WHEN 'SYNCHRO' THEN 'synchro'                 WHEN 'ART' THEN 'synchro'
+    WHEN 'WAP' THEN 'water-polo'      WHEN 'WATER-POLO' THEN 'water-polo'           WHEN 'WP' THEN 'water-polo'
+    WHEN 'PLO' THEN 'plongeon'        WHEN 'PLONGEON' THEN 'plongeon'
+    ELSE discipline END
+WHERE discipline IS NOT NULL;
+
+ALTER TABLE public.utilisateurs DROP CONSTRAINT IF EXISTS utilisateurs_discipline_check;
+ALTER TABLE public.utilisateurs ADD CONSTRAINT utilisateurs_discipline_check
+  CHECK (discipline IS NULL OR discipline IN ('natation-bassin','eau-libre','synchro','water-polo','plongeon'))
+  NOT VALID;
+
 -- 1. Fonctions d'aide : rôle et discipline du compte connecté
 CREATE OR REPLACE FUNCTION public.ppi_role() RETURNS text
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -92,6 +108,13 @@ COMMIT;
 
 -- ════════════════════════════════════════════════════════════════════
 -- Vérification (à lancer après) :
+--   Comptes dont la discipline reste non reconnue (à corriger à la main) :
+--   SELECT email, role, discipline FROM utilisateurs
+--   WHERE discipline IS NOT NULL
+--     AND discipline NOT IN ('natation-bassin','eau-libre','synchro','water-polo','plongeon');
+--   Entraîneurs nationaux sans discipline (ne verront rien) :
+--   SELECT email FROM utilisateurs WHERE role = 'entraineur_national' AND discipline IS NULL;
+--
 --   SELECT tablename, policyname, cmd, roles, qual, with_check
 --   FROM pg_policies WHERE tablename IN ('ppi_nageurs','utilisateurs');
 -- ════════════════════════════════════════════════════════════════════
