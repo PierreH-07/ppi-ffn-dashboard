@@ -1147,7 +1147,7 @@ function renderFiche(n, versions, selectedIndex) {
   ${renderSection(7, 'Actions clés & Dimensions de développement', renderDimensions(n))}
 
   <!-- SECTION 8 : CALENDRIER -->
-  ${renderSection(8, 'Calendrier', renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>')}
+  ${renderSection(8, 'Calendrier', renderBilanChiffre(n) + renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>')}
 
   <!-- SECTION 9 : CHARTE D\'ENGAGEMENT -->
   ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
@@ -1619,6 +1619,69 @@ function renderBudgetNA(n) {
         </tr>
       </tbody>
     </table>
+  </div>`;
+}
+
+// ── Bilan chiffré (même calcul que updateStats() du questionnaire) ──
+// Saison : 1er août (Y-1) → 31 août Y, Y = saison des dimensions (2027 pour les PPI actuels)
+function renderBilanChiffre(n) {
+  let raw = n.semaine_type_data;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { raw = {}; } }
+  const semaine = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+
+  const rankings = n.rankings_by_seasons || {};
+  const saisonDims = Object.keys(rankings).sort().find(k => (rankings[k] || []).some(Boolean));
+  const Y = parseInt(saisonDims) || parseInt(anneeObjectifPrincipal(n)) || 2027;
+  const SEASON_START = new Date(Y - 1, 7, 1);
+  const SEASON_END   = new Date(Y, 7, 31);
+  const SEASON_DAYS  = Math.round((SEASON_END - SEASON_START) / 86400000) + 1;
+  const ds = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+  const allEvents = [...(Array.isArray(n.calendrier) ? n.calendrier : []),
+                     ...(Array.isArray(n.competitions_calendrier) ? n.competitions_calendrier : [])];
+  const competitionSet = new Set(), stageSet = new Set(), vacancesSet = new Set();
+  allEvents.forEach(ev => {
+    const isComp = ev.type === 'competition-eaulibre' || ev.type === 'competition-bassin' || ev.type === 'objectif-competition';
+    const isVacances = ev.type === 'vacances' || ev.type === 'coupure';
+    if ((!isComp && ev.type !== 'stage' && !isVacances) || !ev.startDate) return;
+    let d = new Date(ev.startDate + 'T00:00:00');
+    const end = new Date((ev.endDate || ev.startDate) + 'T00:00:00');
+    while (d <= end) {
+      if (d >= SEASON_START && d <= SEASON_END) {
+        if (isComp) competitionSet.add(ds(d));
+        else if (ev.type === 'stage') stageSet.add(ds(d));
+        else vacancesSet.add(ds(d));
+      }
+      d = new Date(d.getTime() + 86400000);
+    }
+  });
+
+  // Jours d'entraînement : jours de la semaine type contenant au moins un créneau 'eau' ou 'acro'
+  const trainingDow = new Set();
+  Object.entries(semaine).forEach(([key, t]) => {
+    if (t === 'eau' || t === 'acro') trainingDow.add(parseInt(key.split('_')[0]));
+  });
+  let entrainement = 0;
+  for (let d = new Date(SEASON_START); d <= SEASON_END; d = new Date(d.getTime() + 86400000)) {
+    const k = ds(d), dow = (d.getDay() + 6) % 7;
+    if (trainingDow.has(dow) && !competitionSet.has(k) && !stageSet.has(k) && !vacancesSet.has(k)) entrainement++;
+  }
+  const competition = competitionSet.size;
+  const stage = [...stageSet].filter(k => !competitionSet.has(k)).length;
+  const coupure = SEASON_DAYS - competition - stage - entrainement;
+
+  const box = (val, label, col) => `<div style="flex:1;min-width:110px;background:var(--line-2);border-top:3px solid ${col};border-radius:6px;padding:10px 12px;text-align:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;color:var(--navy);line-height:1">${val}</div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">${label}</div>
+    </div>`;
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Bilan chiffré — saison ${Y-1}-${Y}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      ${box(competition, 'Jours de compétition', '#D7282F')}
+      ${box(stage, 'Jours en stage', '#6CB33F')}
+      ${box(entrainement, "Jours d'entraînement", '#00AEEF')}
+      ${box(coupure, 'Jours de coupure', '#7C88A6')}
+    </div>
   </div>`;
 }
 
