@@ -888,6 +888,114 @@ handleAuthRedirect().then(isReset => {
 // Genre : 'F' = Femme, 'H' = Homme, NULL = non renseigné (fiches antérieures au 06/10/2026)
 const GENRES = { F: 'Femme', H: 'Homme' };
 
+// ══ QUESTIONNAIRE PRÉ-REMPLI ══
+// Reconstruit, à partir d'une fiche enregistrée, le format de sauvegarde lu par le
+// questionnaire (balise #embedded-data, comme « Transmettre une copie »), puis l'injecte
+// dans le questionnaire vierge PPI-ffnV2.html déposé à côté du dashboard.
+const QUESTIONNAIRE_MODELE = 'PPI-ffnV2.html';
+
+// Colonne ppi_nageurs → id du champ dans le questionnaire.
+// La charte d'engagement (engagements, noms signés, dates) n'est volontairement pas reprise.
+const CHAMPS_QUESTIONNAIRE = {
+  licence:'licence', nom:'nom', prenom:'prenom', date_naissance:'dateNaissance', genre:'genre',
+  email:'email', telephone:'telephone', club:'club',
+  entraineur_nom:'p2_entraineurNom', entraineur_email:'p2_entraineurEmail', entraineur_tel:'p2_entraineurTel',
+  structure_nom:'p2_structureNom', commentaire_programme:'p2_commentaireProgramme',
+  bq_satisfaction:'bq_satisfaction', bq_forme:'bq_forme', bq_entrainabilite:'bq_entrainabilite',
+  bq_meilleur_moment:'bq_meilleurMoment', bq_moment_difficile:'bq_momentDifficile',
+  bq_ferais_differemment:'bq_feraisDifferemment', bq_points_forts:'bq_pointsForts',
+  bq_points_ameliorer:'bq_pointsAmeliorer', bq_blessures:'bq_blessures',
+  sep_ct_entrainement:'sep_ct_entrainement', sep_ct_environnement:'sep_ct_environnement',
+  sep_mt_entrainement:'sep_mt_entrainement', sep_mt_environnement:'sep_mt_environnement',
+  sep_lt_entrainement:'sep_lt_entrainement', sep_lt_environnement:'sep_lt_environnement',
+  proj_debut_2027:'proj_debut_2027', proj_fin_2027:'proj_fin_2027',
+  proj_competition_2027:'proj_competition_2027', proj_competition_2028:'proj_competition_2028',
+  proj_competition_2029:'proj_competition_2029', proj_competition_2030:'proj_competition_2030',
+  proj_competition_2031:'proj_competition_2031', proj_competition_2032:'proj_competition_2032',
+  action1_comment:'action1Comment', action1_attendus:'action1Attendus',
+  action2_comment:'action2Comment', action2_attendus:'action2Attendus',
+  action3_comment:'action3Comment', action3_attendus:'action3Attendus',
+};
+
+function jsonCol(v, defaut) {
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return defaut; } }
+  return v == null ? defaut : v;
+}
+
+function ficheVersSauvegardeQuestionnaire(n) {
+  const fields = {};
+  Object.entries(CHAMPS_QUESTIONNAIRE).forEach(([col, id]) => {
+    if (n[col] !== null && n[col] !== undefined && n[col] !== '') fields[id] = String(n[col]);
+  });
+  if (fields.licence && fields.licence.startsWith('SANS_LICENCE_')) delete fields.licence;
+
+  const semaine = jsonCol(n.semaine_type_data, {});
+  fields.p2_semaineTypeData = JSON.stringify(semaine);
+  // Entraîneurs principaux 2+ (NA) : le 1er est dans les champs historiques
+  fields.p2_entraineursSuppData = JSON.stringify(getEntraineursPrincipaux(n).slice(1));
+
+  const competitionsCalendar = jsonCol(n.competitions_calendrier, []);
+  // Objectifs compétitions : colonne obj_competitions (fiches récentes), sinon reconstitués
+  // depuis le calendrier (nom, dates, priorité ; épreuves et commentaire non enregistrés)
+  let objCompetitions = jsonCol(n.obj_competitions, null);
+  if (!Array.isArray(objCompetitions)) {
+    objCompetitions = competitionsCalendar
+      .filter(c => c && c.type === 'objectif-competition' && !String(c.sourceId || '').startsWith('proj_ref_'))
+      .map(c => ({ nom: c.nom || '', priorite: c.priorite || 'resultats', debut: c.startDate || '', fin: c.endDate || '', commentaire: '', epreuves: [] }));
+  }
+
+  return {
+    fields,
+    ranking: [],
+    calendarEvents: jsonCol(n.calendrier, []),
+    competitionsCalendar,
+    staffData: jsonCol(n.staff_data, []),
+    competitionsBilan: jsonCol(n.competitions_bilan, []),
+    objCompetitions,
+    projCompetitions: jsonCol(n.proj_competitions, []),
+    semaineTypeData: semaine,
+    rankingMultiSaison: {},
+    rankingsBySeasons: jsonCol(n.rankings_by_seasons, {}),
+    currentPage: 2,
+    discipline: n.discipline || '',
+    savedAt: new Date().toISOString(),
+  };
+}
+
+async function genererQuestionnairePrerempli(n) {
+  let modele;
+  try {
+    const resp = await fetch(QUESTIONNAIRE_MODELE, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    modele = await resp.text();
+  } catch (e) {
+    alert(`Questionnaire modèle introuvable (${QUESTIONNAIRE_MODELE}).\nIl doit être déposé dans le dépôt, à côté du dashboard.\n\nDétail : ${e.message}`);
+    return;
+  }
+  if (!/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/.test(modele)) {
+    alert(`${QUESTIONNAIRE_MODELE} ne contient pas la balise de pré-remplissage (embedded-data).`);
+    return;
+  }
+
+  const dataJson = JSON.stringify(ficheVersSauvegardeQuestionnaire(n))
+    .replace(/<\/script>/gi, '<\\/script>')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  const fin = '<' + '/script>';
+  // Remplace la 1re balise #embedded-data (la vraie, en tête de page), comme saveAndTransfer()
+  const html = modele
+    .replace(/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/,
+             () => '<script id="embedded-data" type="application/json">' + dataJson + fin);
+
+  const propre = t => (t || '').trim().replace(/[^a-zA-ZÀ-ÿ0-9]/g, '-');
+  const filename = ['questionnaire', propre(n.nom) || 'nageur', propre(n.prenom), 'prerempli'].filter(Boolean).join('-') + '.html';
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // ── Clé de regroupement des versions d'un même nageur ──
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[-'’]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1221,10 +1329,16 @@ function renderFiche(n, versions, selectedIndex) {
             return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}</option>`;
           }).join('')}
         </select>` : ''}
+      <button id="btn-questionnaire-prerempli" title="Télécharger le questionnaire PPI-ffnV2 pré-rempli avec cette version (charte vide)"
+        style="padding:4px 10px;background:#EEF4FF;color:var(--navy-2);
+               border:1px solid #C9D8F5;border-radius:6px;
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto">
+        📄 Questionnaire pré-rempli
+      </button>
       <button id="btn-delete-version"
         style="padding:4px 10px;background:#FDECEA;color:var(--red);
                border:1px solid #F5C6C6;border-radius:6px;
-               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto">
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
         🗑 ${allVersions.length > 1 ? 'Supprimer cette version' : 'Supprimer ce PPI'}
       </button>
     </div>` : '';
@@ -1294,6 +1408,10 @@ function renderFiche(n, versions, selectedIndex) {
         }
       });
     }
+
+    // Bouton questionnaire pré-rempli
+    const btnQ = document.getElementById('btn-questionnaire-prerempli');
+    if (btnQ) btnQ.addEventListener('click', () => genererQuestionnairePrerempli(n));
 
     // Bouton suppression
     const btnDelete = document.getElementById('btn-delete-version');
