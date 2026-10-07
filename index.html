@@ -1383,7 +1383,7 @@ function renderFiche(n, versions, selectedIndex) {
   ${renderSection(6, `Projection saison en cours${anneeObjectifPrincipal(n) ? ' ' + anneeObjectifPrincipal(n) : ''}`, renderCompetitions(n))}
 
   <!-- SECTION 7 : ACTIONS CLÉS & DIMENSIONS -->
-  ${renderSection(7, 'Actions clés & Dimensions de développement', renderDimensions(n))}
+  ${renderSection(7, `Actions clés & Dimensions de développement — saison ${saisonAffichee(n) - 1}-${saisonAffichee(n)}`, renderDimensions(n))}
 
   <!-- SECTION 8 : CALENDRIER -->
   ${renderSection(8, 'Calendrier', renderBilanChiffre(n) + renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>')}
@@ -1771,9 +1771,9 @@ function renderCompetitions(n) {
 // ── Dimensions ──
 function renderDimensions(n) {
   const rankings = n.rankings_by_seasons || {};
-  // Saison en cours = première saison renseignée (2027 pour les PPI actuels, 2026 pour les anciens)
-  const saisonDims = Object.keys(rankings).sort().find(k => (rankings[k] || []).some(Boolean));
-  const dims2026 = saisonDims ? rankings[saisonDims].filter(Boolean).slice(0,3) : [];
+  // Saison selon la date du jour (repli sur la saison renseignée la plus proche)
+  const saisonDims = saisonAffichee(n);
+  const dims2026 = (rankings[saisonDims] || []).filter(Boolean).slice(0,3);
   const actions = [
     { comment: n.action1_comment, attendus: n.action1_attendus },
     { comment: n.action2_comment, attendus: n.action2_attendus },
@@ -1867,16 +1867,33 @@ function renderBudgetNA(n) {
   </div>`;
 }
 
+// ── Saison affichée selon la date du jour ──
+// Saison Y = 1er septembre (Y-1) → 31 août Y (au 07/10/2026 : saison 2027).
+function saisonDuJour(d = new Date()) {
+  return d.getMonth() >= 8 ? d.getFullYear() + 1 : d.getFullYear();
+}
+
+// Saison des priorités à afficher : celle du jour si renseignée, sinon la plus récente
+// renseignée avant elle (ancienne fiche), sinon la plus proche après.
+function saisonAffichee(n) {
+  const rankings = jsonCol(n.rankings_by_seasons, {}) || {};
+  const remplies = Object.keys(rankings).map(Number)
+    .filter(k => !isNaN(k) && (rankings[k] || []).some(Boolean)).sort((a, b) => a - b);
+  const Y = saisonDuJour();
+  if (remplies.includes(Y)) return Y;
+  const avant = remplies.filter(k => k < Y);
+  if (avant.length) return avant[avant.length - 1];
+  return remplies.length ? remplies[0] : Y;
+}
+
 // ── Bilan chiffré (même calcul que updateStats() du questionnaire) ──
-// Saison : 1er août (Y-1) → 31 août Y, Y = saison des dimensions (2027 pour les PPI actuels)
+// Saison : 1er août (Y-1) → 31 août Y (bornes du questionnaire), Y = saisonAffichee(n)
 function renderBilanChiffre(n) {
   let raw = n.semaine_type_data;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { raw = {}; } }
   const semaine = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
 
-  const rankings = n.rankings_by_seasons || {};
-  const saisonDims = Object.keys(rankings).sort().find(k => (rankings[k] || []).some(Boolean));
-  const Y = parseInt(saisonDims) || parseInt(anneeObjectifPrincipal(n)) || 2027;
+  const Y = saisonAffichee(n);
   const SEASON_START = new Date(Y - 1, 7, 1);
   const SEASON_END   = new Date(Y, 7, 31);
   const SEASON_DAYS  = Math.round((SEASON_END - SEASON_START) / 86400000) + 1;
