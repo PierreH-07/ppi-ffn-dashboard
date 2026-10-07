@@ -479,6 +479,13 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
     </div>
     <button class="login-btn" onclick="doLogin()">Se connecter</button>
     <div class="login-error" id="login-error"></div>
+    <!-- Questionnaire vierge, en libre accès (dernière version déposée dans le dépôt) -->
+    <a id="lien-questionnaire" href="PPI-ffnV2.html" download="PPI-FFN.html"
+       onclick="this.href = 'PPI-ffnV2.html?v=' + Date.now()"
+       style="display:block;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);
+              text-align:center;font-size:12px;font-weight:700;color:var(--blue-d);text-decoration:none">
+      📄 Télécharger le questionnaire PPI-FFN (dernière version)
+    </a>
   </div>
 </div>
 
