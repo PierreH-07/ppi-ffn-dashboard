@@ -916,6 +916,12 @@ const CHAMPS_QUESTIONNAIRE = {
   action2_comment:'action2Comment', action2_attendus:'action2Attendus',
   action3_comment:'action3Comment', action3_attendus:'action3Attendus',
 };
+// Budget : l'id du champ = le nom de la colonne (b_xxx et b_xxx_detail)
+['b_dep_comp','b_heb_comp','b_stage','b_equip','b_medical','b_mental','b_licence','b_heb_annuel','b_transport','b_etudes',
+ 'b_autre_charge','b_dotation_ffn','b_aide_ligue','b_aide_club','b_sponsor','b_autofinancement','b_autre_recette']
+  .forEach(c => { CHAMPS_QUESTIONNAIRE[c] = c; CHAMPS_QUESTIONNAIRE[c + '_detail'] = c + '_detail'; });
+CHAMPS_QUESTIONNAIRE.b_heb_annuel_type = 'b_heb_annuel_type';
+CHAMPS_QUESTIONNAIRE.b_commentaire = 'b_commentaire';
 
 function jsonCol(v, defaut) {
   if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return defaut; } }
@@ -925,7 +931,9 @@ function jsonCol(v, defaut) {
 function ficheVersSauvegardeQuestionnaire(n) {
   const fields = {};
   Object.entries(CHAMPS_QUESTIONNAIRE).forEach(([col, id]) => {
-    if (n[col] !== null && n[col] !== undefined && n[col] !== '') fields[id] = String(n[col]);
+    if (n[col] === null || n[col] === undefined || n[col] === '') return;
+    if (col.startsWith('b_') && typeof n[col] === 'number' && n[col] === 0) return; // montants vides
+    fields[id] = String(n[col]);
   });
   if (fields.licence && fields.licence.startsWith('SANS_LICENCE_')) delete fields.licence;
 
@@ -935,9 +943,9 @@ function ficheVersSauvegardeQuestionnaire(n) {
   fields.p2_entraineursSuppData = JSON.stringify(getEntraineursPrincipaux(n).slice(1));
 
   const competitionsCalendar = jsonCol(n.competitions_calendrier, []);
-  // Objectifs compétitions : colonne obj_competitions (fiches récentes), sinon reconstitués
+  // Objectifs compétitions : colonne objectifs_saison (fiches récentes), sinon reconstitués
   // depuis le calendrier (nom, dates, priorité ; épreuves et commentaire non enregistrés)
-  let objCompetitions = jsonCol(n.obj_competitions, null);
+  let objCompetitions = jsonCol(n.objectifs_saison ?? n.obj_competitions, null);
   if (!Array.isArray(objCompetitions)) {
     objCompetitions = competitionsCalendar
       .filter(c => c && c.type === 'objectif-competition' && !String(c.sourceId || '').startsWith('proj_ref_'))
@@ -952,7 +960,7 @@ function ficheVersSauvegardeQuestionnaire(n) {
     staffData: jsonCol(n.staff_data, []),
     competitionsBilan: jsonCol(n.competitions_bilan, []),
     objCompetitions,
-    projCompetitions: jsonCol(n.proj_competitions, []),
+    projCompetitions: jsonCol(n.objectifs_pluriannuels ?? n.proj_competitions, []),
     semaineTypeData: semaine,
     rankingMultiSaison: {},
     rankingsBySeasons: jsonCol(n.rankings_by_seasons, {}),
@@ -1391,8 +1399,8 @@ function renderFiche(n, versions, selectedIndex) {
   <!-- SECTION 9 : CHARTE D\'ENGAGEMENT -->
   ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
 
-  <!-- SECTION 10 : BUDGET NA (version B, uniquement si les champs sont présents) -->
-  ${hasBudgetNA(n) ? renderSection(10, 'Budget — postes spécifiques NA', renderBudgetNA(n)) : ''}
+  <!-- SECTION 10 : BUDGET PRÉVISIONNEL (uniquement si renseigné) -->
+  ${hasBudget(n) ? renderSection(10, 'Budget prévisionnel de saison', renderBudget(n)) : ''}
   `;
 
   // Listeners versions et suppression (après injection HTML)
@@ -1832,38 +1840,69 @@ function renderDimensions(n) {
   </div>` : ''}`;
 }
 
-// ── Budget NA (version B) ──
-function hasBudgetNA(n) {
-  if (n.discipline !== 'synchro') return false;
-  return !!(n.b_heb_annuel_type || Number(n.b_heb_annuel) || Number(n.b_transport) || Number(n.b_etudes)
-    || n.b_heb_annuel_detail || n.b_transport_detail || n.b_etudes_detail);
+// ── Budget prévisionnel (colonnes b_* : version B, et V2 pour la natation artistique) ──
+const BUDGET_CHARGES = [
+  { id:'b_dep_comp',     label:'Déplacements compétitions (transport)' },
+  { id:'b_heb_comp',     label:'Hébergement compétitions' },
+  { id:'b_stage',        label:'Stages (transport + hébergement)' },
+  { id:'b_equip',        label:'Équipement' },
+  { id:'b_medical',      label:'Préparation physique / Kiné / Médical' },
+  { id:'b_mental',       label:'Préparation mentale' },
+  { id:'b_licence',      label:'Frais de licence / inscriptions' },
+  { id:'b_heb_annuel',   label:"Hébergement à l'année", na:true },
+  { id:'b_transport',    label:'Frais de transport',    na:true },
+  { id:'b_etudes',       label:"Frais d'études",        na:true },
+  { id:'b_autre_charge', label:'Autre charge' },
+];
+const BUDGET_RESSOURCES = [
+  { id:'b_dotation_ffn',    label:'Dotation FFN' },
+  { id:'b_aide_ligue',      label:'Aide de la ligue / du comité' },
+  { id:'b_aide_club',       label:'Aide du club' },
+  { id:'b_sponsor',         label:'Sponsors / partenaires' },
+  { id:'b_autofinancement', label:'Autofinancement (athlète / famille)' },
+  { id:'b_autre_recette',   label:'Autre ressource' },
+];
+const HEB_ANNUEL_TYPES = { interne_insep:'Interne INSEP', externe:'Externe' };
+
+function hasBudget(n) {
+  return [...BUDGET_CHARGES, ...BUDGET_RESSOURCES].some(p => Number(n[p.id]) || n[p.id + '_detail'])
+    || !!n.b_commentaire || !!n.b_heb_annuel_type;
 }
 
-function renderBudgetNA(n) {
+function renderBudget(n) {
   const eur = v => (Number(v) || 0).toLocaleString('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 });
-  const typeLabel = { interne_insep:'Interne INSEP', externe:'Externe' }[n.b_heb_annuel_type] || 'Non renseigné';
-  const postes = [
-    { label:`Hébergement annuel (${typeLabel})`, montant:n.b_heb_annuel, detail:n.b_heb_annuel_detail },
-    { label:'Transport',                         montant:n.b_transport,  detail:n.b_transport_detail },
-    { label:'Études',                            montant:n.b_etudes,     detail:n.b_etudes_detail },
-  ];
-  const total = postes.reduce((a, p) => a + (Number(p.montant) || 0), 0);
-  return `<div class="card">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <tbody>
-        ${postes.map((p, i) => `
+  const na = n.discipline === 'synchro';
+  const charges = BUDGET_CHARGES.filter(p => !p.na || na).map(p => ({
+    ...p,
+    label: p.id === 'b_heb_annuel' ? `${p.label} — ${HEB_ANNUEL_TYPES[n.b_heb_annuel_type] || 'type non renseigné'}` : p.label,
+  }));
+  const totC = charges.reduce((a, p) => a + (Number(n[p.id]) || 0), 0);
+  const totR = BUDGET_RESSOURCES.reduce((a, p) => a + (Number(n[p.id]) || 0), 0);
+  const solde = totR - totC;
+  const rows = list => list.map((p, i) => `
           <tr style="background:${i%2===0?'var(--line-2)':'#fff'}">
-            <td style="padding:6px 10px;font-weight:700;color:var(--navy)">${p.label}</td>
-            <td style="padding:6px 10px;text-align:right;white-space:nowrap">${eur(p.montant)}</td>
-            <td style="padding:6px 10px;color:var(--text-2)">${p.detail || '—'}</td>
-          </tr>`).join('')}
-        <tr>
-          <td style="padding:6px 10px;font-weight:800;color:var(--navy);border-top:2px solid var(--line)">Total postes NA</td>
-          <td style="padding:6px 10px;text-align:right;font-weight:800;border-top:2px solid var(--line)">${eur(total)}</td>
-          <td style="border-top:2px solid var(--line)"></td>
-        </tr>
-      </tbody>
-    </table>
+            <td style="padding:6px 10px;font-weight:700;color:var(--navy)">${p.label}${p.na ? ' <span style="font-size:9px;color:var(--muted);font-weight:600">(NA)</span>' : ''}</td>
+            <td style="padding:6px 10px;text-align:right;white-space:nowrap">${eur(n[p.id])}</td>
+            <td style="padding:6px 10px;color:var(--text-2)">${n[p.id + '_detail'] || '—'}</td>
+          </tr>`).join('');
+  const total = (label, v) => `
+          <tr>
+            <td style="padding:6px 10px;font-weight:800;color:var(--navy);border-top:2px solid var(--line)">${label}</td>
+            <td style="padding:6px 10px;text-align:right;font-weight:800;border-top:2px solid var(--line)">${eur(v)}</td>
+            <td style="border-top:2px solid var(--line)"></td>
+          </tr>`;
+  const table = (titre, list, labelTot, tot) => `
+    <div class="card-title" style="margin-top:4px">${titre}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px"><tbody>${rows(list)}${total(labelTot, tot)}</tbody></table>`;
+  return `<div class="card">
+    ${table('Charges prévisionnelles', charges, 'Total charges', totC)}
+    ${table('Ressources prévisionnelles', BUDGET_RESSOURCES, 'Total ressources', totR)}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;
+                background:${solde >= 0 ? '#e8f5e9' : '#fdecea'};border:1px solid ${solde >= 0 ? '#a5d6a7' : '#f5c6c2'}">
+      <span style="font-weight:800;color:var(--navy)">Solde prévisionnel (ressources − charges)</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:${solde >= 0 ? '#0E8A36' : '#CC2200'}">${solde >= 0 ? '+' : ''}${eur(solde)}</span>
+    </div>
+    ${n.b_commentaire ? `<div style="margin-top:10px;font-size:12px;line-height:1.5"><strong>Commentaires / besoins :</strong> ${n.b_commentaire}</div>` : ''}
   </div>`;
 }
 
