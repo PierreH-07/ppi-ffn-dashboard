@@ -384,6 +384,40 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 }
 
 /* Compétitions objectif */
+/* Onglets de la fiche nageur */
+.fiche-tabs {display:flex;gap:4px;margin-bottom:18px;border-bottom:2px solid var(--line)}
+.fiche-tab {
+  padding:8px 16px;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--muted);cursor:pointer;
+}
+.fiche-tab.active {color:var(--navy);border-bottom-color:var(--navy)}
+
+/* Carnet de bord compétitions */
+.carnet-head {display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+.carnet-head .info {flex:1;min-width:220px;font-size:12px;color:var(--text-2);line-height:1.5}
+.carnet-btn {
+  padding:6px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;
+  font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+}
+.carnet-btn:disabled {opacity:.5;cursor:default}
+.carnet-btn.secondaire {background:#EEF4FF;color:var(--navy-2);border:1px solid #C9D8F5}
+.carnet-comp-head {display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:10px}
+.carnet-comp-nom {font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;color:var(--navy);text-transform:uppercase}
+.carnet-comp-dates {font-size:12px;color:var(--muted)}
+.carnet-badge {font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--line-2);color:var(--text-2)}
+.carnet-badge.objectif {background:#FDECEA;color:var(--red)}
+.carnet-badge.passee {background:#EDF7E6;color:#3C7A1E}
+.carnet-bloc {margin-top:10px}
+.carnet-texte {font-size:13px;line-height:1.55;white-space:pre-wrap;color:var(--text)}
+.carnet-vide {font-size:12px;color:var(--muted);font-style:italic}
+.carnet-meta {font-size:11px;color:var(--muted);margin-top:4px}
+.carnet-suivi textarea {
+  width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;
+  font-family:'Barlow',sans-serif;font-size:13px;color:var(--text);resize:vertical;
+}
+.carnet-suivi .actions {display:flex;align-items:center;gap:10px;margin-top:6px}
+
 .comp-cards {display:flex;flex-wrap:wrap;gap:10px}
 .comp-card {
   flex:1;min-width:180px;background:#fff;border:1px solid var(--line);
@@ -589,6 +623,7 @@ let currentDisc = 'all';
 let calendarInstance = null;
 let currentUser = null;  // { email, role: 'dtn'|'entraineur'|'entraineur_national', discipline?: string }
 let selectedNageurKey = null;
+let ongletFiche = 'fiche';  // onglet affiché dans la fiche nageur : 'fiche' | 'carnet'
 
 // ══ AUTH ══
 async function doLogin() {
@@ -1379,6 +1414,15 @@ function renderFiche(n, versions, selectedIndex) {
     </div>
   </div>
 
+  <!-- ONGLETS -->
+  <div class="fiche-tabs">
+    <button type="button" class="fiche-tab${ongletFiche === 'fiche' ? ' active' : ''}" data-onglet="fiche">Fiche PPI</button>
+    <button type="button" class="fiche-tab${ongletFiche === 'carnet' ? ' active' : ''}" data-onglet="carnet">Carnet de bord compétitions</button>
+  </div>
+
+  <div id="tab-carnet"${ongletFiche === 'carnet' ? '' : ' hidden'}></div>
+  <div id="tab-fiche"${ongletFiche === 'fiche' ? '' : ' hidden'}>
+
   <!-- SECTION 1 : ENVIRONNEMENT & STAFF -->
   ${renderSection(1, 'Environnement & Staff', renderStaff(n))}
 
@@ -1408,6 +1452,7 @@ function renderFiche(n, versions, selectedIndex) {
 
   <!-- SECTION 10 : BUDGET PRÉVISIONNEL (uniquement si renseigné) -->
   ${hasBudget(n) ? renderSection(10, 'Budget prévisionnel de saison', renderBudget(n)) : ''}
+  </div>
   `;
 
   // Listeners versions et suppression (après injection HTML)
@@ -1435,6 +1480,18 @@ function renderFiche(n, versions, selectedIndex) {
       if (currentUser.role !== 'dtn') btnDelete.remove();
       else btnDelete.addEventListener('click', () => deleteVersion(n.id, nageurKey));
     }
+
+    // Onglets : le carnet de bord porte toujours sur la version la plus récente du nageur
+    const carnetFiche = allVersions[0] || n;
+    document.querySelectorAll('.fiche-tab').forEach(btn => btn.addEventListener('click', () => {
+      ongletFiche = btn.dataset.onglet;
+      document.querySelectorAll('.fiche-tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('tab-fiche').hidden  = ongletFiche !== 'fiche';
+      document.getElementById('tab-carnet').hidden = ongletFiche !== 'carnet';
+      if (ongletFiche === 'carnet') renderCarnet(carnetFiche);
+      else if (calendarInstance) calendarInstance.updateSize();
+    }));
+    if (ongletFiche === 'carnet') renderCarnet(carnetFiche);
 
     // Calendrier
     initCalendar(n);
@@ -2148,6 +2205,369 @@ function initCalendar(n) {
   });
 
   calendarInstance.render();
+}
+
+// ══ CARNET DE BORD COMPÉTITIONS ══
+// Tables et fonctions Supabase : supabase/carnet_de_bord.sql
+// Bilans et suivis sont rattachés au nageur (nageur_key) et à la compétition (comp_key = date|nom)
+
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const dateFr = (d, opts = { day:'numeric', month:'short', year:'numeric' }) =>
+  d ? new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('fr-FR', opts) : '';
+const dateHeureFr = d => d ? new Date(d).toLocaleString('fr-FR',
+  { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+
+const TYPES_COMPETITION = {
+  'objectif-competition': 'Compétition objectif',
+  'competition-bassin':   'Compétition bassin',
+  'competition-eaulibre': 'Compétition eau libre',
+};
+const PRIORITES_COMPETITION = {
+  resultats: 'Objectif de résultats', developpement: 'Objectif de développement',
+  A: 'Priorité A', B: 'Priorité B', C: 'Priorité C',
+};
+
+// Compétitions du calendrier de la saison en cours (1er sept. Y-1 → 31 août Y, Y = saisonDuJour()),
+// avec les attentes saisies dans le questionnaire (objectifs_saison, objectifs_pluriannuels)
+function competitionsSaison(n) {
+  const tab = v => Array.isArray(v) ? v.filter(Boolean) : [];
+  const Y = saisonDuJour();
+  const debutSaison = `${Y - 1}-09-01`, finSaison = `${Y}-08-31`;
+  const objectifs = tab(jsonCol(n.objectifs_saison ?? n.obj_competitions, []));
+  const pluriannuels = tab(jsonCol(n.objectifs_pluriannuels ?? n.proj_competitions, []));
+
+  const attentes = e => {
+    if (e.type !== 'objectif-competition') return null;
+    const ref = String(e.sourceId || '').match(/^proj_ref_(\d{4})$/);
+    const o = ref
+      ? pluriannuels.find(p => String(p.saison) === ref[1])
+      : objectifs.find(o => o.debut === e.startDate && norm(o.nom) === norm(e.nom))
+        || objectifs.find(o => o.debut === e.startDate && (o.fin || o.debut) === (e.endDate || e.startDate));
+    if (!o) return null;
+    const epreuves = tab(o.epreuves).filter(ep => ep.epreuve || ep.perf || ep.classement)
+      .map(ep => ({ epreuve: ep.epreuve || '', perf: ep.perf || '', classement: ep.classement ?? '' }));
+    const commentaire = (o.commentaire || '').trim();
+    return epreuves.length || commentaire ? { epreuves, commentaire } : null;
+  };
+
+  const evts = [...tab(jsonCol(n.competitions_calendrier, [])), ...tab(jsonCol(n.calendrier, []))]
+    .filter(e => TYPES_COMPETITION[e.type] && e.startDate && e.startDate >= debutSaison && e.startDate <= finSaison);
+  const objectifsCal = evts.filter(e => e.type === 'objectif-competition');
+
+  const liste = [], vues = new Set();
+  evts.forEach(e => {
+    const fin = e.endDate || e.startDate;
+    // Compétition du calendrier aux mêmes dates qu'une compétition objectif : déjà listée
+    if (e.type !== 'objectif-competition'
+        && objectifsCal.some(o => o.startDate === e.startDate && (o.endDate || o.startDate) === fin)) return;
+    const nom = e.type === 'objectif-competition'
+      ? (e.nom || 'Compétition objectif')
+      : (e.comment && e.comment !== 'Aucune description' ? e.comment : TYPES_COMPETITION[e.type]);
+    const key = `${e.startDate}|${norm(nom)}`;
+    if (vues.has(key)) return;
+    vues.add(key);
+    liste.push({
+      key, nom, type: e.type, typeLabel: TYPES_COMPETITION[e.type],
+      debut: e.startDate, fin,
+      prioriteLabel: e.type === 'objectif-competition' ? (PRIORITES_COMPETITION[e.priorite] || '') : '',
+      attentes: attentes(e),
+    });
+  });
+  return liste.sort((a, b) => a.debut.localeCompare(b.debut) || a.nom.localeCompare(b.nom, 'fr'));
+}
+
+function renderAttentes(a) {
+  if (!a) return `<div class="carnet-vide">Aucune attente saisie dans le questionnaire</div>`;
+  return `${a.epreuves.length ? `<ul style="margin:0 0 4px 18px;font-size:13px;line-height:1.55">
+      ${a.epreuves.map(ep => `<li>${esc(ep.epreuve || 'Épreuve non précisée')}${ep.perf ? ` : <strong>${esc(ep.perf)}</strong>` : ''}${ep.classement !== '' ? ` · classement visé : <strong>${esc(ep.classement)}</strong>` : ''}</li>`).join('')}
+    </ul>` : ''}
+    ${a.commentaire ? `<div class="carnet-texte">${esc(a.commentaire)}</div>` : ''}`;
+}
+
+const estEntraineurPrincipal = n => {
+  const moi = (currentUser?.email || '').trim().toLowerCase();
+  return !!moi && getEntraineursPrincipaux(n).some(e => (e.email || '').trim().toLowerCase() === moi);
+};
+
+async function renderCarnet(n) {
+  const el = document.getElementById('tab-carnet');
+  if (!el) return;
+  const cle = n._key;
+  el.innerHTML = `<div class="card"><div class="carnet-vide">Chargement du carnet de bord…</div></div>`;
+
+  const comps = competitionsSaison(n);
+  const [rb, rs] = await Promise.all([
+    sb.from('ppi_bilans_competition').select('*').eq('nageur_key', cle),
+    sb.from('ppi_suivi_entraineur').select('*').eq('nageur_key', cle),
+  ]);
+  // L'utilisateur a changé de nageur ou d'onglet pendant le chargement
+  if (selectedNageurKey !== cle || ongletFiche !== 'carnet' || !document.body.contains(el)) return;
+
+  const erreur = rb.error || rs.error;
+  if (erreur) {
+    el.innerHTML = `<div class="card"><div style="color:var(--red);font-size:13px">
+      Carnet de bord indisponible : ${esc(erreur.message)}<br>
+      <span style="color:var(--muted)">Si les tables n'existent pas encore, exécuter supabase/carnet_de_bord.sql dans le SQL Editor de Supabase.</span>
+    </div></div>`;
+    return;
+  }
+  const bilans = Object.fromEntries((rb.data || []).map(r => [r.comp_key, r]));
+  const suivis = Object.fromEntries((rs.data || []).map(r => [r.comp_key, r]));
+  const peutSuivre = estEntraineurPrincipal(n);
+  const Y = saisonDuJour();
+  const auj = new Date().toISOString().slice(0, 10);
+  // Bilans reçus pour une compétition absente du calendrier actuel (renommée, déplacée…)
+  const horsCalendrier = (rb.data || []).filter(r => !comps.some(c => c.key === r.comp_key))
+    .sort((a, b) => String(a.comp_date || '').localeCompare(String(b.comp_date || '')));
+
+  const carteComp = (c, i) => {
+    const b = bilans[c.key], s = suivis[c.key];
+    const dates = c.fin && c.fin !== c.debut ? `${dateFr(c.debut, { day:'numeric', month:'short' })} → ${dateFr(c.fin)}` : dateFr(c.debut);
+    return `<div class="card">
+      <div class="carnet-comp-head">
+        <span class="carnet-comp-nom">${esc(c.nom)}</span>
+        <span class="carnet-comp-dates">${dates}</span>
+        <span class="carnet-badge${c.type === 'objectif-competition' ? ' objectif' : ''}">${esc(c.prioriteLabel || c.typeLabel)}</span>
+        ${c.fin < auj ? `<span class="carnet-badge passee">Passée</span>` : ''}
+      </div>
+      <div class="carnet-bloc">
+        <div class="field-label">Attentes (questionnaire PPI)</div>
+        ${renderAttentes(c.attentes)}
+      </div>
+      <div class="carnet-bloc">
+        <div class="field-label">Bilan de l'athlète</div>
+        ${b ? `<div class="carnet-texte">${esc(b.bilan)}</div><div class="carnet-meta">Envoyé le ${dateHeureFr(b.envoye_le)}</div>`
+            : `<div class="carnet-vide">Pas encore reçu</div>`}
+      </div>
+      <div class="carnet-bloc carnet-suivi">
+        <div class="field-label">Suivi entraîneur <span style="font-weight:400;text-transform:none;letter-spacing:0">(non visible par l'athlète)</span></div>
+        ${peutSuivre
+          ? `<textarea id="suivi-${i}" placeholder="Éléments de suivi…">${esc(s?.suivi || '')}</textarea>
+             <div class="actions">
+               <button type="button" class="carnet-btn" data-suivi="${i}">Enregistrer</button>
+               <span class="carnet-meta" id="suivi-statut-${i}">${s ? `Modifié le ${dateHeureFr(s.modifie_le)}${s.auteur ? ' par ' + esc(s.auteur) : ''}` : ''}</span>
+             </div>`
+          : (s ? `<div class="carnet-texte">${esc(s.suivi)}</div><div class="carnet-meta">Modifié le ${dateHeureFr(s.modifie_le)}${s.auteur ? ' par ' + esc(s.auteur) : ''}</div>`
+               : `<div class="carnet-vide">Aucun suivi saisi</div>`)}
+      </div>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div class="carnet-head">
+      <div class="info">
+        <strong>Saison ${Y - 1}-${Y}</strong> · ${comps.length} compétition${comps.length > 1 ? 's' : ''} au calendrier
+        (PPI du ${n.date_export ? new Date(n.date_export).toLocaleDateString('fr-FR') : '—'}).<br>
+        Le carnet exporté permet à l'athlète de rédiger et d'envoyer un bilan par compétition ; il contient ses bilans déjà reçus, jamais le suivi entraîneur.
+      </div>
+      <button type="button" class="carnet-btn secondaire" id="btn-carnet-export">📒 Exporter le carnet de bord</button>
+    </div>
+    ${comps.length ? comps.map(carteComp).join('')
+      : `<div class="card"><div class="carnet-vide">Aucune compétition de la saison ${Y - 1}-${Y} dans le calendrier de ce PPI</div></div>`}
+    ${horsCalendrier.length ? `${renderSection('!', 'Bilans reçus pour des compétitions absentes du calendrier actuel',
+      horsCalendrier.map(r => `<div class="card">
+        <div class="carnet-comp-head"><span class="carnet-comp-nom">${esc(r.comp_nom || 'Compétition')}</span>
+          <span class="carnet-comp-dates">${dateFr(r.comp_date)}</span></div>
+        <div class="carnet-texte">${esc(r.bilan)}</div><div class="carnet-meta">Envoyé le ${dateHeureFr(r.envoye_le)}</div>
+      </div>`).join(''))}` : ''}`;
+
+  document.getElementById('btn-carnet-export').addEventListener('click', e => exporterCarnet(n, comps, bilans, e.currentTarget));
+  el.querySelectorAll('[data-suivi]').forEach(btn => btn.addEventListener('click', () => {
+    const i = Number(btn.dataset.suivi);
+    enregistrerSuivi(n, comps[i], document.getElementById(`suivi-${i}`).value, btn, document.getElementById(`suivi-statut-${i}`));
+  }));
+}
+
+async function enregistrerSuivi(n, comp, texte, btn, statut) {
+  btn.disabled = true;
+  statut.textContent = 'Enregistrement…';
+  const { data, error } = await sb.rpc('ppi_enregistrer_suivi', {
+    p_fiche_id: String(n.id), p_nageur_key: n._key, p_comp_key: comp.key, p_suivi: texte,
+  });
+  btn.disabled = false;
+  if (error) { statut.textContent = ''; alert('Suivi non enregistré : ' + error.message); return; }
+  statut.textContent = texte.trim()
+    ? `Modifié le ${dateHeureFr(data)} par ${currentUser.email}` : 'Suivi effacé';
+}
+
+async function exporterCarnet(n, comps, bilans, btn) {
+  btn.disabled = true;
+  const { data: jeton, error } = await sb.rpc('ppi_jeton_carnet', { p_fiche_id: String(n.id), p_nageur_key: n._key });
+  btn.disabled = false;
+  if (error || !jeton) { alert('Export impossible : ' + (error?.message || 'jeton non créé')); return; }
+
+  const Y = saisonDuJour();
+  const donnees = {
+    url: SUPABASE_URL, anon: SUPABASE_ANON, jeton,
+    nageur: { prenom: n.prenom || '', nom: n.nom || '' },
+    saison: `${Y - 1}-${Y}`,
+    competitions: comps,
+    // Uniquement le texte des bilans de l'athlète (jamais le suivi entraîneur)
+    bilans: Object.fromEntries(Object.entries(bilans)
+      .filter(([k]) => comps.some(c => c.key === k))
+      .map(([k, b]) => [k, { bilan: b.bilan, envoye_le: b.envoye_le }])),
+  };
+  const html = carnetHtml(donnees);
+  const propre = t => (t || '').trim().replace(/[^a-zA-ZÀ-ÿ0-9]/g, '-');
+  const filename = ['carnet-de-bord', propre(n.nom) || 'nageur', propre(n.prenom), donnees.saison].filter(Boolean).join('-') + '.html';
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Fichier HTML autonome remis à l'athlète (aucune bibliothèque externe)
+function carnetHtml(d) {
+  const json = JSON.stringify(d).replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  const fin = '<' + '/script>';
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carnet de bord — ${esc(d.nageur.prenom)} ${esc(d.nageur.nom)} — saison ${esc(d.saison)}</title>
+<style>
+:root{--navy:#0B1F5C;--red:#D7282F;--green:#3C7A1E;--text:#0E1A3C;--text-2:#4A5478;--muted:#7C88A6;--line:#E3EAF2;--line-2:#EFF3F8;--bg:#F0F4F9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+header{background:var(--navy);color:#fff;padding:20px 16px}
+header h1{font-size:20px;text-transform:uppercase;letter-spacing:.04em}
+header p{font-size:13px;opacity:.85;margin-top:4px}
+main{max-width:820px;margin:0 auto;padding:16px}
+.aide{font-size:13px;color:var(--text-2);margin-bottom:14px}
+.comp{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.comp-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.comp-nom{font-weight:800;font-size:17px;color:var(--navy);text-transform:uppercase}
+.comp-dates{font-size:13px;color:var(--muted)}
+.badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--line-2);color:var(--text-2)}
+.badge.objectif{background:#FDECEA;color:var(--red)}
+.label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:12px 0 4px}
+.attentes ul{margin-left:18px}
+.texte{white-space:pre-wrap}
+.vide{font-style:italic;color:var(--muted);font-size:13px}
+textarea{width:100%;min-height:160px;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;color:var(--text);resize:vertical}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}
+button{padding:9px 16px;background:var(--navy);color:#fff;border:none;border-radius:8px;font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.statut{font-size:13px;color:var(--muted)}
+.statut.ok{color:var(--green)}
+.statut.erreur{color:var(--red)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Carnet de bord compétitions</h1>
+  <p>${esc(d.nageur.prenom)} ${esc(d.nageur.nom)} · saison ${esc(d.saison)}</p>
+</header>
+<main>
+  <p class="aide">Après chaque compétition, rédigez votre bilan puis cliquez sur « Envoyer ce bilan » (connexion internet nécessaire).
+  Un nouvel envoi remplace la version précédente. Votre brouillon est conservé dans ce navigateur tant qu'il n'est pas envoyé.</p>
+  <div id="liste"></div>
+</main>
+<script id="carnet-data" type="application/json">${json}${fin}
+<script>(${carnetScript.toString()})();${fin}
+</body>
+</html>`;
+}
+
+// Script du carnet exporté (exécuté dans le fichier de l'athlète, pas dans le dashboard)
+function carnetScript() {
+  var D = JSON.parse(document.getElementById('carnet-data').textContent);
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  };
+  var jour = function (d, opts) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', opts || { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  var horodatage = function (d) {
+    return new Date(d).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+  var lire = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  var ecrire = function (k, v) {
+    try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {}
+  };
+
+  var liste = document.getElementById('liste');
+  if (!D.competitions.length) {
+    liste.innerHTML = '<p class="vide">Aucune compétition de la saison dans votre calendrier PPI.</p>';
+    return;
+  }
+
+  liste.innerHTML = D.competitions.map(function (c, i) {
+    var dates = c.fin && c.fin !== c.debut ? jour(c.debut, { day: 'numeric', month: 'short' }) + ' → ' + jour(c.fin) : jour(c.debut);
+    var a = c.attentes;
+    var attentes = !a ? '<div class="vide">Aucune attente saisie dans le questionnaire</div>'
+      : (a.epreuves.length ? '<ul>' + a.epreuves.map(function (ep) {
+          return '<li>' + esc(ep.epreuve || 'Épreuve non précisée')
+            + (ep.perf ? ' : <strong>' + esc(ep.perf) + '</strong>' : '')
+            + (ep.classement !== '' ? ' · classement visé : <strong>' + esc(ep.classement) + '</strong>' : '') + '</li>';
+        }).join('') + '</ul>' : '')
+        + (a.commentaire ? '<div class="texte">' + esc(a.commentaire) + '</div>' : '');
+    return '<section class="comp">'
+      + '<div class="comp-head"><span class="comp-nom">' + esc(c.nom) + '</span>'
+      + '<span class="comp-dates">' + dates + '</span>'
+      + '<span class="badge' + (c.type === 'objectif-competition' ? ' objectif' : '') + '">' + esc(c.prioriteLabel || c.typeLabel) + '</span></div>'
+      + '<div class="label">Mes attentes (questionnaire PPI)</div><div class="attentes">' + attentes + '</div>'
+      + '<div class="label"><label for="bilan-' + i + '">Mon bilan</label></div>'
+      + '<textarea id="bilan-' + i + '" placeholder="Votre bilan qualitatif de la compétition…"></textarea>'
+      + '<div class="actions"><button type="button" id="envoyer-' + i + '">Envoyer ce bilan</button>'
+      + '<span class="statut" id="statut-' + i + '"></span></div>'
+      + '</section>';
+  }).join('');
+
+  D.competitions.forEach(function (c, i) {
+    var ta = document.getElementById('bilan-' + i);
+    var btn = document.getElementById('envoyer-' + i);
+    var st = document.getElementById('statut-' + i);
+    var cle = 'carnet:' + D.jeton + ':' + c.key;
+
+    var statut = function (texte, classe) { st.textContent = texte; st.className = 'statut' + (classe ? ' ' + classe : ''); };
+    var majStatut = function () {
+      var envoye = D.bilans[c.key];
+      if (envoye && ta.value === envoye.bilan) statut('Envoyé le ' + horodatage(envoye.envoye_le), 'ok');
+      else if (envoye) statut('Modifications non envoyées (dernier envoi le ' + horodatage(envoye.envoye_le) + ')');
+      else if (ta.value.trim()) statut('Brouillon non envoyé');
+      else statut('');
+    };
+
+    var brouillon = lire(cle);
+    ta.value = brouillon !== null ? brouillon : (D.bilans[c.key] ? D.bilans[c.key].bilan : '');
+    majStatut();
+    ta.addEventListener('input', function () { ecrire(cle, ta.value); majStatut(); });
+
+    btn.addEventListener('click', function () {
+      var texte = ta.value;
+      if (!texte.trim()) { statut('Le bilan est vide.', 'erreur'); return; }
+      var envoye = D.bilans[c.key];
+      if (envoye && !confirm('Ce bilan remplacera la version envoyée le ' + horodatage(envoye.envoye_le) + '. Continuer ?')) return;
+      btn.disabled = true;
+      statut('Envoi en cours…');
+      fetch(D.url + '/rest/v1/rpc/ppi_envoyer_bilan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: D.anon, Authorization: 'Bearer ' + D.anon },
+        body: JSON.stringify({ p_jeton: D.jeton, p_comp_key: c.key, p_comp_nom: c.nom, p_comp_date: c.debut, p_bilan: texte })
+      }).then(function (r) {
+        return r.text().then(function (t) {
+          var corps = null;
+          try { corps = JSON.parse(t); } catch (e) {}
+          if (!r.ok) throw new Error((corps && corps.message) || ('HTTP ' + r.status));
+          return corps;
+        });
+      }).then(function (date) {
+        D.bilans[c.key] = { bilan: texte, envoye_le: date || new Date().toISOString() };
+        ecrire(cle, null);
+        btn.disabled = false;
+        majStatut();
+      }).catch(function (e) {
+        btn.disabled = false;
+        statut('Échec de l’envoi : ' + e.message + ' (vérifiez votre connexion ; le brouillon est conservé).', 'erreur');
+      });
+    });
+  });
 }
 
 // ── Charte ──
