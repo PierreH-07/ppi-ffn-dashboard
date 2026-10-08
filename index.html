@@ -2361,7 +2361,7 @@ async function renderCarnet(n) {
         (PPI du ${n.date_export ? new Date(n.date_export).toLocaleDateString('fr-FR') : '—'}).<br>
         Le lien du carnet permet à l'athlète de rédiger et d'envoyer un bilan par compétition depuis son téléphone ou son ordinateur ; il affiche ses bilans déjà envoyés, jamais le suivi entraîneur.
       </div>
-      <button type="button" class="carnet-btn secondaire" id="btn-carnet-lien">🔗 Lien du carnet</button>
+      <button type="button" class="carnet-btn secondaire" id="btn-carnet-lien">✉️ Envoyer le carnet à l'athlète</button>
     </div>
     <div class="card" id="carnet-lien" hidden></div>
     ${comps.length ? comps.map(carteComp).join('')
@@ -2396,7 +2396,8 @@ async function enregistrerSuivi(n, comp, texte, btn, statut) {
 const CARNET_PAGE = 'carnet.html';
 
 // Crée ou met à jour le lien du carnet : enregistre dans Supabase la liste des compétitions affichée
-// à l'athlète (sans le suivi entraîneur), puis propose de copier le lien ou de l'envoyer par e-mail
+// à l'athlète (sans le suivi entraîneur), puis ouvre la messagerie de l'entraîneur avec l'e-mail
+// de l'athlète (questionnaire) pré-rempli ; le lien reste affiché pour un envoi par SMS ou messagerie
 async function lienCarnet(n, comps, btn) {
   if (!/^https?:$/.test(location.protocol)) {
     alert("Le lien du carnet ne fonctionne que si le dashboard est ouvert depuis son adresse en ligne (https://…), pas depuis un fichier local.");
@@ -2421,23 +2422,30 @@ async function lienCarnet(n, comps, btn) {
   const corps = `Bonjour ${n.prenom || ''},\n\nVoici ton carnet de bord compétitions pour la saison ${contenu.saison}. `
     + `Après chaque compétition, ouvre ce lien (dans Safari ou Chrome), rédige ton bilan et appuie sur « Envoyer ce bilan » :\n\n${lien}\n\n`
     + `Ce lien est personnel : ne le transmets pas.`;
+  // Adresse non encodée : certains logiciels de messagerie ne décodent pas « %40 » dans le destinataire
+  const email = (n.email || '').trim();
+  const emailValide = /^[^\s@,;?&]+@[^\s@,;?&]+\.[^\s@,;?&]+$/.test(email);
+  const mailto = `mailto:${emailValide ? email : ''}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
   zone.hidden = false;
   zone.innerHTML = `
+    ${emailValide ? '' : `<div style="color:var(--red);font-size:12px;margin-bottom:8px">
+      Aucune adresse e-mail valide dans le PPI de l'athlète${email ? ` (« ${esc(email)} »)` : ''} : saisissez-la dans votre messagerie, ou transmettez le lien ci-dessous.</div>`}
     <div class="field-label">Lien personnel de l'athlète (à transmettre par e-mail, SMS ou messagerie)</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
       <input id="carnet-lien-url" readonly value="${esc(lien)}"
         style="flex:1;min-width:220px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px">
       <button type="button" class="carnet-btn" id="carnet-lien-copier">Copier</button>
-      <a class="carnet-btn secondaire" style="text-decoration:none"
-        href="mailto:${encodeURIComponent(n.email || '')}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}">✉️ E-mail à l'athlète</a>
+      <a class="carnet-btn secondaire" style="text-decoration:none" href="${esc(mailto)}">✉️ Rouvrir l'e-mail</a>
     </div>
-    <div class="carnet-meta">Lien identique toute la saison ; la liste des compétitions affichée à l'athlète est mise à jour à chaque clic sur « Lien du carnet ».</div>`;
+    <div class="carnet-meta">Lien identique toute la saison ; la liste des compétitions affichée à l'athlète est mise à jour à chaque clic sur « Envoyer le carnet à l'athlète ».</div>`;
   document.getElementById('carnet-lien-copier').addEventListener('click', async e => {
     const champ = document.getElementById('carnet-lien-url');
     try { await navigator.clipboard.writeText(lien); }
     catch (err) { champ.select(); document.execCommand('copy'); }
     e.currentTarget.textContent = 'Copié ✓';
   });
+  // Ouvre la messagerie de l'entraîneur (Outlook, Mail, Gmail si défini comme messagerie par défaut…)
+  window.location.href = mailto;
 }
 
 // ── Charte ──
