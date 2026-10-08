@@ -9063,15 +9063,10 @@ ${resumeHTML}
         function buildSemaineType(v) {
             const volumes = computeVolumes();
             const totalHeures = Object.values(volumes).reduce((a,b) => a+b, 0);
-            const colorMap = {
-                eau:      { style: 'background-image:linear-gradient(90deg,#0080BE,#00AEEF)' },
-                acro:     { style: 'background-image:linear-gradient(90deg,#D9731A,#F28C28)' },
-                physique: { style: 'background-image:linear-gradient(90deg,#D7282F,#E55A60)' },
-                scolaire: { style: 'background-image:linear-gradient(90deg,#6CB33F,#8DCB6E)' },
-                recup:    { style: 'background-color:#7C88A6' },
-                kine:     { style: 'background-color:#7C88A6' },
-                mental:   { style: 'background-color:#7C88A6' }
-            };
+            // Couleurs identiques à celles de la grille semaine type (page 2) et du dashboard
+            const semaineColor = id => (SEMAINE_TYPES.find(t => t.id === id) || {}).color || '#7C88A6';
+            const colorMap = Object.fromEntries(['eau','acro','physique','scolaire','recup','kine','mental']
+                .map(id => [id, { style: 'background-color:' + semaineColor(id) }]));
             const labelMap = { eau: 'Entraînement eau', acro: 'Entraînement acro', physique: 'Préparation physique', scolaire: 'Scolaire / Pro', recup: 'Récupération', kine: 'Kiné / Ostéo', mental: 'Préparation mentale' };
 
             let html = `<div class="card">
@@ -9107,15 +9102,8 @@ ${resumeHTML}
                 <div class="donut">`;
 
             // Générer le donut avec tous les volumes
-            const volumeCategories = [
-                { key: 'eau', color: '#00AEEF' },
-                { key: 'acro', color: '#F28C28' },
-                { key: 'physique', color: '#E55A60' },
-                { key: 'scolaire', color: '#8DCB6E' },
-                { key: 'recup', color: '#7C88A6' },
-                { key: 'kine', color: '#7C88A6' },
-                { key: 'mental', color: '#7C88A6' }
-            ];
+            const volumeCategories = ['eau','acro','physique','scolaire','recup','kine','mental']
+                .map(key => ({ key, color: semaineColor(key) }));
             const circ = 87.96;
             let offset = 0;
             let volumeArcs = '';

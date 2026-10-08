@@ -1553,15 +1553,25 @@ function renderSemaineType(n) {
   const total = Object.values(volumes).reduce((a,b)=>a+b,0);
   const maxV = Math.max(...Object.values(volumes), 1);
 
+  // Couleurs identiques à celles de la grille semaine type du questionnaire (PPI-ffnV2.html, SEMAINE_TYPES)
+  const SEMAINE_COULEURS_BASE = { eau:'#0090D4', acro:'#F28C28', physique:'#55CC85', scolaire:'#8D71DE', recup:'#D59F49', kine:'#E2001A', mental:'#FF6B9D' };
+  const SEMAINE_COULEURS_DISCIPLINE = {
+    synchro: { physique:'#F28C28', acro:'#E2001A', recup:'#55CC85', kine:'#55CC85', scolaire:'#FFF3A6' }
+  };
+  // Couleur de texte foncée sur les fonds clairs (jaune pâle)
+  const SEMAINE_TEXTE_FONCE = ['#FFF3A6'];
+  const couleurs = { ...SEMAINE_COULEURS_BASE, ...(SEMAINE_COULEURS_DISCIPLINE[n.discipline] || {}) };
   const catConfig = [
-    { id:'eau',      label:'Entraînement eau',    shortLabel:'EAU',      color:'#00AEEF', gradient:'linear-gradient(90deg,#0080BE,#00AEEF)', major:true  },
-    { id:'acro',     label:'Entraînement acro',    shortLabel:'ACRO',     color:'#F28C28', gradient:'#F28C28',                               major:true  },
-    { id:'physique', label:'Préparation physique', shortLabel:'PHYSIQUE', color:'#D7282F', gradient:'linear-gradient(90deg,#D7282F,#E55A60)', major:true  },
-    { id:'scolaire', label:'Scolaire / Pro',        shortLabel:'SCOLAIRE', color:'#6CB33F', gradient:'linear-gradient(90deg,#6CB33F,#8DCB6E)', major:true  },
-    { id:'recup',    label:'Récupération',          shortLabel:'RÉCUP',    color:'#7C88A6', gradient:'#7C88A6',                               major:false },
-    { id:'kine',     label:'Kiné / Ostéo',          shortLabel:'KINÉ',     color:'#663F9E', gradient:'#663F9E',                               major:false },
-    { id:'mental',   label:'Préparation mentale',   shortLabel:'MENTAL',   color:'#C98A3C', gradient:'#C98A3C',                               major:false },
-  ];
+    { id:'eau',      label:'Entraînement eau',    shortLabel:'EAU',      major:true  },
+    { id:'acro',     label:'Entraînement acro',    shortLabel:'ACRO',     major:true  },
+    { id:'physique', label:'Préparation physique', shortLabel:'PHYSIQUE', major:true  },
+    { id:'scolaire', label:'Scolaire / Pro',        shortLabel:'SCOLAIRE', major:true  },
+    { id:'recup',    label:'Récupération',          shortLabel:'RÉCUP',    major:false },
+    { id:'kine',     label:'Kiné / Ostéo',          shortLabel:'KINÉ',     major:false },
+    { id:'mental',   label:'Préparation mentale',   shortLabel:'MENTAL',   major:false },
+  ].map(c => ({ ...c, color: couleurs[c.id], gradient: couleurs[c.id],
+                textColor: SEMAINE_TEXTE_FONCE.includes(couleurs[c.id]) ? '#5C5000' : '#fff' }));
+  const textById = Object.fromEntries(catConfig.map(c => [c.id, c.textColor]));
   const colorById = Object.fromEntries(catConfig.map(c => [c.id, c.color]));
   const shortById = Object.fromEntries(catConfig.map(c => [c.id, c.shortLabel]));
 
@@ -1650,7 +1660,7 @@ function renderSemaineType(n) {
                   return `<td style="padding:2px 3px;background:${col}18;border-right:1px solid ${col}30">
                     <div style="background:${col};border-radius:3px;padding:2px 4px;
                                 font-family:'Barlow Condensed',sans-serif;font-size:7px;
-                                font-weight:800;color:#fff;text-align:center;
+                                font-weight:800;color:${textById[type] || '#fff'};text-align:center;
                                 letter-spacing:.04em;text-transform:uppercase">${lbl}</div>
                   </td>`;
                 }).join('')}
