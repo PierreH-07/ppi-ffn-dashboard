@@ -4533,12 +4533,12 @@
             <div class="buttons">
                 <button class="prev-btn" onclick="goToPage(5)">Précédent</button>
                 <button class="home-btn" onclick="goToPage(1)" style="background: #9c27b0;">Accueil</button>
-                <button class="next-btn" onclick="goToPage(7)" style="background:#0B1F5C;">Charte d'engagement →</button>
+                <button class="next-btn" id="btnPage6Next" onclick="goToPage(7)" style="background:#0B1F5C;">Charte d'engagement →</button>
             </div>
         </div>
 
-        <!-- PAGE 7 : Charte d'engagement mutuel -->
-        <div class="page" id="page7">
+        <!-- PAGE 10 : Budget prévisionnel (natation artistique uniquement, entre le calendrier et la charte) -->
+        <div class="page" id="page10">
             <!-- Budget prévisionnel : natation artistique uniquement (affiché par updateBudgetForDiscipline) -->
             <div class="form-section" id="budgetSectionNA" style="display:none">
                 <h2>Budget Prévisionnel de Saison (natation artistique)</h2>
@@ -4703,6 +4703,15 @@
                 </div>
             </div>
 
+            <div class="buttons">
+                <button class="prev-btn" onclick="goToPage(6)">Précédent</button>
+                <button class="home-btn" onclick="goToPage(1)" style="background: #9c27b0;">Accueil</button>
+                <button class="next-btn" onclick="goToPage(7)" style="background:#0B1F5C;">Charte d'engagement →</button>
+            </div>
+        </div>
+
+        <!-- PAGE 7 : Charte d'engagement mutuel -->
+        <div class="page" id="page7">
             <div class="form-section">
                 <h2>Charte d'Engagement Mutuel</h2>
                 <p style="color: #666; margin-bottom: 20px; line-height: 1.6;">
@@ -4735,7 +4744,7 @@
             </div>
 
             <div class="buttons">
-                <button class="prev-btn" onclick="goToPage(6)">Précédent</button>
+                <button class="prev-btn" id="btnPage7Prev" onclick="goToPage(6)">Précédent</button>
                 <button class="home-btn" onclick="goToPage(1)" style="background: #9c27b0;">Accueil</button>
                 <button class="pdf-btn" onclick="exportEtResume()" style="background:#0B1F5C;">👁️ Réviser et exporter</button>
             </div>
@@ -6317,7 +6326,8 @@ ${resumeHTML}
                 6: { title: 'Calendrier', subtitle: 'Planification de la saison' },
                 7: { title: "Charte d'Engagement", subtitle: 'Signatures des trois parties' },
                 8: { title: 'Révision complète', subtitle: 'Vérification de toutes les informations saisies' },
-                9: { title: 'Résumé PPI', subtitle: 'Projet de Performance Individuel — FFN' }
+                9: { title: 'Résumé PPI', subtitle: 'Projet de Performance Individuel — FFN' },
+                10: { title: 'Budget Prévisionnel', subtitle: 'Saison — natation artistique' }
             };
 
             document.getElementById('pageTitle').textContent = titles[pageNumber].title;
@@ -9681,6 +9691,14 @@ ${resumeHTML}
             // Version V2 : le bloc budget n'apparaît que pour la natation artistique
             const bloc = document.getElementById('budgetSectionNA');
             if (bloc) bloc.style.display = na ? '' : 'none';
+            // Navigation : en NA, page budget (10) intercalée entre le calendrier (6) et la charte (7)
+            const next6 = document.getElementById('btnPage6Next');
+            if (next6) {
+                next6.textContent = na ? 'Budget →' : "Charte d'engagement →";
+                next6.setAttribute('onclick', na ? 'goToPage(10)' : 'goToPage(7)');
+            }
+            const prev7 = document.getElementById('btnPage7Prev');
+            if (prev7) prev7.setAttribute('onclick', na ? 'goToPage(10)' : 'goToPage(6)');
             updateBudgetTotals();
         }
 
