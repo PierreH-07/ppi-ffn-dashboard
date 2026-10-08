@@ -5174,10 +5174,23 @@ ${resumeHTML}
             ]
         };
 
+        // Couleurs propres à une discipline (remplacent celles de la palette de base)
+        const SEMAINE_COULEURS_DISCIPLINE = {
+            'synchro': {
+                physique: { color: '#F28C28' },                       // orange
+                acro:     { color: '#E2001A' },                       // rouge
+                recup:    { color: '#55CC85' },                       // vert
+                kine:     { color: '#55CC85' },                       // vert
+                scolaire: { color: '#FFF3A6', hoursColor: '#B8A000' } // jaune pâle
+            }
+        };
+
         let SEMAINE_TYPES = [...SEMAINE_TYPES_BASE];
 
         function updateSemaineTypesForDiscipline(discipline) {
-            SEMAINE_TYPES = [...SEMAINE_TYPES_BASE, ...(SEMAINE_TYPES_DISCIPLINE[discipline] || [])];
+            const couleurs = SEMAINE_COULEURS_DISCIPLINE[discipline] || {};
+            SEMAINE_TYPES = [...SEMAINE_TYPES_BASE, ...(SEMAINE_TYPES_DISCIPLINE[discipline] || [])]
+                .map(t => couleurs[t.id] ? { ...t, ...couleurs[t.id] } : t);
             // Retirer les créneaux d'un type absent de cette discipline
             const validIds = new Set(SEMAINE_TYPES.map(t => t.id));
             Object.keys(semaineTypeData).forEach(key => {
@@ -5349,7 +5362,7 @@ ${resumeHTML}
                 return `<div class="semaine-bilan-card" style="border-color:${t.color}">
                     <div class="semaine-bilan-swatch" style="background:${t.color}"></div>
                     <span style="color:#333">${t.label}</span>
-                    <span style="color:${t.color};margin-left:4px">${heures}h</span>
+                    <span style="color:${t.hoursColor || t.color};margin-left:4px">${heures}h</span>
                 </div>`;
             }).join('');
 
