@@ -2,13 +2,14 @@
 -- Carnet de bord compétitions (Supabase → SQL Editor → coller → Run)
 -- À lancer APRÈS securite_rls.sql (utilise ppi_role() et ppi_discipline()). Idempotent.
 --
---  ppi_carnets                : un jeton secret par fiche exportée (intégré au carnet HTML)
+--  ppi_carnets                : un jeton secret par nageur (dans le lien du carnet carnet.html#jeton)
+--                               + contenu affiché par le carnet (compétitions de la saison, attentes)
 --  ppi_bilans_competition     : bilan qualitatif libre de l'athlète, 1 par compétition
 --                               (un nouvel envoi écrase le précédent)
 --  ppi_suivi_entraineur       : champ libre de l'entraîneur, 1 par compétition
 --
 --  Accès
---    • anon (carnet HTML)     : uniquement la fonction ppi_envoyer_bilan(jeton, …), aucune lecture
+--    • anon (carnet.html)     : uniquement ppi_lire_carnet(jeton) et ppi_envoyer_bilan(jeton, …)
 --    • lecture des bilans et suivis : comptes qui voient la fiche (mêmes règles que ppi_nageurs)
 --    • écriture du suivi      : entraîneur(s) principal(aux) de la fiche uniquement
 --    • aucune écriture directe dans les tables : tout passe par les fonctions ci-dessous
@@ -48,6 +49,10 @@ CREATE TABLE IF NOT EXISTS public.ppi_suivi_entraineur (
   modifie_le timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (nageur_key, comp_key)
 );
+
+-- Version 2 (lien hébergé) : contenu du carnet stocké avec le jeton
+ALTER TABLE public.ppi_carnets ADD COLUMN IF NOT EXISTS contenu jsonb;
+ALTER TABLE public.ppi_carnets ADD COLUMN IF NOT EXISTS maj_le  timestamptz;
 
 ALTER TABLE public.ppi_carnets            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ppi_bilans_competition ENABLE ROW LEVEL SECURITY;
@@ -100,8 +105,11 @@ CREATE POLICY suivi_select_selon_fiche ON public.ppi_suivi_entraineur
   FOR SELECT TO authenticated
   USING (public.ppi_peut_lire_fiche(fiche_id));
 
--- 4. Jeton du carnet (dashboard) : créé au 1er export d'une fiche, réutilisé ensuite
-CREATE OR REPLACE FUNCTION public.ppi_jeton_carnet(p_fiche_id text, p_nageur_key text) RETURNS uuid
+-- 4. Lien du carnet (dashboard) : un jeton par nageur, réutilisé d'une version de PPI à l'autre
+--    tant que le compte voit la fiche liée au jeton ; le contenu affiché est mis à jour à chaque appel
+DROP FUNCTION IF EXISTS public.ppi_jeton_carnet(text, text);
+CREATE OR REPLACE FUNCTION public.ppi_jeton_carnet(p_fiche_id text, p_nageur_key text, p_contenu jsonb)
+RETURNS uuid
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_jeton uuid;
 BEGIN
@@ -111,13 +119,42 @@ BEGIN
   IF coalesce(trim(p_nageur_key), '') = '' OR length(p_nageur_key) > 300 THEN
     RAISE EXCEPTION 'Clé nageur invalide';
   END IF;
+  IF p_contenu IS NULL OR octet_length(p_contenu::text) > 200000 THEN
+    RAISE EXCEPTION 'Contenu du carnet invalide';
+  END IF;
   SELECT jeton INTO v_jeton FROM public.ppi_carnets WHERE fiche_id = p_fiche_id;
   IF v_jeton IS NULL THEN
-    INSERT INTO public.ppi_carnets (fiche_id, nageur_key, cree_par)
-    VALUES (p_fiche_id, p_nageur_key, auth.jwt() ->> 'email')
+    SELECT jeton INTO v_jeton FROM public.ppi_carnets
+    WHERE nageur_key = p_nageur_key AND public.ppi_peut_lire_fiche(fiche_id)
+    ORDER BY created_at LIMIT 1;
+  END IF;
+  IF v_jeton IS NULL THEN
+    INSERT INTO public.ppi_carnets (fiche_id, nageur_key, cree_par, contenu, maj_le)
+    VALUES (p_fiche_id, p_nageur_key, auth.jwt() ->> 'email', p_contenu, now())
     RETURNING jeton INTO v_jeton;
+  ELSE
+    UPDATE public.ppi_carnets
+    SET fiche_id = p_fiche_id, nageur_key = p_nageur_key, contenu = p_contenu, maj_le = now()
+    WHERE jeton = v_jeton;
   END IF;
   RETURN v_jeton;
+END $$;
+
+-- 4 bis. Lecture du carnet (carnet.html, sans connexion) : contenu + bilans déjà envoyés,
+--        jamais le suivi entraîneur
+CREATE OR REPLACE FUNCTION public.ppi_lire_carnet(p_jeton uuid) RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE c public.ppi_carnets%ROWTYPE;
+BEGIN
+  SELECT * INTO c FROM public.ppi_carnets WHERE jeton = p_jeton;
+  IF NOT FOUND OR c.contenu IS NULL THEN RAISE EXCEPTION 'Carnet inconnu'; END IF;
+  RETURN jsonb_build_object(
+    'contenu', c.contenu,
+    'bilans', coalesce((
+      SELECT jsonb_object_agg(b.comp_key, jsonb_build_object('bilan', b.bilan, 'envoye_le', b.envoye_le))
+      FROM public.ppi_bilans_competition b WHERE b.nageur_key = c.nageur_key
+    ), '{}'::jsonb)
+  );
 END $$;
 
 -- 5. Envoi d'un bilan (carnet HTML, sans connexion) : le jeton désigne le nageur
@@ -172,10 +209,15 @@ BEGIN
 END $$;
 
 REVOKE ALL ON FUNCTION public.ppi_peut_lire_fiche(text), public.ppi_est_entraineur_principal(text),
-  public.ppi_jeton_carnet(text, text), public.ppi_envoyer_bilan(uuid, text, text, date, text),
+  public.ppi_jeton_carnet(text, text, jsonb), public.ppi_lire_carnet(uuid),
+  public.ppi_envoyer_bilan(uuid, text, text, date, text),
   public.ppi_enregistrer_suivi(text, text, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.ppi_peut_lire_fiche(text), public.ppi_est_entraineur_principal(text),
-  public.ppi_jeton_carnet(text, text), public.ppi_enregistrer_suivi(text, text, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.ppi_envoyer_bilan(uuid, text, text, date, text) TO anon, authenticated;
+  public.ppi_jeton_carnet(text, text, jsonb), public.ppi_enregistrer_suivi(text, text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ppi_lire_carnet(uuid), public.ppi_envoyer_bilan(uuid, text, text, date, text)
+  TO anon, authenticated;
 
 COMMIT;
+
+-- Rafraîchit le cache de l'API Supabase (nouvelles fonctions)
+NOTIFY pgrst, 'reload schema';

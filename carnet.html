@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Carnet de bord compétitions — FFN</title>
+<style>
+:root{--navy:#0B1F5C;--red:#D7282F;--green:#3C7A1E;--text:#0E1A3C;--text-2:#4A5478;--muted:#7C88A6;--line:#E3EAF2;--line-2:#EFF3F8;--bg:#F0F4F9}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.5}
+header{background:var(--navy);color:#fff;padding:20px 16px;padding-top:max(20px,env(safe-area-inset-top))}
+header h1{font-size:20px;text-transform:uppercase;letter-spacing:.04em}
+header p{font-size:14px;opacity:.85;margin-top:4px}
+main{max-width:820px;margin:0 auto;padding:16px}
+.aide{font-size:14px;color:var(--text-2);margin-bottom:14px}
+.comp{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.comp-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.comp-nom{font-weight:800;font-size:17px;color:var(--navy);text-transform:uppercase;overflow-wrap:anywhere}
+.comp-dates{font-size:14px;color:var(--muted)}
+.badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--line-2);color:var(--text-2)}
+.badge.objectif{background:#FDECEA;color:var(--red)}
+.label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:12px 0 4px}
+.attentes ul{margin-left:18px}
+.texte{white-space:pre-wrap;overflow-wrap:anywhere}
+.vide{font-style:italic;color:var(--muted);font-size:14px}
+/* 16px minimum : évite le zoom automatique de Safari iOS à la saisie */
+textarea{width:100%;min-height:160px;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;font-size:16px;color:var(--text);background:#fff;resize:vertical;-webkit-appearance:none;appearance:none}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}
+button{padding:11px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;-webkit-appearance:none;appearance:none}
+button:disabled{opacity:.5;cursor:default}
+.statut{font-size:14px;color:var(--muted)}
+.statut.ok{color:var(--green)}
+.statut.erreur{color:var(--red)}
+.message{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;font-size:15px}
+.message.erreur{color:var(--red)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Carnet de bord compétitions</h1>
+  <p id="sous-titre">Chargement…</p>
+</header>
+<main>
+  <p class="aide">Après chaque compétition, rédigez votre bilan puis appuyez sur « Envoyer ce bilan » (connexion internet nécessaire).
+  Un nouvel envoi remplace la version précédente. Votre brouillon est conservé sur cet appareil tant qu'il n'est pas envoyé.</p>
+  <div id="liste"><div class="message">Chargement du carnet…</div></div>
+</main>
+<noscript><p style="padding:16px;color:#D7282F">Ce carnet nécessite JavaScript : ouvrez le lien dans Safari ou Chrome.</p></noscript>
+<script>
+// Carnet de bord de l'athlète : ouvert par le lien carnet.html#<jeton> généré dans le dashboard.
+// Lecture et envoi via les fonctions Supabase ppi_lire_carnet / ppi_envoyer_bilan (supabase/carnet_de_bord.sql).
+(function () {
+  var SUPABASE_URL  = 'https://nyasokzqnuhngfwpnmhg.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXNva3pxbnVobmdmd3BubWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0OTQyMDQsImV4cCI6MjA5NDA3MDIwNH0.f5nx3-17vGrF9BrqbnezvzSgFCJiu--O5gr2yIlDiHw';
+
+  var liste = document.getElementById('liste');
+  var sousTitre = document.getElementById('sous-titre');
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  };
+  var jour = function (d, opts) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', opts || { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  var horodatage = function (d) {
+    return new Date(d).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+  var lire = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  var ecrire = function (k, v) {
+    try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {}
+  };
+  var erreur = function (texte) {
+    sousTitre.textContent = '';
+    liste.innerHTML = '<div class="message erreur">' + esc(texte) + '</div>';
+  };
+  var rpc = function (fonction, params) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + fonction, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON },
+      body: JSON.stringify(params)
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var corps = null;
+        try { corps = JSON.parse(t); } catch (e) {}
+        if (!r.ok) throw new Error((corps && corps.message) || ('HTTP ' + r.status));
+        return corps;
+      });
+    });
+  };
+
+  // Nouveau lien ouvert dans le même onglet (seul le # change) : recharger
+  window.addEventListener('hashchange', function () { location.reload(); });
+
+  // Jeton : après le # (jamais transmis au serveur qui héberge la page), ou ?j=
+  var jeton = (location.hash.replace(/^#/, '') || (location.search.match(/[?&]j=([^&]+)/) || [])[1] || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jeton)) {
+    erreur('Lien de carnet incomplet. Utilisez le lien complet transmis par votre entraîneur.');
+    return;
+  }
+
+  rpc('ppi_lire_carnet', { p_jeton: jeton }).then(function (D) {
+    afficher(D.contenu || {}, D.bilans || {});
+  }).catch(function (e) {
+    erreur(/Carnet inconnu/.test(e.message)
+      ? 'Ce lien de carnet n’est pas valide. Demandez un nouveau lien à votre entraîneur.'
+      : 'Impossible de charger le carnet (' + e.message + '). Vérifiez votre connexion puis rechargez la page.');
+  });
+
+  function afficher(C, bilans) {
+    var nageur = C.nageur || {};
+    var comps = Array.isArray(C.competitions) ? C.competitions : [];
+    sousTitre.textContent = [nageur.prenom, nageur.nom].filter(Boolean).join(' ') + (C.saison ? ' · saison ' + C.saison : '');
+    document.title = 'Carnet de bord — ' + sousTitre.textContent;
+    if (!comps.length) {
+      liste.innerHTML = '<div class="message vide">Aucune compétition de la saison dans votre calendrier PPI.</div>';
+      return;
+    }
+
+    liste.innerHTML = comps.map(function (c, i) {
+      var dates = c.fin && c.fin !== c.debut ? jour(c.debut, { day: 'numeric', month: 'short' }) + ' → ' + jour(c.fin) : jour(c.debut);
+      var a = c.attentes;
+      var attentes = !a ? '<div class="vide">Aucune attente saisie dans le questionnaire</div>'
+        : ((a.epreuves || []).length ? '<ul>' + a.epreuves.map(function (ep) {
+            return '<li>' + esc(ep.epreuve || 'Épreuve non précisée')
+              + (ep.perf ? ' : <strong>' + esc(ep.perf) + '</strong>' : '')
+              + (ep.classement !== '' && ep.classement != null ? ' · classement visé : <strong>' + esc(ep.classement) + '</strong>' : '') + '</li>';
+          }).join('') + '</ul>' : '')
+          + (a.commentaire ? '<div class="texte">' + esc(a.commentaire) + '</div>' : '');
+      return '<section class="comp">'
+        + '<div class="comp-head"><span class="comp-nom">' + esc(c.nom) + '</span>'
+        + '<span class="comp-dates">' + dates + '</span>'
+        + '<span class="badge' + (c.type === 'objectif-competition' ? ' objectif' : '') + '">' + esc(c.prioriteLabel || c.typeLabel) + '</span></div>'
+        + '<div class="label">Mes attentes (questionnaire PPI)</div><div class="attentes">' + attentes + '</div>'
+        + '<div class="label"><label for="bilan-' + i + '">Mon bilan</label></div>'
+        + '<textarea id="bilan-' + i + '" placeholder="Votre bilan qualitatif de la compétition…"></textarea>'
+        + '<div class="actions"><button type="button" id="envoyer-' + i + '">Envoyer ce bilan</button>'
+        + '<span class="statut" id="statut-' + i + '"></span></div>'
+        + '</section>';
+    }).join('');
+
+    comps.forEach(function (c, i) {
+      var ta = document.getElementById('bilan-' + i);
+      var btn = document.getElementById('envoyer-' + i);
+      var st = document.getElementById('statut-' + i);
+      var cle = 'carnet:' + jeton + ':' + c.key;
+
+      var statut = function (texte, classe) { st.textContent = texte; st.className = 'statut' + (classe ? ' ' + classe : ''); };
+      var majStatut = function () {
+        var envoye = bilans[c.key];
+        if (envoye && ta.value === envoye.bilan) statut('Envoyé le ' + horodatage(envoye.envoye_le), 'ok');
+        else if (envoye) statut('Modifications non envoyées (dernier envoi le ' + horodatage(envoye.envoye_le) + ')');
+        else if (ta.value.trim()) statut('Brouillon non envoyé');
+        else statut('');
+      };
+
+      var brouillon = lire(cle);
+      ta.value = brouillon !== null ? brouillon : (bilans[c.key] ? bilans[c.key].bilan : '');
+      majStatut();
+      ta.addEventListener('input', function () { ecrire(cle, ta.value); majStatut(); });
+
+      btn.addEventListener('click', function () {
+        var texte = ta.value;
+        if (!texte.trim()) { statut('Le bilan est vide.', 'erreur'); return; }
+        var envoye = bilans[c.key];
+        if (envoye && !window.confirm('Ce bilan remplacera la version envoyée le ' + horodatage(envoye.envoye_le) + '. Continuer ?')) return;
+        btn.disabled = true;
+        statut('Envoi en cours…');
+        rpc('ppi_envoyer_bilan', { p_jeton: jeton, p_comp_key: c.key, p_comp_nom: c.nom, p_comp_date: c.debut, p_bilan: texte })
+          .then(function (date) {
+            bilans[c.key] = { bilan: texte, envoye_le: date || new Date().toISOString() };
+            ecrire(cle, null);
+            btn.disabled = false;
+            majStatut();
+          }).catch(function (e) {
+            btn.disabled = false;
+            statut('Échec de l’envoi : ' + e.message + ' (vérifiez votre connexion ; le brouillon est conservé).', 'erreur');
+          });
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
