@@ -548,6 +548,14 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
     </div>
     <button class="login-btn" onclick="doLogin()">Se connecter</button>
     <div class="login-error" id="login-error"></div>
+    <div id="login-info" style="display:none;background:#EDF7ED;border:1px solid #B7DFB7;
+         border-radius:6px;padding:10px 12px;font-size:12px;color:#2E7D32;margin-top:12px"></div>
+    <!-- Entraîneur principal référencé dans un PPI : accès sans invitation (lien par e-mail) -->
+    <button type="button" onclick="envoyerLienConnexion()"
+       style="display:block;width:100%;margin-top:12px;background:none;border:none;cursor:pointer;
+              font-size:12px;font-weight:700;color:var(--blue-d);text-decoration:underline">
+      Première connexion ou mot de passe oublié : recevoir un lien par e-mail
+    </button>
     <!-- Questionnaire vierge, en libre accès (dernière version déposée dans le dépôt) -->
     <a id="lien-questionnaire" href="PPI-ffnV2.html" download="PPI-FFN.html"
        onclick="this.href = 'PPI-ffnV2.html?v=' + Date.now()"
@@ -635,6 +643,11 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
  *    VALUES ('<uuid>', 'email@club.fr', 'entraineur');
  * 5. L'entraîneur verra uniquement les nageurs dont il est l'entraîneur principal.
  *
+ * ACCÈS AUTOMATIQUE DES ENTRAÎNEURS PRINCIPAUX (supabase/acces_auto_entraineurs.sql) :
+ * L'entraîneur dont l'e-mail figure comme entraîneur principal dans un PPI clique sur
+ * « Première connexion… », reçoit un lien de connexion, et obtient le rôle 'entraineur'
+ * à sa première connexion (ppi_activer_entraineur). Les étapes 1 à 4 ne sont plus nécessaires.
+ *
  * PROCÉDURE D'INVITATION D'UN ENTRAÎNEUR NATIONAL :
  * Même chose mais avec role = 'entraineur_national' et discipline renseignée :
  *    INSERT INTO utilisateurs (id, email, role, discipline)
@@ -683,23 +696,64 @@ async function doLogin() {
   await initSession();
 }
 
+// Lien de connexion par e-mail : crée le compte s'il n'existe pas encore (entraîneur principal
+// référencé dans un PPI), sert aussi en cas de mot de passe oublié
+async function envoyerLienConnexion() {
+  const email  = document.getElementById('login-email').value.trim();
+  const errEl  = document.getElementById('login-error');
+  const infoEl = document.getElementById('login-info');
+  errEl.style.display = 'none';
+  infoEl.style.display = 'none';
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Saisissez votre adresse e-mail (celle indiquée dans le PPI), puis cliquez à nouveau.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+  if (error) {
+    errEl.textContent = error.status === 429
+      ? 'Trop de demandes. Réessayez dans quelques minutes.'
+      : 'Envoi impossible : ' + error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  infoEl.textContent = `Un lien de connexion a été envoyé à ${email}. Ouvrez-le depuis cet appareil. ` +
+    'Seules les adresses référencées comme entraîneur principal dans un PPI (ou les comptes déjà créés par la DTN) donnent accès au dashboard. ' +
+    'Une fois connecté, vous pourrez définir un mot de passe (bouton « 🔑 Mot de passe » en haut de l'écran).';
+  infoEl.style.display = 'block';
+}
+
 async function initSession() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
 
   // Récupérer le rôle depuis la table utilisateurs
-  const { data: userData, error } = await sb
+  const lireRole = () => sb
     .from('utilisateurs')
     .select('role, discipline')
     .eq('id', user.id)
     .single();
+  let { data: userData, error } = await lireRole();
+
+  if (error || !userData) {
+    // Pas de rôle configuré : rôle 'entraineur' attribué si l'e-mail (vérifié) est celui
+    // d'un entraîneur principal dans au moins une fiche
+    const { data: role } = await sb.rpc('ppi_activer_entraineur');
+    if (role) ({ data: userData, error } = await lireRole());
+  }
 
   if (error || !userData) {
     // Pas de rôle configuré → refuser l'accès
     await sb.auth.signOut();
     const errEl = document.getElementById('login-error');
     if (errEl) {
-      errEl.textContent = 'Compte non autorisé. Contactez la DTN.';
+      errEl.textContent = 'Compte non autorisé : cette adresse n\'est référencée comme entraîneur principal dans aucun PPI. Contactez la DTN.';
       errEl.style.display = 'block';
     }
     return;
