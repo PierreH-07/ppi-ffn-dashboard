@@ -6903,6 +6903,11 @@ ${resumeHTML}
         const SEASON_START = new Date(2026, 7, 1);  // 1er Août 2026
         const SEASON_END   = new Date(2027, 7, 31); // 31 Août 2027
         const SEASON_DAYS  = Math.round((SEASON_END - SEASON_START) / 86400000) + 1;
+        // Bilan chiffré : saison sportive du 1er septembre au 31 août (365 jours, 366 en année bissextile)
+        // (le calendrier et la frise affichent août 2026 en plus, pour la préparation)
+        const STATS_START = new Date(2026, 8, 1);   // 1er Septembre 2026
+        const STATS_END   = new Date(2027, 7, 31);  // 31 Août 2027
+        const STATS_DAYS  = Math.round((STATS_END - STATS_START) / 86400000) + 1;
 
         function renderCalendarView() {
             const calendarGrid = document.getElementById('calendarGrid');
@@ -7140,7 +7145,7 @@ ${resumeHTML}
         }
 
         function updateStats() {
-            const totalDays = SEASON_DAYS;
+            const totalDays = STATS_DAYS;
 
             const allEvents = [...calendarEvents, ...competitionsCalendar];
 
@@ -7159,7 +7164,7 @@ ${resumeHTML}
                 let d = new Date(event.startDate + 'T00:00:00');
                 const end = new Date(event.endDate + 'T00:00:00');
                 while (d <= end) {
-                    if (d >= SEASON_START && d <= SEASON_END) {
+                    if (d >= STATS_START && d <= STATS_END) {
                         const ds = localDateStr(d);
                         if (isComp)              competitionSet.add(ds);
                         else if (event.type === 'stage') stageSet.add(ds);
@@ -7172,8 +7177,8 @@ ${resumeHTML}
             // Jours d'entraînement depuis la semaine type sur la saison
             const trainingDayOfWeek = getTrainingDaysFromSemaineType();
             let statsEntrainement = 0;
-            let d = new Date(SEASON_START);
-            while (d <= SEASON_END) {
+            let d = new Date(STATS_START);
+            while (d <= STATS_END) {
                 const ds  = localDateStr(d);
                 const dow = (d.getDay() + 6) % 7; // 0=lun … 6=dim
                 if (trainingDayOfWeek.has(dow) &&
