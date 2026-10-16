@@ -1534,7 +1534,7 @@ function renderFiche(n, versions, selectedIndex) {
   ${renderSection(1, 'Environnement & Staff', renderStaff(n))}
 
   <!-- SECTION 2 : BILAN SAISON -->
-  ${renderSection(2, 'Bilan saison 2025', renderBilan(n))}
+  ${renderSection(2, 'Bilan saison 2025', renderBilanCompetitions(n) + renderBilan(n))}
 
   <!-- SECTION 3 : SEMAINE TYPE -->
   ${renderSection(3, 'Semaine type', renderSemaineType(n))}
@@ -1670,6 +1670,51 @@ function renderStaff(n) {
   }
 
   return html;
+}
+
+// ── Bilan chiffré des compétitions (questionnaire : competitions_bilan) ──
+// [{ nom, date, priorite: 1|2|3, epreuves: [{ epreuve, classement, perf }] }]
+const PRIORITES_BILAN = { 1: 'Principale', 2: 'Secondaire', 3: 'Annexe' };
+
+function competitionsBilan(n) {
+  const liste = jsonCol(n.competitions_bilan, []);
+  return (Array.isArray(liste) ? liste : [])
+    .filter(c => c && (c.nom || c.date || (Array.isArray(c.epreuves) && c.epreuves.length)))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.priorite || 9) - (b.priorite || 9));
+}
+
+// commentaires(c) : HTML des bilans qualitatifs du carnet pour cette compétition, ou '' (onglet carnet)
+function tableBilanCompetitions(comps, commentaires) {
+  const saisons = [...new Set(comps.filter(c => c.date).map(c => saisonDuJour(new Date(c.date + 'T00:00:00'))))].sort();
+  const th = t => `<th style="text-align:left;padding:6px 10px;background:var(--navy);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap">${t}</th>`;
+  const td = (v, extra = '') => `<td style="padding:6px 10px;border-top:1px solid var(--line);vertical-align:top;${extra}">${v}</td>`;
+  const lignes = comps.map((c, ci) => {
+    const eps = (Array.isArray(c.epreuves) ? c.epreuves : []).filter(ep => ep && (ep.epreuve || ep.perf || rempli(ep.classement)));
+    const rows = eps.length ? eps : [{}];
+    const bg = ci % 2 === 0 ? 'var(--line-2)' : '#fff';
+    const com = commentaires ? commentaires(c) : '';
+    return rows.map((ep, i) => `<tr style="background:${bg}">
+        ${i === 0 ? td(`<strong style="color:var(--navy)">${esc(c.nom || 'Compétition')}</strong>`, '') + td(c.date ? dateFr(c.date) : '—', 'white-space:nowrap') + td(esc(PRIORITES_BILAN[c.priorite] || '—')) : td('') + td('') + td('')}
+        ${td(esc(ep.epreuve || '—'))}
+        ${td(rempli(ep.classement) ? esc(ep.classement) : '—', 'text-align:center')}
+        ${td(rempli(ep.perf) ? esc(ep.perf) : '—', 'text-align:right;white-space:nowrap')}
+      </tr>`).join('')
+      + (com ? `<tr style="background:${bg}"><td colspan="6" style="padding:4px 10px 10px">${com}</td></tr>` : '');
+  }).join('');
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title">Bilan chiffré des compétitions${saisons.length === 1 ? ` — saison ${saisons[0] - 1}-${saisons[0]}` : ''}</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>${th('Compétition')}${th('Date')}${th('Priorité')}${th('Épreuve')}${th('Classement')}${th('Performance')}</tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderBilanCompetitions(n) {
+  const comps = competitionsBilan(n);
+  return comps.length ? tableBilanCompetitions(comps) : aCompleter('Aucun résultat de compétition renseigné');
 }
 
 // ── Bilan ──
@@ -2117,14 +2162,14 @@ function saisonAffichee(n) {
 }
 
 // ── Bilan chiffré (même calcul que updateStats() du questionnaire) ──
-// Saison : 1er août (Y-1) → 31 août Y (bornes du questionnaire), Y = saisonAffichee(n)
+// Saison : 1er septembre (Y-1) → 31 août Y (365 ou 366 jours), Y = saisonAffichee(n)
 function renderBilanChiffre(n) {
   let raw = n.semaine_type_data;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { raw = {}; } }
   const semaine = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
 
   const Y = saisonAffichee(n);
-  const SEASON_START = new Date(Y - 1, 7, 1);
+  const SEASON_START = new Date(Y - 1, 8, 1);
   const SEASON_END   = new Date(Y, 7, 31);
   const SEASON_DAYS  = Math.round((SEASON_END - SEASON_START) / 86400000) + 1;
   const ds = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -2446,8 +2491,29 @@ async function renderCarnet(n) {
   const peutSuivre = estEntraineurPrincipal(n);
   const Y = saisonDuJour();
   const auj = new Date().toISOString().slice(0, 10);
+  // Bilan chiffré (questionnaire) relié aux bilans du carnet : même clé date|nom,
+  // sinon seule entrée du carnet à cette date
+  const compsBilan = competitionsBilan(n);
+  const trouver = (rows, c) => {
+    if (!c.date) return null;
+    const exact = rows.find(r => r.comp_key === `${c.date}|${norm(c.nom)}`);
+    if (exact) return exact;
+    const memeJour = rows.filter(r => String(r.comp_key || '').split('|')[0] === c.date);
+    return memeJour.length === 1 ? memeJour[0] : null;
+  };
+  const relies = new Set();
+  const commentairesCarnet = c => {
+    const b = trouver(rb.data || [], c), s = trouver(rs.data || [], c);
+    if (b) relies.add(b.comp_key);
+    const blocs = [];
+    if (b?.bilan) blocs.push(`<div class="field-label">Bilan de l'athlète</div><div class="carnet-texte">${esc(b.bilan)}</div><div class="carnet-meta">Envoyé le ${dateHeureFr(b.envoye_le)}</div>`);
+    if (s?.suivi) blocs.push(`<div class="field-label" style="margin-top:6px">Suivi entraîneur</div><div class="carnet-texte">${esc(s.suivi)}</div><div class="carnet-meta">Modifié le ${dateHeureFr(s.modifie_le)}${s.auteur ? ' par ' + esc(s.auteur) : ''}</div>`);
+    return blocs.join('');
+  };
+  const tableBilanCarnet = compsBilan.length ? tableBilanCompetitions(compsBilan, commentairesCarnet) : '';
+
   // Bilans reçus pour une compétition absente du calendrier actuel (renommée, déplacée…)
-  const horsCalendrier = (rb.data || []).filter(r => !comps.some(c => c.key === r.comp_key))
+  const horsCalendrier = (rb.data || []).filter(r => !comps.some(c => c.key === r.comp_key) && !relies.has(r.comp_key))
     .sort((a, b) => String(a.comp_date || '').localeCompare(String(b.comp_date || '')));
 
   const carteComp = (c, i) => {
@@ -2495,6 +2561,7 @@ async function renderCarnet(n) {
     <div class="card" id="carnet-lien" hidden></div>
     ${comps.length ? comps.map(carteComp).join('')
       : `<div class="card"><div class="carnet-vide">Aucune compétition de la saison ${Y - 1}-${Y} dans le calendrier de ce PPI</div></div>`}
+    ${tableBilanCarnet}
     ${horsCalendrier.length ? `${renderSection('!', 'Bilans reçus pour des compétitions absentes du calendrier actuel',
       horsCalendrier.map(r => `<div class="card">
         <div class="carnet-comp-head"><span class="carnet-comp-nom">${esc(r.comp_nom || 'Compétition')}</span>
