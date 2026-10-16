@@ -286,6 +286,10 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 }
 .field-value {font-size:13px;color:var(--text);font-weight:500;line-height:1.4}
 .field-value.empty{color:var(--muted);font-style:italic}
+.a-completer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.badge-a-completer{background:#FFF3CD;color:#856404;border:1px solid #F1DFA0;border-radius:4px;padding:2px 8px;
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.badge-prerempli{background:#F3E8FF;color:#5B2C8F}
 
 /* Staff cards */
 .staff-grid{display:flex;flex-wrap:wrap;gap:10px}
@@ -725,7 +729,7 @@ async function envoyerLienConnexion() {
 
   infoEl.textContent = `Un lien de connexion a été envoyé à ${email}. Ouvrez-le depuis cet appareil. ` +
     'Seules les adresses référencées comme entraîneur principal dans un PPI (ou les comptes déjà créés par la DTN) donnent accès au dashboard. ' +
-    'Une fois connecté, vous pourrez définir un mot de passe (bouton « 🔑 Mot de passe » en haut de l'écran).';
+    'Une fois connecté, vous pourrez définir un mot de passe (bouton « 🔑 Mot de passe » en haut de l’écran).';
   infoEl.style.display = 'block';
 }
 
@@ -1378,6 +1382,7 @@ function renderList(nageurs) {
           ${n.discipline_label ? `<span class="badge badge-disc">${n.discipline_label}</span>` : ''}
           ${n.club ? `<span class="badge badge-club">${n.club}</span>` : ''}
           ${vCount > 1 ? `<span class="badge" style="background:#EEF4FF;color:var(--navy-2)">${vCount} versions</span>` : ''}
+          ${estPreremplieDTN(n) ? BADGE_PREREMPLIE : ''}
           ${ficheACompleter(nKey) ? `<span class="badge" style="background:#FFF3CD;color:#856404" title="Ni licence ni date de naissance : les homonymes (même nom et prénom) sont regroupés">⚠ À compléter</span>` : ''}
         </div>
       </div>
@@ -1476,7 +1481,7 @@ function renderFiche(n, versions, selectedIndex) {
                   {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
               : `Version ${i + 1}`;
             const isSelected = selectedIndex !== undefined ? i === selectedIndex : v.id === n.id;
-            return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}</option>`;
+            return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}${estPreremplieDTN(v) ? ' (pré-remplie DTN)' : ''}</option>`;
           }).join('')}
         </select>` : ''}
       <button id="btn-questionnaire-prerempli" title="Télécharger le questionnaire PPI-ffnV2 pré-rempli avec cette version (charte vide)"
@@ -1502,6 +1507,7 @@ function renderFiche(n, versions, selectedIndex) {
     <div>
       <div class="identity-name">${n.prenom || ''} ${n.nom || ''}</div>
       ${n.discipline_label ? `<span class="identity-disc">${n.discipline_label}</span>` : ''}
+      ${estPreremplieDTN(n) ? `<span style="margin-left:6px">${BADGE_PREREMPLIE}</span>` : ''}
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">
         <div class="identity-meta-row">📧 <strong>${n.email || '—'}</strong></div>
         <div class="identity-meta-row">📱 <strong>${n.telephone || '—'}</strong></div>
@@ -1510,7 +1516,7 @@ function renderFiche(n, versions, selectedIndex) {
       </div>
     </div>
     <div class="identity-right">
-      <div class="identity-licence">N° Licence<span>${n.licence || '—'}</span></div>
+      <div class="identity-licence">N° Licence<span>${licenceValide(n.licence) ? n.licence : '—'}</span></div>
       <div class="updated-at">Mis à jour le ${updated}</div>
     </div>
   </div>
@@ -1546,7 +1552,9 @@ function renderFiche(n, versions, selectedIndex) {
   ${renderSection(7, `Actions clés & Dimensions de développement — saison ${saisonAffichee(n) - 1}-${saisonAffichee(n)}`, renderDimensions(n))}
 
   <!-- SECTION 8 : CALENDRIER -->
-  ${renderSection(8, 'Calendrier', renderBilanChiffre(n) + renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>')}
+  ${renderSection(8, 'Calendrier', [...(n.calendrier || []), ...(n.competitions_calendrier || [])].length
+      ? renderBilanChiffre(n) + renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>'
+      : aCompleter('Calendrier non renseigné'))}
 
   <!-- SECTION 9 : CHARTE D\'ENGAGEMENT -->
   ${renderSection(9, "Charte d'engagement mutuel", renderCharte(n))}
@@ -1620,6 +1628,16 @@ function field(label, val) {
   </div>`;
 }
 
+// Section entièrement vide : bloc « À compléter » à la place d'un bloc vide
+function aCompleter(detail) {
+  return `<div class="card a-completer"><span class="badge-a-completer">À compléter</span>${detail ? `<span>${detail}</span>` : ''}</div>`;
+}
+const rempli = v => v !== null && v !== undefined && String(v).trim() !== '';
+
+// Fiche saisie par la DTN avant le questionnaire de l'athlète (repère : début du commentaire programme)
+const estPreremplieDTN = n => String(n.commentaire_programme || '').trim().startsWith('Fiche pré-remplie par la DTN');
+const BADGE_PREREMPLIE = `<span class="badge badge-prerempli" title="Fiche saisie par la DTN, en attente du questionnaire de l'athlète">Pré-remplie DTN</span>`;
+
 // ── Staff ──
 function renderStaff(n) {
   const staff = n.staff_data || [];
@@ -1656,6 +1674,10 @@ function renderStaff(n) {
 
 // ── Bilan ──
 function renderBilan(n) {
+  const champsBilan = ['bq_satisfaction','bq_forme','bq_entrainabilite','bq_points_forts','bq_points_ameliorer',
+    'bq_meilleur_moment','bq_moment_difficile','bq_ferais_differemment','bq_blessures'];
+  if (!champsBilan.some(k => rempli(n[k]))) return aCompleter('Bilan qualitatif non renseigné');
+
   const bars = [
     { label: 'Satisfaction globale', val: n.bq_satisfaction },
     { label: 'État de forme en fin de saison', val: n.bq_forme },
@@ -1703,6 +1725,7 @@ function renderSemaineType(n) {
   let raw = n.semaine_type_data;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { raw = {}; } }
   const data = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  if (!Object.values(data).some(Boolean)) return aCompleter('Semaine type non renseignée');
 
   // Volumes par catégorie (comptage des créneaux × 0.5h)
   const counts = { eau:0, acro:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
@@ -1847,6 +1870,7 @@ function renderSeparation(n) {
     { label:'Moyen terme', e: n.sep_mt_entrainement, env: n.sep_mt_environnement },
     { label:'Long terme',  e: n.sep_lt_entrainement, env: n.sep_lt_environnement },
   ];
+  if (!horizons.some(h => rempli(h.e) || rempli(h.env))) return aCompleter();
 
   return `<div class="card">
     <div style="display:grid;grid-template-columns:auto 1fr 1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden">
@@ -1875,6 +1899,8 @@ function renderProjection(n) {
     comp: n[`proj_competition_${s}`] || '',
     isJO: JO.includes(s),
   }));
+
+  if (!saisons.some(s => rempli(s.comp))) return aCompleter('Aucune compétition visée sur l\'olympiade');
 
   let last = -1;
   saisons.forEach((s,i) => { if (s.comp) last = i; });
@@ -1911,7 +1937,7 @@ function renderCompetitions(n) {
   const list = Array.isArray(comps) ? comps.filter(c => c.type === 'objectif-competition') : [];
 
   if (list.length === 0) {
-    return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune compétition objectif renseignée</div></div>`;
+    return aCompleter('Aucune compétition objectif renseignée');
   }
 
   const sorted = [...list].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
@@ -1955,7 +1981,7 @@ function renderDimensions(n) {
   const colors = ['#0B1F5C','#00AEEF','#C98A3C'];
 
   if (dims2026.length === 0 && !actions[0].comment) {
-    return `<div class="card"><div style="color:var(--muted);font-style:italic;font-size:13px">Aucune dimension ou action renseignée</div></div>`;
+    return aCompleter('Aucune dimension ou action renseignée');
   }
 
   return `<div class="dims-grid">
@@ -2145,9 +2171,11 @@ function renderBilanChiffre(n) {
     <div style="display:flex;flex-wrap:wrap;gap:10px">
       ${box(competition, 'Jours de compétition', '#D7282F')}
       ${box(stage, 'Jours en stage', '#6CB33F')}
-      ${box(entrainement, "Jours d'entraînement", '#00AEEF')}
-      ${box(coupure, 'Jours de coupure', '#7C88A6')}
+      ${box(trainingDow.size ? entrainement : '—', "Jours d'entraînement", '#00AEEF')}
+      ${box(trainingDow.size ? coupure : '—', 'Jours de coupure', '#7C88A6')}
     </div>
+    ${trainingDow.size ? '' : `<div class="a-completer" style="margin-top:10px"><span class="badge-a-completer">À compléter</span>
+      <span>Semaine type non renseignée : jours d'entraînement et de coupure non calculables</span></div>`}
   </div>`;
 }
 
@@ -2556,6 +2584,7 @@ function renderCharte(n) {
     { role:'Entraîneur', nom: n.nom_entraineur_signe, date: n.date_entraineur, engagement: n.engagement_entraineur },
     { role:'Fédération', nom: n.nom_federation,        date: n.date_federation, engagement: n.engagement_federation },
   ];
+  if (!signataires.some(s => rempli(s.nom) || rempli(s.date) || rempli(s.engagement))) return aCompleter('Charte non signée');
 
   return `
   <div class="card" style="margin-bottom:12px">
