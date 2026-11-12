@@ -4332,26 +4332,26 @@
 
                 <div class="action-item">
                     <h3 id="action1Title" style="color:#0E1655">Action clé n°1 <span style="font-weight:normal;color:#888">(dimension 1)</span></h3>
-                    <label>Comment l'action va se dérouler :</label>
-                    <textarea id="action1Comment" placeholder="Dates, moyens, ressources à mobiliser, organisation, etc..."></textarea>
-                    <label>Quels sont les attendus de l'action :</label>
-                    <textarea id="action1Attendus" placeholder="Décrivez les résultats attendus de cette action..."></textarea>
+                    <label>Description de l'action :</label>
+                    <textarea id="action1Comment"></textarea>
+                    <label>Indicateurs de réussite :</label>
+                    <textarea id="action1Attendus"></textarea>
                 </div>
 
                 <div class="action-item">
                     <h3 id="action2Title" style="color:#0E1655">Action clé n°2 <span style="font-weight:normal;color:#888">(dimension 2)</span></h3>
-                    <label>Comment l'action va se dérouler :</label>
-                    <textarea id="action2Comment" placeholder="Dates, moyens, ressources à mobiliser, organisation, etc..."></textarea>
-                    <label>Quels sont les attendus de l'action :</label>
-                    <textarea id="action2Attendus" placeholder="Décrivez les résultats attendus de cette action..."></textarea>
+                    <label>Description de l'action :</label>
+                    <textarea id="action2Comment"></textarea>
+                    <label>Indicateurs de réussite :</label>
+                    <textarea id="action2Attendus"></textarea>
                 </div>
 
                 <div class="action-item">
                     <h3 id="action3Title" style="color:#0E1655">Action clé n°3 <span style="font-weight:normal;color:#888">(dimension 3)</span></h3>
-                    <label>Comment l'action va se dérouler :</label>
-                    <textarea id="action3Comment" placeholder="Dates, moyens, ressources à mobiliser, organisation, etc..."></textarea>
-                    <label>Quels sont les attendus de l'action :</label>
-                    <textarea id="action3Attendus" placeholder="Décrivez les résultats attendus de cette action..."></textarea>
+                    <label>Description de l'action :</label>
+                    <textarea id="action3Comment"></textarea>
+                    <label>Indicateurs de réussite :</label>
+                    <textarea id="action3Attendus"></textarea>
                 </div>
             </div>
 
@@ -7305,9 +7305,9 @@ ${resumeHTML}
                 // Page 5 — Dimensions & actions (7 saisons)
                 classementObjectifs: rankingsBySeasons[2027].filter(d => d !== null).join(' | ') || '',
                 rankingsBySeasons: JSON.stringify(rankingsBySeasons),
-                action1Comment: v('action1Comment'), action1Attendus: v('action1Attendus'),
-                action2Comment: v('action2Comment'), action2Attendus: v('action2Attendus'),
-                action3Comment: v('action3Comment'), action3Attendus: v('action3Attendus'),
+                action1Comment: texteAction('action1Comment'), action1Attendus: texteAction('action1Attendus'),
+                action2Comment: texteAction('action2Comment'), action2Attendus: texteAction('action2Attendus'),
+                action3Comment: texteAction('action3Comment'), action3Attendus: texteAction('action3Attendus'),
 
                 // Page 6 — Calendrier
                 calendrier:            JSON.stringify(calendarEvents),
@@ -7760,24 +7760,24 @@ ${resumeHTML}
                 doc.setFont(undefined, 'bold');
                 doc.text('Action prioritaire 1', leftMargin, yPos);
                 yPos += lineHeight;
-                addField('Comment :', allData.action1Comment);
-                addField('Attendus :', allData.action1Attendus);
+                addField('Action :', allData.action1Comment);
+                addField('Indicateurs de réussite :', allData.action1Attendus);
                 yPos += 3;
 
                 checkPageBreak(30);
                 doc.setFont(undefined, 'bold');
                 doc.text('Action prioritaire 2', leftMargin, yPos);
                 yPos += lineHeight;
-                addField('Comment :', allData.action2Comment);
-                addField('Attendus :', allData.action2Attendus);
+                addField('Action :', allData.action2Comment);
+                addField('Indicateurs de réussite :', allData.action2Attendus);
                 yPos += 3;
 
                 checkPageBreak(30);
                 doc.setFont(undefined, 'bold');
                 doc.text('Action prioritaire 3', leftMargin, yPos);
                 yPos += lineHeight;
-                addField('Comment :', allData.action3Comment);
-                addField('Attendus :', allData.action3Attendus);
+                addField('Action :', allData.action3Comment);
+                addField('Indicateurs de réussite :', allData.action3Attendus);
                 yPos += 5;
 
                 // PAGE 6 : CALENDRIER (2 pages paysage, 6 mini-calendriers par page)
@@ -9013,14 +9013,14 @@ ${resumeHTML}
             const dims = (rankingsBySeasons[2027]||[]).filter(d=>d!==null).slice(0,3);
             const actionsHtml = [0,1,2].map(i => {
                 const dim = dims[i]||'Dimension à définir';
-                const act = v(`action${i+1}Comment`);
-                const att = v(`action${i+1}Attendus`);
+                const act = texteAction(`action${i+1}Comment`);
+                const att = texteAction(`action${i+1}Attendus`);
                 return `<div style="margin:6px 8px;padding:8px;background:#f5f7ff;border-left:4px solid ${['#E2001A','#0090D4','#55CC85'][i]};border-radius:0 4px 4px 0">
                     <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10pt;color:#0E1655">
                         Priorité ${i+1} — ${dim}
                     </div>
-                    ${act?`<div style="font-size:8.5pt;margin-top:4px"><strong>Action :</strong> ${act}</div>`:''}
-                    ${att?`<div style="font-size:8.5pt;margin-top:2px"><strong>Attendus :</strong> ${att}</div>`:''}
+                    ${act?`<div style="font-size:8.5pt;margin-top:4px;white-space:pre-line"><strong>Action :</strong> ${act}</div>`:''}
+                    ${att?`<div style="font-size:8.5pt;margin-top:2px;white-space:pre-line"><strong>Indicateurs de réussite :</strong> ${att}</div>`:''}
                 </div>`;
             }).join('');
 
@@ -9386,8 +9386,8 @@ ${resumeHTML}
             <div class="num"><span class="n">${idx+1}</span><span class="lbl">Priorité<br>${idx+1}</span></div>
             <div class="body">
                 <span class="cat" ${isPlaceholder ? 'style="color:#ccc;font-style:italic;"' : ''}>${dim || 'Dimension à définir'}</span>
-                <span class="ttl" ${isPlaceholder ? 'style="color:#999;font-style:italic;"' : ''}>${isPlaceholder ? 'Action à définir' : (v(`action${idx+1}Comment`) || 'Action à définir')}</span>
-                <span class="desc">${isPlaceholder ? '—' : (v(`action${idx+1}Attendus`) || '—')}</span>
+                <span class="ttl" ${isPlaceholder ? 'style="color:#999;font-style:italic;"' : 'style="white-space:pre-line"'}>${isPlaceholder ? 'Action à définir' : (texteAction(`action${idx+1}Comment`) || 'Action à définir')}</span>
+                <span class="desc" style="white-space:pre-line">${isPlaceholder ? '—' : (texteAction(`action${idx+1}Attendus`) || '—')}</span>
             </div>
         </div>`;
             });
@@ -9585,8 +9585,8 @@ ${resumeHTML}
                 html += `<tr>
                     <td>${idx+1}</td>
                     <td>${dims[idx] || '<span style="color:#C0C8D8;font-style:italic;">—</span>'}</td>
-                    <td>${v(`action${idx+1}Comment`) || '<span style="color:#C0C8D8;font-style:italic;">—</span>'}</td>
-                    <td>${v(`action${idx+1}Attendus`) || '<span style="color:#C0C8D8;font-style:italic;">—</span>'}</td>
+                    <td style="white-space:pre-line">${texteAction(`action${idx+1}Comment`) || '<span style="color:#C0C8D8;font-style:italic;">—</span>'}</td>
+                    <td style="white-space:pre-line">${texteAction(`action${idx+1}Attendus`) || '<span style="color:#C0C8D8;font-style:italic;">—</span>'}</td>
                 </tr>`;
             });
             html += `</tbody></table></div>`;
@@ -9858,6 +9858,256 @@ ${resumeHTML}
         window.addEventListener('scroll', positionSaveButton);
         window.addEventListener('resize', positionSaveButton);
         requestAnimationFrame(positionSaveButton);
+    </script>
+    <!-- ═══ Aides contextuelles (icône « ? » sur les questions complexes) ═══ -->
+    <style>
+        .ppi-tip {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; margin-left: 6px; border-radius: 50%;
+            background: #0090D4; color: #fff; font-size: 12px; font-weight: 700;
+            font-family: Arial, sans-serif; line-height: 1; cursor: help;
+            vertical-align: middle; user-select: none; flex-shrink: 0;
+        }
+        .ppi-tip::before { content: "?"; }
+        .ppi-tip:hover, .ppi-tip:focus { background: #0E1655; outline: none; }
+        #ppiTipBubble {
+            position: fixed; z-index: 10000; display: none;
+            max-width: min(360px, calc(100vw - 24px)); padding: 12px 14px;
+            background: #fff; color: #222; border: 1px solid #0090D4; border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(14, 22, 85, .18);
+            font-size: 13px; line-height: 1.45; text-align: left; font-weight: normal;
+        }
+        #ppiTipBubble .t { font-weight: 700; color: #0E1655; margin-bottom: 4px; }
+        #ppiTipBubble .ex { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #c9d6e8; }
+        #ppiTipBubble ul { margin: 4px 0 0 16px; padding: 0; }
+        #ppiTipBubble li { margin-bottom: 3px; font-style: italic; color: #444; }
+        @media print { .ppi-tip, #ppiTipBubble { display: none !important; } }
+    </style>
+    <script>
+    (function () {
+        // Aides limitées aux questions qui demandent une explication.
+        // cible : fonction qui renvoie les éléments (titre ou libellé) auxquels ajouter l'icône.
+        const parTexte = (sel, debut) => () => [...document.querySelectorAll(sel)]
+            .filter(el => el.textContent.replace(/\s+/g, ' ').trim().startsWith(debut));
+        const labelAvant = selChamp => () => [...document.querySelectorAll(selChamp)]
+            .map(ch => ch.previousElementSibling).filter(el => el && el.tagName === 'LABEL');
+
+        const AIDES = [
+            {
+                cible: parTexte('h2', 'Semaine type'),
+                attendus: "Une semaine représentative d'une période d'entraînement normale (hors stage, compétition et vacances). Chaque case correspond à 30 min. Renseignez toutes les activités, y compris scolaire / pro, récupération, soins et préparation mentale : les volumes hebdomadaires sont calculés à partir de cette grille.",
+                exemples: [
+                    "Lundi 6h30–8h30 : entraînement eau ; 9h–12h : scolaire / pro ; 17h–18h : préparation physique.",
+                    "Mercredi 14h–15h : kiné / ostéo ; 15h–15h30 : préparation mentale."
+                ]
+            },
+            {
+                cible: () => [document.querySelector('label[for="bq_entrainabilite"]')].filter(Boolean),
+                attendus: "Capacité à s'entraîner comme prévu sur la saison : présence aux séances, séances réalisées sans interruption (blessure, maladie, fatigue), capacité à encaisser la charge programmée.",
+                exemples: [
+                    "9–10 : quasiment aucune séance manquée, charge prévue réalisée.",
+                    "4 : six semaines d'arrêt sur blessure, reprise progressive."
+                ]
+            },
+            {
+                cible: parTexte('h2', 'Compétitions principales saison passée'),
+                attendus: "Les compétitions qui comptaient vraiment la saison dernière, avec le résultat par épreuve. Priorité : ★★★ Principale = objectif majeur de la saison ; ★★ Secondaire = qualification ou étape importante ; ★ Annexe = compétition de préparation.",
+                exemples: [
+                    "Championnats du monde — ★★★ — 200 m dos : 6e.",
+                    "Championnats de France — ★★ — Tremplin 3 m : 1er, 420 pts."
+                ]
+            },
+            {
+                cible: parTexte('h2', 'Projection long terme'),
+                attendus: "Pour chaque saison jusqu'à 2032 : la compétition de référence (l'objectif n°1 de la saison), puis pour chaque épreuve la performance visée (temps ou points) et le classement visé (TOP).",
+                exemples: [
+                    "Saison 2027 — Championnats du monde — 200 m papillon : 1:55.50, TOP 8.",
+                    "Saison 2028 — Jeux olympiques de Los Angeles — Tremplin 3 m : 460 pts, TOP 5."
+                ]
+            },
+            {
+                cible: parTexte('h2', 'Ce qui me sépare de mes objectifs'),
+                attendus: "L'écart entre le niveau actuel et les objectifs de la projection. Axe entraînement : ce qui relève de la pratique (technique, physique, mental, tactique, volume, qualité des séances). Axe environnement : ce qui se passe autour (études / emploi, sommeil, nutrition, logement, finances, staff, accès aux installations). Court terme = saison en cours ; moyen terme = 1 à 3 ans ; long terme = jusqu'à 2032. Soyez précis : chaque manque identifié doit pouvoir déboucher sur une action.",
+                exemples: [
+                    "Entraînement, court terme : « Perte de vitesse sur le dernier 50 m du 200 m ; manque de force-vitesse en sortie de virage. »",
+                    "Environnement, court terme : « Cours jusqu'à 18 h deux jours par semaine : séance du soir impossible. »"
+                ]
+            },
+            {
+                cible: labelAvant('select[id^="oc_priorite_"]'),
+                attendus: "Objectif de résultats : compétition où une performance ou un classement précis est visé (championnat de référence, qualification). Objectif de développement : compétition utilisée pour progresser (tester une course, une série, une tactique), sans enjeu de résultat.",
+                exemples: [
+                    "Résultats : championnats nationaux qualificatifs pour les championnats d'Europe.",
+                    "Développement : meeting de janvier pour tester un passage plus rapide au 100 m."
+                ]
+            },
+            {
+                cible: parTexte('h2', 'Dimensions de'),
+                attendus: "Glissez les dimensions dans chaque saison, par ordre de priorité. Les 3 premières cases (bordure bleue) sont les priorités de la saison ; pour la saison 2027, elles déterminent les 3 actions clés ci-dessous. Les cases 4 et 5 sont secondaires.",
+                exemples: [
+                    "2027 : 1. Dimension Physique — 2. Technique — 3. Dimension Mentale."
+                ]
+            }
+        ];
+
+        const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+        let bulle = null, iconeActive = null;
+        function getBulle() {
+            if (!bulle) {
+                bulle = document.createElement('div');
+                bulle.id = 'ppiTipBubble';
+                bulle.setAttribute('role', 'tooltip');
+                document.body.appendChild(bulle);
+            }
+            return bulle;
+        }
+        function afficher(icone) {
+            const a = AIDES[+icone.dataset.aide];
+            if (!a) return;
+            const b = getBulle();
+            b.innerHTML = `<div class="t">Attendus</div><div>${esc(a.attendus)}</div>` +
+                (a.exemples && a.exemples.length
+                    ? `<div class="ex"><div class="t">${a.exemples.length > 1 ? 'Exemples' : 'Exemple'}</div><ul>${a.exemples.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>`
+                    : '');
+            b.style.display = 'block';
+            const r = icone.getBoundingClientRect(), w = b.offsetWidth, h = b.offsetHeight;
+            let left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), window.innerWidth - w - 12);
+            let top = r.bottom + 8;
+            if (top + h > window.innerHeight - 8 && r.top - h - 8 > 8) top = r.top - h - 8;
+            b.style.left = left + 'px';
+            b.style.top = Math.max(8, top) + 'px';
+            iconeActive = icone;
+        }
+        function masquer() {
+            if (bulle) bulle.style.display = 'none';
+            iconeActive = null;
+        }
+
+        function decorer() {
+            AIDES.forEach((a, i) => {
+                a.cible().forEach(el => {
+                    if (el.querySelector(':scope > .ppi-tip')) return;
+                    const ic = document.createElement('span');
+                    ic.className = 'ppi-tip';
+                    ic.tabIndex = 0;
+                    ic.setAttribute('role', 'button');
+                    ic.setAttribute('aria-label', 'Aide : ' + a.attendus);
+                    ic.dataset.aide = i;
+                    el.appendChild(ic);
+                });
+            });
+        }
+
+        document.addEventListener('mouseover', e => {
+            const ic = e.target.closest && e.target.closest('.ppi-tip');
+            if (ic) afficher(ic);
+        });
+        document.addEventListener('mouseout', e => {
+            const ic = e.target.closest && e.target.closest('.ppi-tip');
+            if (ic && !ic.contains(e.relatedTarget) && document.activeElement !== ic) masquer();
+        });
+        document.addEventListener('focusin', e => {
+            if (e.target.classList && e.target.classList.contains('ppi-tip')) afficher(e.target);
+        });
+        document.addEventListener('focusout', e => {
+            if (e.target.classList && e.target.classList.contains('ppi-tip')) masquer();
+        });
+        // Clic / toucher : bascule (et n'active pas le champ associé au libellé)
+        document.addEventListener('click', e => {
+            const ic = e.target.closest && e.target.closest('.ppi-tip');
+            if (ic) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (iconeActive === ic && bulle && bulle.style.display === 'block') masquer(); else afficher(ic);
+            } else if (iconeActive) {
+                masquer();
+            }
+        }, true);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') masquer(); });
+        window.addEventListener('scroll', masquer, true);
+        window.addEventListener('resize', masquer);
+
+        // Les pages sont générées dynamiquement selon la discipline : on redécore à chaque changement
+        let planifie = false;
+        new MutationObserver(() => {
+            if (planifie) return;
+            planifie = true;
+            requestAnimationFrame(() => { planifie = false; decorer(); });
+        }).observe(document.body, { childList: true, subtree: true });
+        decorer();
+    })();
+    </script>
+    <!-- ═══ Actions clés : trame pré-écrite (reste en place pendant la saisie) ═══ -->
+    <style>
+        .action-item textarea[id$="Comment"] { min-height: 190px; }
+        .action-item textarea[id$="Attendus"] { min-height: 90px; }
+    </style>
+    <script>
+    (function () {
+        const TRAME_DESCRIPTION = [
+            "Quand (période, dates, fréquence) : ",
+            "Pourquoi (lien avec la dimension prioritaire et l'objectif visé) : ",
+            "Avec quoi / qui (staff, intervenants, matériel, installations, budget) : ",
+            "Comment (contenu, organisation, étapes) : ",
+            "Risques (points de vigilance, freins personnels internes ou externes, etc.) : "
+        ].join('\n');
+        const TRAME_INDICATEURS = "Indicateurs de réussite (tests, chronos, notes, observations permettant de vérifier que l'action a réussi) : ";
+
+        const RUBRIQUE = /^\s*(Quand|Pourquoi|Avec quoi \/ qui|Comment|Risques|Indicateurs de réussite)\s*(\([^)]*\))?\s*:\s*(.*)$/;
+        const trameDe = id => /Attendus$/.test(id) ? TRAME_INDICATEURS : TRAME_DESCRIPTION;
+        const IDS = [1, 2, 3].flatMap(n => [`action${n}Comment`, `action${n}Attendus`]);
+
+        // Texte enregistré : précisions entre parenthèses retirées, rubriques non remplies supprimées.
+        // Un texte libre (fiche antérieure à la trame) est renvoyé tel quel.
+        window.texteAction = function (id) {
+            const brut = document.getElementById(id)?.value || '';
+            const lignes = brut.split('\n');
+            if (!lignes.some(l => RUBRIQUE.test(l))) return brut.trim();
+            const blocs = [];
+            let courant = { entete: null, lignes: [] };
+            lignes.forEach(l => {
+                const m = l.match(RUBRIQUE);
+                if (m) {
+                    blocs.push(courant);
+                    courant = { entete: m[1], lignes: m[3].trim() ? [m[3].trim()] : [] };
+                } else {
+                    courant.lignes.push(l);
+                }
+            });
+            blocs.push(courant);
+            return blocs.map(b => {
+                const contenu = b.lignes.join('\n').trim();
+                if (!contenu) return '';
+                return b.entete ? `${b.entete} : ${contenu}` : contenu;
+            }).filter(Boolean).join('\n');
+        };
+
+        function poserTrames() {
+            IDS.forEach(id => {
+                const ta = document.getElementById(id);
+                if (ta && !ta.value.trim()) ta.value = trameDe(id);
+            });
+        }
+
+        document.addEventListener('focusin', e => {
+            const ta = e.target;
+            if (!ta || !IDS.includes(ta.id)) return;
+            if (!ta.value.trim()) ta.value = trameDe(ta.id);
+            // Trame intacte : curseur en fin de première rubrique
+            if (ta.value === trameDe(ta.id)) {
+                const fin = ta.value.indexOf('\n') === -1 ? ta.value.length : ta.value.indexOf('\n');
+                setTimeout(() => ta.setSelectionRange(fin, fin), 0);
+            }
+        });
+        document.addEventListener('focusout', e => {
+            const ta = e.target;
+            if (ta && IDS.includes(ta.id) && !ta.value.trim()) ta.value = trameDe(ta.id);
+        });
+
+        // Après la restauration des données (sauvegarde locale ou questionnaire pré-rempli)
+        [400, 1500].forEach(t => setTimeout(poserTrames, t));
+    })();
     </script>
 </body>
 </html>
