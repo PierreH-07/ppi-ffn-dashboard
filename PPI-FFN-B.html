@@ -10052,7 +10052,7 @@ ${resumeHTML}
             "Comment (contenu, organisation, étapes) : ",
             "Risques (points de vigilance, freins personnels internes ou externes, etc.) : "
         ].join('\n');
-        const TRAME_INDICATEURS = "Indicateurs de réussite (tests, chronos, notes, observations permettant de vérifier que l'action a réussi) : ";
+        const TRAME_INDICATEURS = "Indicateurs de réussite (éléments objectifs et subjectifs permettant de vérifier que l'action a réussi) : ";
 
         const RUBRIQUE = /^\s*(Quand|Pourquoi|Avec quoi \/ qui|Comment|Risques|Indicateurs de réussite)\s*(\([^)]*\))?\s*:\s*(.*)$/;
         const trameDe = id => /Attendus$/.test(id) ? TRAME_INDICATEURS : TRAME_DESCRIPTION;
