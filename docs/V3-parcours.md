@@ -35,7 +35,7 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
      - 50 à 200 m : détail phase par phase, longueur par longueur (départ, coulées, nage, approche, sortie de virage, arrivée), en petits histogrammes ; écart de l'athlète au meilleur de la référence. Pas de tableau en double.
      - 400 m et plus : moyennes, sur l'ensemble des virages, de l'approche, de la sortie et de la coulée.
      Sortie de virage = mur → +15 m pour les 50, 100 et 200 m ; mur → +5 m pour le 400 m et au-delà.
-- Eau libre : place, écart au vainqueur, écart à chaque tour, niveau de performance en bassin (profils de performance EL 2026).
+- Eau libre : place, écart au vainqueur, position et fréquence (cycles/min) à chaque tour (Omega) ; niveau en bassin (400, 800, 1500 NL, 50 m) de l'athlète et du podium mondial, meilleur temps sur les 24 mois précédant la course de chacun (veille de la course incluse), source `historique_bassin_el.json` de l'application EL.
 - Natation artistique : notes, coefficient de difficulté (avec le détail si disponible), rang.
 - Plongeon : total, notes par plongeon, coefficient de difficulté.
 - Water-polo : à définir.
