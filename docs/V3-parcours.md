@@ -31,9 +31,10 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
 - Natation course (base Espadon), par épreuve, sans commentaire DTN :
   1. Résultat : place, temps, écart au 1er et au 3e.
   2. Par 50 m : temps de passage, écart cumulé, fréquence, DPC ; athlète et chacun des 3 de la référence.
-  3. Phases : départ 0-15 m, approches (5 m avant le mur), sorties de virage, coulées (m), arrivée 5 m ; athlète, meilleur des 3, écart.
+  3. Phases :
+     - 50 à 200 m : détail phase par phase, longueur par longueur (départ, coulées, nage, approche, sortie de virage, arrivée), en petits histogrammes ; écart de l'athlète au meilleur de la référence. Pas de tableau en double.
+     - 400 m et plus : moyennes, sur l'ensemble des virages, de l'approche, de la sortie et de la coulée.
      Sortie de virage = mur → +15 m pour les 50, 100 et 200 m ; mur → +5 m pour le 400 m et au-delà.
-  4. 50, 100 et 200 m uniquement : visualisation des phases longueur par longueur.
 - Eau libre : place, écart au vainqueur, écart à chaque tour, niveau de performance en bassin (profils de performance EL 2026).
 - Natation artistique : notes, coefficient de difficulté (avec le détail si disponible), rang.
 - Plongeon : total, notes par plongeon, coefficient de difficulté.
