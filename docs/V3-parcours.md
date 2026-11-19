@@ -14,7 +14,7 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
 |---|---|---|
 | 0 | Bandeau | Identité et discipline pré-remplies. |
 | 1 | Ambitions | Lignes libres : horizon (choisi par l'athlète), compétition, résultat visé. Champ « pourquoi je me lance ». Aucun moyen ni plan d'action. |
-| 2 | Performances brutes | Pré-rempli, lecture seule. Athlète comparé au top 3 de la compétition de référence choisie par la DTN. |
+| 2 | Performances brutes | Pré-rempli, lecture seule. Athlète comparé au top 3 de la référence mondiale (voir ci-dessous). |
 | 3 | Analyse conjointe entraîneur + athlète | Liste de constats : dimension (liste existante), constat, indicateurs (libellé + valeur actuelle, libres). Les dimensions sont priorisées à partir de cette liste. |
 | 4 | Saison 2026-27 | Performance à réaliser. 3 actions : levier, constat(s) visé(s) de la page 3, indicateur de réussite (valeur actuelle → cible), mise en œuvre. |
 | 5 | Compétitions de la saison | Planning de compétition seul (objectif de résultats / de développement). |
@@ -22,8 +22,16 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
 | 7 | Administratif et staff | Pré-remplis. Structure et entraîneur d'entraînement ; si l'athlète s'entraîne à l'étranger : structure et entraîneur de référence en France. |
 | 8 | Révision et résumé | |
 
+## Référence (toutes disciplines)
+- Top 3 de la dernière compétition mondiale de référence : Championnats du monde ou Jeux olympiques, à N-1 si besoin.
+- Si l'athlète est déjà dans ce top 3 : on garde ses valeurs + celles des 2 autres, et la question posée devient « comment y rester ».
+
 ## Données de la page 2, par discipline
-- Natation course : sur chaque épreuve du championnat de référence : temps, temps de passage, place, analyse de course (fournie par la DTN, base Espadon).
+- Natation course (base Espadon), par épreuve, sans commentaire DTN :
+  1. Résultat : place, temps, écart au 1er et au 3e.
+  2. Par 50 m : temps de passage, écart cumulé, fréquence, DPC ; athlète et chacun des 3 de la référence.
+  3. Phases : départ 0-15 m, approches, sorties, coulées (m), arrivée 5 m ; athlète, meilleur des 3, écart.
+  4. 50, 100 et 200 m uniquement : visualisation des phases longueur par longueur.
 - Eau libre : place, écart au vainqueur, écart à chaque tour, niveau de performance en bassin (profils de performance EL 2026).
 - Natation artistique : notes, coefficient de difficulté (avec le détail si disponible), rang.
 - Plongeon : total, notes par plongeon, coefficient de difficulté.
