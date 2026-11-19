@@ -23,7 +23,8 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
 | 8 | Révision et résumé | |
 
 ## Référence (toutes disciplines)
-- Top 3 de la dernière compétition mondiale de référence : Championnats du monde ou Jeux olympiques, à N-1 si besoin.
+- Données de l'athlète : compétition de référence de la saison écoulée (saison 2026 : Championnats d'Europe de Paris, résultats microplus).
+- Comparaison : top 3 de la dernière compétition mondiale (Championnats du monde ou Jeux olympiques ; pour 2026 : CM 2025 Singapour).
 - Si l'athlète est déjà dans ce top 3 : on garde ses valeurs + celles des 2 autres, et la question posée devient « comment y rester ».
 
 ## Données de la page 2, par discipline
@@ -32,7 +33,6 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
   2. Par 50 m : temps de passage, écart cumulé, fréquence, DPC ; athlète et chacun des 3 de la référence.
   3. Phases : départ 0-15 m, approches (5 m avant le mur), sorties de virage, coulées (m), arrivée 5 m ; athlète, meilleur des 3, écart.
      Sortie de virage = mur → +15 m pour les 50, 100 et 200 m ; mur → +5 m pour le 400 m et au-delà.
-  Course de l'athlète = sa meilleure course de la saison écoulée ; référence = top 3 de la dernière compétition mondiale.
   4. 50, 100 et 200 m uniquement : visualisation des phases longueur par longueur.
 - Eau libre : place, écart au vainqueur, écart à chaque tour, niveau de performance en bassin (profils de performance EL 2026).
 - Natation artistique : notes, coefficient de difficulté (avec le détail si disponible), rang.
