@@ -56,3 +56,11 @@ Le dashboard lit `calendrier`, `semaine_type_data` et `competitions_calendrier` 
 - Plusieurs épreuves : liste des épreuves du projet = épreuves de la compétition de référence + épreuves de la performance visée. Chaque constat est rattaché à une ou plusieurs épreuves, ou à toutes (constat global).
 - Actions : une action par constat (1 pour 1), avec un statut : prioritaire (rang sur l'ensemble du projet), à mener, déjà traité ailleurs, mise de côté pour l'instant (raison facultative). Rien n'est obligatoire. Bilan PDF regroupé par épreuve, chaque constat une seule fois ; constats écartés listés en une ligne.
 - En attente : appliquer à toutes les disciplines la référence « meilleurs performers de la saison » (fait en natation course).
+
+## Parcours collectif / individuel (2026-11-19)
+- Athlète individuel : Analyse conjointe → Plan d'action 2026-27.
+- Épreuves uniquement collectives (duo, équipe) : Analyse collective → « Mon rôle dans le duo / l'équipe et plan d'action » (onglets fusionnés : statistiques individuelles, mon rôle par constat collectif, action associée, priorisation).
+- Athlète mixte (ex. plongeon synchro 3 m + tremplin 3 m) : Analyse collective (constats collectifs) → Mon rôle dans le duo synchro (statistiques de l'athlète dans le duo, rôle + indicateurs individuels + action associée à chaque constat collectif) → Analyse individuelle (épreuves individuelles) → Plan d'action (reprend les actions de « Mon rôle », marquées « au service du collectif », et ajoute les actions individuelles ; arbitrage).
+- Plan d'action : bloc « Priorisation des actions » en tête (prioritaires dans l'ordre avec ▲ ▼, à mener, à arbitrer, écartées) ; statut modifiable sur chaque ligne ; bouton « Modifier » vers la fiche de l'action.
+- Statut « Mise de côté pour l'instant » remplacé par « Pas prioritaire », justification attendue.
+- Plongeon synchro : référence = top 3 de la finale de la compétition de référence de la saison (CE 2026 Paris). Exécution : la feuille Omega ne dit pas quel plongeur est jugé par E1-E3 ou E4-E6.
