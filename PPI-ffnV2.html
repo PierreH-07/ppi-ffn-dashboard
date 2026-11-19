@@ -5170,7 +5170,8 @@ ${resumeHTML}
         // Types propres à une discipline, ajoutés à la palette de base
         const SEMAINE_TYPES_DISCIPLINE = {
             'synchro': [
-                { id: 'acro', label: 'Entraînement acro', color: '#F28C28', textColor: '#fff' }
+                { id: 'voltige', label: 'Voltige', color: '#F28C28', textColor: '#fff' },
+                { id: 'portes',  label: 'Portés',  color: '#1F4E9C', textColor: '#fff' }
             ]
         };
 
@@ -5589,7 +5590,7 @@ ${resumeHTML}
             // Charger les dimensions de développement (page 5)
             loadDisciplineDimensions(discipline);
 
-            // Page 2 : entraîneurs principaux multiples et type « Entraînement acro » (natation artistique)
+            // Page 2 : entraîneurs principaux multiples et types « Voltige » et « Portés » (natation artistique)
             updateEntraineurSectionForDiscipline(discipline);
             updateSemaineTypesForDiscipline(discipline);
             updateBudgetForDiscipline(discipline);
@@ -7246,11 +7247,11 @@ ${resumeHTML}
         }
 
         // Retourne un Set des indices de jours de semaine (0=lundi...6=dimanche)
-        // qui contiennent au moins un slot 'eau', 'acro' ou 'physique' dans la semaine type
+        // qui contiennent au moins un slot 'eau', 'voltige', 'portes' ou 'physique' dans la semaine type
         function getTrainingDaysFromSemaineType() {
             const days = new Set();
             Object.entries(semaineTypeData).forEach(([key, typeId]) => {
-                if (typeId === 'eau' || typeId === 'acro' || typeId === 'physique') {
+                if (typeId === 'eau' || typeId === 'voltige' || typeId === 'portes' || typeId === 'physique') {
                     const dayIndex = parseInt(key.split('_')[0]);
                     days.add(dayIndex);
                 }
@@ -8720,10 +8721,13 @@ ${resumeHTML}
 
 
         function computeVolumes() {
-            const counts = { eau:0, acro:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
+            const counts = { eau:0, voltige:0, portes:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
             Object.values(semaineTypeData).forEach(typeId => {
                 if (typeId && counts[typeId] !== undefined) counts[typeId]++;
             });
+            // Les portés comptent comme entraînement dans l'eau (natation artistique)
+            counts.eau += counts.portes;
+            delete counts.portes;
             return Object.fromEntries(Object.entries(counts).map(([k, n]) => [k, n * 0.5]));
         }
 
@@ -9047,14 +9051,14 @@ ${resumeHTML}
             const totalHeures = Object.values(volumes).reduce((a,b) => a+b, 0);
             const colorMap = {
                 eau:      { style: 'background-image:linear-gradient(90deg,#0080BE,#00AEEF)' },
-                acro:     { style: 'background-image:linear-gradient(90deg,#D9731A,#F28C28)' },
+                voltige:  { style: 'background-image:linear-gradient(90deg,#D9731A,#F28C28)' },
                 physique: { style: 'background-image:linear-gradient(90deg,#D7282F,#E55A60)' },
                 scolaire: { style: 'background-image:linear-gradient(90deg,#6CB33F,#8DCB6E)' },
                 recup:    { style: 'background-color:#7C88A6' },
                 kine:     { style: 'background-color:#7C88A6' },
                 mental:   { style: 'background-color:#7C88A6' }
             };
-            const labelMap = { eau: 'Entraînement eau', acro: 'Entraînement acro', physique: 'Préparation physique', scolaire: 'Scolaire / Pro', recup: 'Récupération', kine: 'Kiné / Ostéo', mental: 'Préparation mentale' };
+            const labelMap = { eau: 'Entraînement eau', voltige: 'Voltige', physique: 'Préparation physique', scolaire: 'Scolaire / Pro', recup: 'Récupération', kine: 'Kiné / Ostéo', mental: 'Préparation mentale' };
 
             let html = `<div class="card">
         <div class="card-head">
@@ -9063,7 +9067,7 @@ ${resumeHTML}
         <div class="week">
             <div class="week-bars">`;
 
-            ['eau', ...(currentDiscipline === 'synchro' ? ['acro'] : []), 'physique', 'scolaire'].forEach(id => {
+            ['eau', ...(currentDiscipline === 'synchro' ? ['voltige'] : []), 'physique', 'scolaire'].forEach(id => {
                 const h = (volumes[id] || 0).toFixed(1);
                 const pct = totalHeures > 0 ? ((volumes[id] || 0) / totalHeures * 100).toFixed(0) : 0;
                 html += `<div class="week-row major">
@@ -9091,7 +9095,7 @@ ${resumeHTML}
             // Générer le donut avec tous les volumes
             const volumeCategories = [
                 { key: 'eau', color: '#00AEEF' },
-                { key: 'acro', color: '#F28C28' },
+                { key: 'voltige', color: '#F28C28' },
                 { key: 'physique', color: '#E55A60' },
                 { key: 'scolaire', color: '#8DCB6E' },
                 { key: 'recup', color: '#7C88A6' },
@@ -9413,7 +9417,7 @@ ${resumeHTML}
             // 5. Semaine type
             const volumes = computeVolumes();
             const totalH  = Object.values(volumes).reduce((a, b) => a + b, 0);
-            const volLabels = { eau: 'Entraînement eau', ...(currentDiscipline === 'synchro' ? { acro: 'Entraînement acro' } : {}), physique: 'Préparation physique', scolaire: 'Scolaire / Pro', recup: 'Récupération', kine: 'Kiné / Ostéo', mental: 'Préparation mentale' };
+            const volLabels = { eau: 'Entraînement eau', ...(currentDiscipline === 'synchro' ? { voltige: 'Voltige' } : {}), physique: 'Préparation physique', scolaire: 'Scolaire / Pro', recup: 'Récupération', kine: 'Kiné / Ostéo', mental: 'Préparation mentale' };
             html += `<div class="rev-card">
                 <div class="rev-card-title">Semaine type</div>
                 <table class="rev-table"><thead><tr><th>Catégorie</th><th>h/sem</th></tr></thead><tbody>`;

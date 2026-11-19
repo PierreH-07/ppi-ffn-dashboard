@@ -1773,8 +1773,11 @@ function renderSemaineType(n) {
   if (!Object.values(data).some(Boolean)) return aCompleter('Semaine type non renseignée');
 
   // Volumes par catégorie (comptage des créneaux × 0.5h)
-  const counts = { eau:0, acro:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
+  const counts = { eau:0, acro:0, voltige:0, portes:0, physique:0, scolaire:0, recup:0, kine:0, mental:0 };
   Object.values(data).forEach(t => { if (t && counts[t] !== undefined) counts[t]++; });
+  // Les portés (natation artistique) comptent comme entraînement dans l'eau
+  counts.eau += counts.portes;
+  delete counts.portes;
   const volumes = Object.fromEntries(Object.entries(counts).map(([k,v]) => [k, v*0.5]));
   const total = Object.values(volumes).reduce((a,b)=>a+b,0);
   const maxV = Math.max(...Object.values(volumes), 1);
@@ -1782,6 +1785,7 @@ function renderSemaineType(n) {
   const catConfig = [
     { id:'eau',      label:'Entraînement eau',    shortLabel:'EAU',      color:'#00AEEF', gradient:'linear-gradient(90deg,#0080BE,#00AEEF)', major:true  },
     { id:'acro',     label:'Entraînement acro',    shortLabel:'ACRO',     color:'#F28C28', gradient:'#F28C28',                               major:true  },
+    { id:'voltige',  label:'Voltige',               shortLabel:'VOLTIGE',  color:'#F28C28', gradient:'#F28C28',                               major:true  },
     { id:'physique', label:'Préparation physique', shortLabel:'PHYSIQUE', color:'#D7282F', gradient:'linear-gradient(90deg,#D7282F,#E55A60)', major:true  },
     { id:'scolaire', label:'Scolaire / Pro',        shortLabel:'SCOLAIRE', color:'#6CB33F', gradient:'linear-gradient(90deg,#6CB33F,#8DCB6E)', major:true  },
     { id:'recup',    label:'Récupération',          shortLabel:'RÉCUP',    color:'#7C88A6', gradient:'#7C88A6',                               major:false },
@@ -1790,9 +1794,13 @@ function renderSemaineType(n) {
   ];
   const colorById = Object.fromEntries(catConfig.map(c => [c.id, c.color]));
   const shortById = Object.fromEntries(catConfig.map(c => [c.id, c.shortLabel]));
+  // Portés : pas de barre propre (heures ajoutées à l'eau), mais affichés dans la grille
+  colorById.portes = '#1F4E9C';
+  shortById.portes = 'PORTÉS';
 
-  // La ligne acro n'apparaît que pour la NA ou si des créneaux acro existent
-  const barRows = catConfig.filter(c => c.id !== 'acro' || volumes.acro > 0 || n.discipline === 'synchro').map(c => {
+  // Ligne acro : fiches anciennes seulement (créneaux acro existants).
+  // Ligne voltige : NA, ou si des créneaux voltige existent
+  const barRows = catConfig.filter(c => (c.id !== 'acro' || volumes.acro > 0) && (c.id !== 'voltige' || volumes.voltige > 0 || n.discipline === 'synchro')).map(c => {
     const h = volumes[c.id].toFixed(1);
     const pct = Math.round(volumes[c.id] / maxV * 100);
     return `<div class="semaine-row">
@@ -2193,10 +2201,10 @@ function renderBilanChiffre(n) {
     }
   });
 
-  // Jours d'entraînement : jours de la semaine type contenant au moins un créneau 'eau', 'acro' ou 'physique'
+  // Jours d'entraînement : jours de la semaine type contenant au moins un créneau 'eau', 'acro', 'voltige', 'portes' ou 'physique'
   const trainingDow = new Set();
   Object.entries(semaine).forEach(([key, t]) => {
-    if (t === 'eau' || t === 'acro' || t === 'physique') trainingDow.add(parseInt(key.split('_')[0]));
+    if (t === 'eau' || t === 'acro' || t === 'voltige' || t === 'portes' || t === 'physique') trainingDow.add(parseInt(key.split('_')[0]));
   });
   let entrainement = 0;
   for (let d = new Date(SEASON_START); d <= SEASON_END; d = new Date(d.getTime() + 86400000)) {
