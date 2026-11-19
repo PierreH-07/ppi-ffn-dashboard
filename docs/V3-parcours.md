@@ -14,7 +14,7 @@ Version à côté : `PPI-FFN-V3.html`, construit à partir de `PPI-ffnV2.html`. 
 |---|---|---|
 | 0 | Bandeau | Identité et discipline pré-remplies. |
 | 1 | Ambitions | Lignes libres : horizon (choisi par l'athlète), compétition, résultat visé. Champ « pourquoi je me lance ». Aucun moyen ni plan d'action. |
-| 2 | Performances brutes | Pré-rempli, lecture seule. Athlète comparé au top 3 de la référence mondiale (voir ci-dessous). |
+| 2 | Bilan de la compétition de référence | Pré-rempli, lecture seule. Athlète comparé au top 3 de la référence mondiale (voir ci-dessous). |
 | 3 | Analyse conjointe entraîneur + athlète | Liste de constats : dimension (liste existante), constat, indicateurs (libellé + valeur actuelle, libres). Les dimensions sont priorisées à partir de cette liste. |
 | 4 | Saison 2026-27 | Performance à réaliser. 3 actions : levier, constat(s) visé(s) de la page 3, indicateur de réussite (valeur actuelle → cible), mise en œuvre. |
 | 5 | Compétitions de la saison | Planning de compétition seul (objectif de résultats / de développement). |
