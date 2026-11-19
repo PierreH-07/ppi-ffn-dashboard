@@ -47,7 +47,7 @@ Semaine type ; vue calendrier annuel et timeline ; bilan chiffré (jours de comp
 Le dashboard lit `calendrier`, `semaine_type_data` et `competitions_calendrier` : il devra accepter des fiches V3 où `calendrier` et `semaine_type_data` sont vides.
 
 ## Décisions complémentaires (prototype)
-- Ambitions : objectif aux prochains Jeux olympiques (2028) obligatoire ; autres ambitions facultatives (championnats du monde ou JO). Plus de champ « Pourquoi je me lance ».
+- Ambitions : par défaut Championnats du monde 2027 et Jeux olympiques 2028 (objectif JO obligatoire) ; bouton « Ajouter une ambition à plus long terme » (CM 2029, CM 2031, JO 2032). Plus de champ « Pourquoi je me lance ».
 - Constats : « Ce qui est observé, et pourquoi c'est important pour la performance » ; indicateurs chiffrés, sur échelle de 1 à 5 (évaluation entraîneur) ou descriptifs ; valeur actuelle, niveau requis pour l'objectif, écart ; « Ce qui sépare de l'objectif » ; difficulté de l'écart (à portée / exigeant mais atteignable / hors de portée cette saison), sans contrainte imposée à l'entraîneur.
 - Performance visée 2026-27 : Championnats du monde de Budapest 2027, dates de la discipline (World Aquatics) : natation 10-18 juillet, natation artistique 10-17 juillet, plongeon 26 juin-4 juillet, eau libre 3-8 juillet, water-polo 26 juin-9 juillet.
 - Natation artistique : comparaison au top 3 de la compétition de référence de la saison (CE 2026 Paris).
