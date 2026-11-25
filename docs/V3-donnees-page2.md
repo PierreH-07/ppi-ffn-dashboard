@@ -67,7 +67,9 @@ Relancer la requête remplace la ligne : on peut corriger et réinsérer autant 
 | `epreuve` | `titre` | ouvre un onglet. Un bloc `epreuve` avant chaque épreuve ; aucun s'il n'y a qu'une épreuve. |
 | `tableau` | `titre`, `colonnes`, `lignes`, `athlete`, `hors`, `note` | tableau. `lignes` = liste de lignes, chaque ligne = liste de textes, **dans l'ordre des colonnes**. `athlete` = numéros des lignes de l'athlète (la 1re ligne est 0) : en gras, marquées « (athlète) ». `hors` = lignes « pour information ». `note` = texte sous le tableau. |
 | `texte` | `titre`, `texte` | paragraphe ; les retours à la ligne (`\n`) sont conservés |
-| `html` | `titre` (facultatif), `html` | contenu libre (graphiques). Réservé aux mises en forme qu'un tableau ne permet pas. |
+| `barres` | `titre`, `series`, `groupes`, `note` | petits histogrammes par phase (natation course), écart de l'athlète au meilleur calculé automatiquement — section 4.3 |
+| `courbe` | `titre`, `axe`, `series`, `inverse`, `etiquette_axe`, `note` | courbe (positions tour par tour en eau libre) — section 5.2 |
+| `html` | `titre` (facultatif), `html` | contenu libre. Réservé aux mises en forme qu'aucun autre bloc ne permet. |
 
 **Règle du tableau « Résultat »** : si le titre contient le mot « Résultat », le tableau est automatiquement coupé en deux groupes : « Compétition de référence de la saison » (lignes `athlete`) puis la référence (les autres lignes). Mettre donc toutes les lignes de l'athlète dans `athlete`.
 
@@ -146,7 +148,25 @@ Format tableau : **une ligne par phase**, une colonne par nageur, plus l'écart 
 ```
 Un tableau par longueur (50 à 200 m), ou un seul tableau « 3. Phases — moyennes sur les virages » (400 m et plus).
 
-Les petits histogrammes du prototype ne sont pas reproduits par un tableau. Pour les garder, il faut un bloc `html` (mise en forme du prototype, voir `supabase/exemple_analyse_v3.sql`).
+**Version graphique (recommandée)** : bloc `barres`, un petit histogramme par phase, comme dans le prototype.
+```json
+{ "type": "barres", "titre": "3. Phases, longueur par longueur",
+  "series": ["NOM 2026 — CE 2026 Paris", "NOM1 2026 — CE 2026 Paris", "NOM2 2025 — CM 2025 Singapour", "NOM3 2026 — CE 2026 Paris"],
+  "groupes": [
+    { "titre": "Longueur 1 (0-50 m)",
+      "phases": [
+        { "nom": "Départ 0-15 m",       "unite": "s", "valeurs": [5.32, 5.19, 5.24, 5.25] },
+        { "nom": "Coulée de départ",    "unite": "m", "valeurs": [13.0, 14.5, 13.8, 12.9], "plus_haut_meilleur": true },
+        { "nom": "Nage 15-45 m",        "unite": "s", "valeurs": [15.10, 15.00, 15.20, 15.30] },
+        { "nom": "Approche 45-50 m",    "unite": "s", "valeurs": [2.55, 2.50, 2.60, 2.58] } ] },
+    { "titre": "Longueur 2 (50-100 m)", "phases": [ … ] } ],
+  "note": "Temps en secondes, coulées en mètres. Valeur à droite du titre = écart de l’athlète au meilleur des 3 performers." }
+```
+- `series` : **l'athlète en premier**, puis les nageurs de référence ; même ordre dans chaque `valeurs`.
+- `valeurs` : des **nombres** (point décimal, sans guillemets) ; `null` si la valeur manque.
+- `plus_haut_meilleur: true` pour les coulées (une plus grande valeur est meilleure) ; à omettre pour les temps.
+- L'écart affiché à droite de chaque phase est calculé : athlète − meilleur des autres, en rouge s'il est défavorable.
+- 400 m et plus : un seul groupe « Moyennes sur les virages » avec les phases approche, sortie de virage, coulée.
 
 ---
 
@@ -183,6 +203,20 @@ Source : Omega (passages publiés). Une ligne par tour (ou demi-tour publié).
 ```
 Même tableau pour chaque nageur du podium (« 3. Podium CM 2025 — NOM1 », etc.), ou un seul tableau avec une colonne « Nageur ».
 Passage non publié : écrire `non publié`. Point aberrant retiré : le signaler dans `note`.
+
+**Version graphique (recommandée)** : bloc `courbe`, une courbe de position par nageur.
+```json
+{ "type": "courbe", "titre": "2. Position tour par tour — CE 2026 Paris (athlète)",
+  "axe": ["0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5", "5.5", "6", "6.5", "7", "7.5", "F"],
+  "etiquette_axe": "tour",
+  "series": [ { "nom": "NOM Prénom — CE 2026 Paris",
+                "valeurs": [1, 3, 2, 6, 1, 1, 1, 4, 5, 3, 2, 3, 3, null, 19, 21] } ],
+  "note": "Position : 1 en haut. Trait pointillé = passage non publié." }
+```
+- `axe` : les passages, dans l'ordre ; `series` : un nageur par élément, `valeurs` dans l'ordre de `axe`.
+- `null` = passage non publié : la courbe le saute en pointillé.
+- Position (1 en haut) par défaut. Pour une autre grandeur (écart au leader en secondes, fréquence…), ajouter `"inverse": false` (valeur haute en haut).
+- Podium : un bloc `courbe` avec les 3 nageurs dans `series` (3 couleurs).
 
 ### 5.3 Niveau en bassin (50 m)
 Meilleur temps de chaque nageur **sur les 24 mois précédant sa course** (jusqu'à la veille incluse), **bassin de 50 m uniquement**. Source : `historique_bassin_el.json` de l'application EL.
