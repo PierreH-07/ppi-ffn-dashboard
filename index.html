@@ -1164,6 +1164,107 @@ async function genererQuestionnairePrerempli(n) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// ══ QUESTIONNAIRE V3 PRÉ-REMPLI ══
+// Proposé sur les fiches des athlètes de la table ppi_v3_liste (actif), pour l'instant natation course et eau libre.
+// Le dashboard télécharge le questionnaire PPI-V3-prototype.html déposé à côté de lui et remplit sa balise
+// #embedded-data avec : l'administratif (dernière fiche), les données d'analyse de la page 2 (ppi_v3_analyse,
+// saison la plus récente) et le rappel du PPI précédent (objectifs et plan d'action de la dernière fiche).
+const QUESTIONNAIRE_V3 = 'PPI-V3-prototype.html';
+const DISCIPLINES_V3 = ['natation-bassin', 'eau-libre'];
+let listeV3 = {};   // licence normalisée → discipline
+
+async function chargerListeV3() {
+  listeV3 = {};
+  try {
+    const { data, error } = await sb.from('ppi_v3_liste').select('licence,discipline').eq('actif', true);
+    if (error) return;   // table absente ou non lisible : pas de bouton V3
+    (data || []).forEach(r => { const l = licenceValide(r.licence); if (l) listeV3[l] = r.discipline; });
+  } catch (e) { /* pas de bouton V3 */ }
+}
+const eligibleV3 = n => { const d = listeV3[licenceValide(n.licence)]; return !!d && DISCIPLINES_V3.includes(d); };
+
+function adminPourV3(n) {
+  const e = getEntraineursPrincipaux(n)[0] || {};
+  const staff = rempli(n.staff_complementaire) ? n.staff_complementaire
+    : (jsonCol(n.staff_data, []) || []).filter(m => m && m.nom).map(m => (m.type ? m.type + ' : ' : '') + m.nom).join('\n');
+  return {
+    licence: licenceValide(n.licence), nom: n.nom || '', prenom: n.prenom || '', date_naissance: n.date_naissance || '',
+    genre: n._genre || n.genre || '', email: n.email || '', telephone: n.telephone || '', club: n.club || '',
+    structure_nom: n.structure_nom || '', entraineur_nom: e.nom || n.entraineur_nom || '',
+    entraineur_email: e.email || n.entraineur_email || '', entraineur_tel: e.tel || n.entraineur_tel || '',
+    staff, entrainement_etranger: !!n.entrainement_etranger, structure_france: n.structure_france || '', entraineur_france: n.entraineur_france || '',
+  };
+}
+
+// Objectifs et actions de la fiche précédente, à évaluer (« réalisé ») dans la page 2 du V3
+function precedentPourV3(n) {
+  const items = [];
+  const perfEp = ep => [ep.perf, ep.classement ? 'TOP ' + ep.classement : ''].filter(rempli).join(' · ');
+  const objectifs = jsonCol(n.objectifs_saison, []) || [];
+  if (estV3(n)) {
+    const p = jsonCol(n.performance_visee, null);
+    if (p && p.competition) (p.epreuves || []).filter(e => e.epreuve).forEach(e =>
+      items.push({ type: 'objectif', libelle: p.competition + ' — ' + e.epreuve, cible: perfEp(e) }));
+  }
+  objectifs.filter(o => o && o.nom && o.priorite !== 'developpement').forEach(o => {
+    const E = (o.epreuves || []).filter(e => e.epreuve);
+    if (E.length) E.forEach(e => items.push({ type: 'objectif', libelle: o.nom + ' — ' + e.epreuve, cible: perfEp(e) }));
+    else items.push({ type: 'objectif', libelle: o.nom, cible: o.commentaire || '' });
+  });
+  if (estV3(n)) {
+    (jsonCol(n.axes_amelioration, []) || []).map(a => a.action || {})
+      .filter(x => (x.statut === 'prio' || x.statut === 'mener') && rempli(x.quoi))
+      .sort((x, y) => (x.statut === 'prio' ? 0 : 1) - (y.statut === 'prio' ? 0 : 1) || (+x.rang || 99) - (+y.rang || 99))
+      .forEach(x => items.push({ type: 'action', libelle: x.quoi,
+        cible: rempli(x.indicateur) ? `${x.indicateur} : ${fmtInd3(x.type_indicateur, x.valeur_actuelle, x.unite) || '?'} → ${fmtInd3(x.type_indicateur, x.cible, x.unite) || '?'}` : '' }));
+  } else {
+    [1, 2, 3].forEach(i => { if (rempli(n[`action${i}_comment`])) items.push({ type: 'action', libelle: n[`action${i}_comment`], cible: n[`action${i}_attendus`] || '' }); });
+  }
+  return items.length ? { date: n.date_export || '', version: estV3(n) ? 'V3' : 'V2', items } : null;
+}
+
+async function genererQuestionnaireV3(n, versions) {
+  const derniere = (versions && versions[0]) || n;
+  const lic = licenceValide(derniere.licence);
+  let modele;
+  try {
+    const resp = await fetch(QUESTIONNAIRE_V3, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    modele = await resp.text();
+  } catch (e) { alert(`Questionnaire V3 introuvable (${QUESTIONNAIRE_V3}).\n\nDétail : ${e.message}`); return; }
+  if (!/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/.test(modele)) { alert(`${QUESTIONNAIRE_V3} ne contient pas la balise de pré-remplissage (embedded-data).`); return; }
+
+  let analyse = null;
+  const { data, error } = await sb.from('ppi_v3_analyse').select('saison,competition_reference,donnees')
+    .eq('licence', lic).order('saison', { ascending: false }).limit(1);
+  if (!error && data && data[0]) analyse = { ...data[0], donnees: jsonCol(data[0].donnees, null) };
+  if (!analyse && !confirm('Aucune donnée d’analyse (page 2) n’est enregistrée pour cette licence.\nLa page 2 affichera « données à venir ».\n\nGénérer quand même le questionnaire ?')) return;
+
+  const dataJson = JSON.stringify({
+    discipline: listeV3[lic] || derniere.discipline || '', genere_le: new Date().toISOString(),
+    admin: adminPourV3(derniere), analyse, precedent: precedentPourV3(derniere),
+  }).replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '\\u003c!--').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  const fin = '<' + '/script>';
+  const html = modele.replace(/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/,
+    () => '<script id="embedded-data" type="application/json">' + dataJson + fin);
+
+  const propre = t => (t || '').trim().replace(/[^a-zA-ZÀ-ÿ0-9]/g, '-');
+  const filename = ['PPI-V3', propre(derniere.nom) || 'athlete', propre(derniere.prenom)].filter(Boolean).join('-') + '.html';
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function renderBilanPrecedentV3(n) {
+  const b = jsonCol(n.bilan_plan_precedent, null);
+  if (!b || !(b.items || []).length) return '';
+  const R = { atteint: ['Atteint', 'v3-d-portee'], partiel: ['Partiellement atteint', 'v3-d-optimal'], non: ['Non atteint', 'v3-d-hors'] };
+  return `<div class="card" style="margin-top:12px"><div class="card-title">Réalisé du PPI précédent${b.date_fiche ? ' (' + d3(String(b.date_fiche).slice(0, 10)) + ')' : ''}</div>
+    ${b.items.map(x => `<div class="v3-off"><b>${x.type === 'action' ? 'Action' : 'Objectif'}</b> — ${e3(x.libelle)}${x.cible ? ` <span style="color:var(--muted)">(attendu : ${e3(x.cible)})</span>` : ''}
+      ${R[x.realise] ? `<span class="v3-diff ${R[x.realise][1]}">${R[x.realise][0]}</span>` : '<span class="empty">non évalué</span>'}${x.commentaire ? ' · ' + e3(x.commentaire) : ''}</div>`).join('')}</div>`;
+}
+
 // ── Clé de regroupement des versions d'un même nageur ──
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[-'’]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1293,6 +1394,7 @@ async function loadNageurs() {
     .map(versions => versions[0])
     .sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
 
+  await chargerListeV3();
   buildDiscFilter();
   buildListFilters();
   filterNageurs();
@@ -1515,6 +1617,11 @@ function renderFiche(n, versions, selectedIndex) {
                font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto">
         📄 Questionnaire pré-rempli
       </button>
+      ${eligibleV3(allVersions[0] || n) ? `<button id="btn-questionnaire-v3" title="Questionnaire V3 pré-rempli : administratif, données d'analyse de la page 2, rappel du PPI précédent"
+        style="padding:4px 10px;background:#0090D4;color:#fff;border:1px solid #0090D4;border-radius:6px;
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+        📄 Questionnaire V3 pré-rempli
+      </button>` : ''}
       <button id="btn-delete-version"
         style="padding:4px 10px;background:#FDECEA;color:var(--red);
                border:1px solid #F5C6C6;border-radius:6px;
@@ -1608,6 +1715,8 @@ function renderFiche(n, versions, selectedIndex) {
 
     // Bouton questionnaire pré-rempli
     const btnQ = document.getElementById('btn-questionnaire-prerempli');
+    const btnV3 = document.getElementById('btn-questionnaire-v3');
+    if (btnV3) btnV3.addEventListener('click', () => genererQuestionnaireV3(n, allVersions));
     if (btnQ && estV3(n)) btnQ.remove();
     else if (btnQ) btnQ.addEventListener('click', () => genererQuestionnairePrerempli(n));
 
@@ -1656,7 +1765,7 @@ function renderReferenceV3(n) {
   return `<div class="grid-3">
     ${field('Compétition de référence', e3(n.competition_reference))}
     ${field('Satisfaction globale', rempli(n.bq_satisfaction) ? `<b>${e3(n.bq_satisfaction)}</b> / 10` : '')}
-  </div>`;
+  </div>` + renderBilanPrecedentV3(n);
 }
 
 function indTable3(L, tete) {
