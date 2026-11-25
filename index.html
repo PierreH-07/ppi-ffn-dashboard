@@ -530,6 +530,31 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+/* Fiches V3 */
+.badge-v3{background:#0090D4;color:#fff}
+.v3-amb{display:flex;flex-wrap:wrap;gap:10px}
+.v3-amb-c{border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:8px 14px;background:#fff;min-width:170px}
+.v3-amb-c.jo{border-left-color:#D7282F}
+.v3-k{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.v3-amb-n{font-weight:800;color:var(--navy);font-size:15px}.v3-amb-o{font-size:13px;color:var(--text-2)}
+.v3-grp{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--blue-d);margin:14px 0 6px}
+.v3-axe{border-left:4px solid var(--blue)}.v3-axe.coll{border-left-color:#663F9E}
+.v3-axe-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.v3-axe-t{font-weight:800;color:var(--navy);font-size:14px}
+.v3-diff{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px}
+.v3-d-portee{background:#EDF7E6;color:#3E7A1E}.v3-d-optimal{background:#FFF3E0;color:#A0610B}.v3-d-hors{background:#FDECEA;color:#B3261E}
+.v3-prio{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted)}
+.v3-ind{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 10px}
+.v3-ind th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--line);padding:4px 6px}
+.v3-ind td{border-bottom:1px solid var(--line-2);padding:5px 6px}
+.v3-role{border-top:1px dashed var(--line);padding-top:8px;margin-top:4px}
+.v3-perf{border-left:4px solid #D7282F}.v3-perf-n{font-weight:800;color:var(--navy);font-size:15px}.v3-perf-d{font-size:12px;color:var(--text-2);margin-bottom:6px}
+.v3-act{border-left:4px solid var(--navy)}
+.v3-act-r{background:var(--navy);color:#fff;font-size:11px;font-weight:800;border-radius:4px;padding:2px 8px;text-transform:uppercase;letter-spacing:.06em}
+.v3-act-src{font-size:12px;color:var(--text-2);margin:-4px 0 10px}
+.v3-mes{background:var(--line-2);border-radius:6px;padding:6px 10px;font-size:13px;margin-top:6px}
+.v3-off{font-size:12px;padding:4px 0;border-bottom:1px solid var(--line-2)}.v3-off:last-child{border-bottom:0}
+@media (max-width:700px){.v3-amb-c{min-width:0;flex:1 1 100%}}
 </style>
 </head>
 <body>
@@ -1481,7 +1506,7 @@ function renderFiche(n, versions, selectedIndex) {
                   {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
               : `Version ${i + 1}`;
             const isSelected = selectedIndex !== undefined ? i === selectedIndex : v.id === n.id;
-            return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}${estPreremplieDTN(v) ? ' (pré-remplie DTN)' : ''}</option>`;
+            return `<option value="${i}" ${isSelected ? 'selected' : ''}>${i === 0 ? '✦ Dernière — ' : ''}${d}${estPreremplieDTN(v) ? ' (pré-remplie DTN)' : ''}${estV3(v) ? ' (V3)' : ''}</option>`;
           }).join('')}
         </select>` : ''}
       <button id="btn-questionnaire-prerempli" title="Télécharger le questionnaire PPI-ffnV2 pré-rempli avec cette version (charte vide)"
@@ -1508,6 +1533,7 @@ function renderFiche(n, versions, selectedIndex) {
       <div class="identity-name">${n.prenom || ''} ${n.nom || ''}</div>
       ${n.discipline_label ? `<span class="identity-disc">${n.discipline_label}</span>` : ''}
       ${estPreremplieDTN(n) ? `<span style="margin-left:6px">${BADGE_PREREMPLIE}</span>` : ''}
+      ${estV3(n) ? `<span class="badge badge-v3" style="margin-left:6px" title="Fiche du questionnaire V3 (Élite)">PPI V3</span>` : ''}
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">
         <div class="identity-meta-row">📧 <strong>${n.email || '—'}</strong></div>
         <div class="identity-meta-row">📱 <strong>${n.telephone || '—'}</strong></div>
@@ -1530,6 +1556,7 @@ function renderFiche(n, versions, selectedIndex) {
   <div id="tab-carnet"${ongletFiche === 'carnet' ? '' : ' hidden'}></div>
   <div id="tab-fiche"${ongletFiche === 'fiche' ? '' : ' hidden'}>
 
+  ${estV3(n) ? renderFicheV3(n) : `
   <!-- SECTION 1 : ENVIRONNEMENT & STAFF -->
   ${renderSection(1, 'Environnement & Staff', renderStaff(n))}
 
@@ -1561,6 +1588,7 @@ function renderFiche(n, versions, selectedIndex) {
 
   <!-- SECTION 10 : BUDGET PRÉVISIONNEL (uniquement si renseigné) -->
   ${hasBudget(n) ? renderSection(10, 'Budget prévisionnel de saison', renderBudget(n)) : ''}
+  `}
   </div>
   `;
 
@@ -1580,7 +1608,8 @@ function renderFiche(n, versions, selectedIndex) {
 
     // Bouton questionnaire pré-rempli
     const btnQ = document.getElementById('btn-questionnaire-prerempli');
-    if (btnQ) btnQ.addEventListener('click', () => genererQuestionnairePrerempli(n));
+    if (btnQ && estV3(n)) btnQ.remove();
+    else if (btnQ) btnQ.addEventListener('click', () => genererQuestionnairePrerempli(n));
 
     // Bouton suppression
     const btnDelete = document.getElementById('btn-delete-version');
@@ -1605,6 +1634,108 @@ function renderFiche(n, versions, selectedIndex) {
     // Calendrier
     initCalendar(n);
   });
+}
+
+// ════════════ Fiches du questionnaire V3 (version_questionnaire = 'V3') ════════════
+const estV3 = n => n && n.version_questionnaire === 'V3';
+const e3 = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const d3 = d => d ? new Date(d + (String(d).length === 10 ? 'T12:00:00' : '')).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}) : '';
+const DIFF_V3 = { portee:['À portée','v3-d-portee'], optimal:['Exigeant mais atteignable','v3-d-optimal'], hors:['Hors de portée cette saison','v3-d-hors'] };
+const STATUT_V3 = { prio:'Prioritaire', mener:'À mener', traite:'Déjà traité ailleurs', cote:'Pas prioritaire' };
+const fmtInd3 = (t, v) => t === 'ech' && rempli(v) ? v + '/5' : v;
+
+function renderAmbitionV3(n) {
+  const L = (n.objectifs_pluriannuels || []).filter(a => a.competition);
+  if (!L.length) return aCompleter('Ambition non renseignée');
+  return `<div class="v3-amb">${L.map(a => `<div class="v3-amb-c${a.isJO ? ' jo' : ''}">
+    <div class="v3-k">${e3(a.saison)}</div><div class="v3-amb-n">${e3(a.competition)}</div>
+    <div class="v3-amb-o">${rempli(a.objectif) ? e3(a.objectif) : '<span class="empty">objectif à préciser</span>'}</div></div>`).join('')}</div>`;
+}
+
+function renderReferenceV3(n) {
+  return `<div class="grid-3">
+    ${field('Compétition de référence', e3(n.competition_reference))}
+    ${field('Satisfaction globale', rempli(n.bq_satisfaction) ? `<b>${e3(n.bq_satisfaction)}</b> / 10` : '')}
+  </div>`;
+}
+
+function indTable3(L, tete) {
+  const I = (L || []).filter(d => rempli(d.libelle) || rempli(d.actuel) || rempli(d.requis));
+  if (!I.length) return '';
+  return `<table class="v3-ind"><tr><th>${tete || 'Indicateur'}</th><th>Valeur actuelle</th><th>Niveau requis</th></tr>${I.map(d =>
+    `<tr><td>${e3(d.libelle) || '—'}</td><td>${e3(fmtInd3(d.type, d.actuel)) || '—'}</td><td><b>${e3(fmtInd3(d.type, d.requis)) || '—'}</b></td></tr>`).join('')}</table>`;
+}
+
+function epLabel3(a) { const E = a.epreuves || ['*']; return E.includes('*') ? 'Toutes épreuves' : E.join(' · '); }
+
+function renderAxesV3(n) {
+  const A = (n.axes_amelioration || []).filter(a => rempli(a.observation) || rempli(a.dimension) || (a.indicateurs || []).length);
+  if (!A.length) return aCompleter('Aucun axe d’amélioration renseigné');
+  const groupes = {};
+  A.forEach(a => { const g = epLabel3(a); (groupes[g] = groupes[g] || []).push(a); });
+  const num = {}; let ci = 0, ii = 0; A.forEach(a => { num[a.id] = a.type === 'coll' ? 'collectif ' + (++ci) : (++ii); });
+  return Object.entries(groupes).map(([g, L]) => `<div class="v3-grp">${e3(g)}</div>` + L.map(a => {
+    const df = DIFF_V3[a.difficulte];
+    return `<div class="card v3-axe${a.type === 'coll' ? ' coll' : ''}">
+      <div class="v3-axe-h"><span class="v3-axe-t">Axe d’amélioration ${num[a.id]}</span>
+        ${rempli(a.dimension) ? `<span class="badge badge-club">${e3(a.dimension)}</span>` : ''}
+        ${df ? `<span class="v3-diff ${df[1]}">${df[0]}</span>` : ''}
+        ${rempli(a.priorite) ? `<span class="v3-prio">Priorité ${e3(a.priorite)}</span>` : ''}</div>
+      ${field('Ce qui est observé, et pourquoi c’est important', e3(a.observation))}
+      ${indTable3(a.indicateurs)}
+      ${rempli(a.progression_attendue) ? field('Progression attendue', e3(a.progression_attendue)) : ''}
+      ${a.type === 'coll' && (rempli(a.contribution) || (a.indicateurs_individuels || []).length) ? `<div class="v3-role">${field('Rôle de l’athlète', e3(a.contribution))}${indTable3(a.indicateurs_individuels, 'Indicateur individuel')}</div>` : ''}
+    </div>`;
+  }).join('')).join('');
+}
+
+function renderPerfVisee3(n) {
+  const p = n.performance_visee; if (!p || !p.competition) return '';
+  const E = (p.epreuves || []).filter(e => e.epreuve || e.perf || e.classement);
+  return `<div class="card v3-perf"><div class="card-title">Performance visée cette saison</div>
+    <div class="v3-perf-n">${e3(p.competition)}</div><div class="v3-perf-d">${d3(p.debut)}${p.fin ? ' → ' + d3(p.fin) : ''}</div>
+    ${E.length ? `<table class="v3-ind"><tr><th>Épreuve</th><th>Performance visée</th><th>Classement visé</th></tr>${E.map(e => `<tr><td>${e3(e.epreuve) || '—'}</td><td><b>${e3(e.perf) || '—'}</b></td><td>${e3(e.classement) || '—'}</td></tr>`).join('')}</table>` : ''}</div>`;
+}
+
+function renderPlanV3(n) {
+  const A = (n.axes_amelioration || []).filter(a => a.action && (a.action.statut || a.action.quoi));
+  const prio = A.filter(a => a.action.statut === 'prio').sort((x, y) => (+x.action.rang || 99) - (+y.action.rang || 99));
+  const mener = A.filter(a => a.action.statut === 'mener' || !a.action.statut);
+  const off = A.filter(a => a.action.statut === 'traite' || a.action.statut === 'cote');
+  const carte = (a, titre) => { const x = a.action; return `<div class="card v3-act">
+    <div class="v3-axe-h"><span class="v3-act-r">${titre}</span><span class="v3-axe-t">${e3(x.quoi) || '<span class="empty">Action à formuler</span>'}</span></div>
+    <div class="v3-act-src">Axe : ${e3(a.observation) || '—'}${a.type === 'coll' ? ' <span class="badge badge-club">au service du collectif</span>' : ''}</div>
+    ${(() => { const F = [['Ce qui change dans l’organisation', e3(x.organisation)], ['… pour l’athlète', e3(x.athlete)], ['… pour l’entraîneur', e3(x.entraineur)],
+      ['… pour la Fédération', e3(x.federation)], ['Autres intervenants', e3(x.autres)], ['Ce qui manque aujourd’hui', e3(x.manque)],
+      ['Quand', e3(x.periode)], ['Dimension travaillée', e3(x.dimension)], ['Date de vérification', d3(x.date_verification)]].filter(([, v]) => rempli(v));
+      return F.length ? `<div class="grid-3">${F.map(([l, v]) => field(l, v)).join('')}</div>` : '<div class="empty" style="font-size:12px">Organisation de l’action non renseignée</div>'; })()}
+    ${rempli(x.indicateur) ? `<div class="v3-mes"><b>${e3(x.indicateur)}</b> : ${e3(fmtInd3(x.type_indicateur, x.valeur_actuelle)) || '—'} → <b>${e3(fmtInd3(x.type_indicateur, x.cible)) || '—'}</b></div>` : ''}
+  </div>`; };
+  let h = renderPerfVisee3(n);
+  if (!A.length) return h + aCompleter('Plan d’action non renseigné');
+  if (prio.length) h += `<div class="v3-grp">Actions prioritaires, dans l’ordre</div>` + prio.map((a, i) => carte(a, 'Priorité ' + (i + 1))).join('');
+  if (mener.length) h += `<div class="v3-grp">À mener, sans rang</div>` + mener.map(a => carte(a, a.action.statut ? 'À mener' : 'À arbitrer')).join('');
+  if (off.length) h += `<div class="v3-grp">Écartées</div><div class="card">${off.map(a => `<div class="v3-off"><b>${STATUT_V3[a.action.statut]}</b> — ${e3(a.observation) || '—'}${a.action.ou_traite ? ' · traité : ' + e3(a.action.ou_traite) : ''}${a.action.raison_pas_prioritaire ? ' · raison : ' + e3(a.action.raison_pas_prioritaire) : ''}</div>`).join('')}</div>`;
+  return h;
+}
+
+function renderAdminV3(n) {
+  let h = renderStaff(n);
+  if (n.entrainement_etranger) h += `<div class="card" style="margin-top:12px"><div class="card-title">Athlète à l’étranger : référence en France</div><div class="grid-3">${field('Structure de référence en France', e3(n.structure_france))}${field('Entraîneur de référence en France', e3(n.entraineur_france))}</div></div>`;
+  if (rempli(n.staff_complementaire)) h += `<div class="card" style="margin-top:12px">${field('Staff complémentaire', e3(n.staff_complementaire))}</div>`;
+  return h;
+}
+
+function renderFicheV3(n) {
+  const cal = (n.competitions_calendrier || []).length;
+  return `
+  ${renderSection(1, 'Ambition', renderAmbitionV3(n))}
+  ${renderSection(2, 'Bilan de la compétition de référence', renderReferenceV3(n))}
+  ${renderSection(3, 'Ce qu’il faut améliorer pour atteindre l’objectif', renderAxesV3(n))}
+  ${renderSection(4, 'Plan d’action 2026-27', renderPlanV3(n))}
+  ${renderSection(5, 'Calendrier', cal ? renderCompetitions(n) + renderCalendrierSynthetique(n) + '<div id="calendar-container" style="min-height:400px"></div>' : aCompleter('Calendrier non renseigné'))}
+  ${renderSection(6, "Charte d'engagement mutuel", renderCharte(n))}
+  ${renderSection(7, 'Administratif et staff', renderAdminV3(n))}`;
 }
 
 function renderSection(num, title, content) {
