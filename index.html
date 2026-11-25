@@ -1642,7 +1642,7 @@ const e3 = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&':'&amp;'
 const d3 = d => d ? new Date(d + (String(d).length === 10 ? 'T12:00:00' : '')).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}) : '';
 const DIFF_V3 = { portee:['À portée','v3-d-portee'], optimal:['Exigeant mais atteignable','v3-d-optimal'], hors:['Hors de portée cette saison','v3-d-hors'] };
 const STATUT_V3 = { prio:'Prioritaire', mener:'À mener', traite:'Déjà traité ailleurs', cote:'Pas prioritaire' };
-const fmtInd3 = (t, v) => t === 'ech' && rempli(v) ? v + '/5' : v;
+const fmtInd3 = (t, v, u) => !rempli(v) ? v : t === 'ech' ? v + '/5' : (t || 'num') === 'num' ? String(v).replace('.', ',') + (u ? ' ' + u : '') : v;
 
 function renderAmbitionV3(n) {
   const L = (n.objectifs_pluriannuels || []).filter(a => a.competition);
@@ -1663,7 +1663,7 @@ function indTable3(L, tete) {
   const I = (L || []).filter(d => rempli(d.libelle) || rempli(d.actuel) || rempli(d.requis));
   if (!I.length) return '';
   return `<table class="v3-ind"><tr><th>${tete || 'Indicateur'}</th><th>Valeur actuelle</th><th>Niveau requis</th></tr>${I.map(d =>
-    `<tr><td>${e3(d.libelle) || '—'}</td><td>${e3(fmtInd3(d.type, d.actuel)) || '—'}</td><td><b>${e3(fmtInd3(d.type, d.requis)) || '—'}</b></td></tr>`).join('')}</table>`;
+    `<tr><td>${e3(d.libelle) || '—'}</td><td>${e3(fmtInd3(d.type, d.actuel, d.unite)) || '—'}</td><td><b>${e3(fmtInd3(d.type, d.requis, d.unite)) || '—'}</b></td></tr>`).join('')}</table>`;
 }
 
 function epLabel3(a) { const E = a.epreuves || ['*']; return E.includes('*') ? 'Toutes épreuves' : E.join(' · '); }
@@ -1709,7 +1709,7 @@ function renderPlanV3(n) {
       ['… pour la Fédération', e3(x.federation)], ['Autres intervenants', e3(x.autres)], ['Ce qui manque aujourd’hui', e3(x.manque)],
       ['Quand', e3(x.periode)], ['Dimension travaillée', e3(x.dimension)], ['Date de vérification', d3(x.date_verification)]].filter(([, v]) => rempli(v));
       return F.length ? `<div class="grid-3">${F.map(([l, v]) => field(l, v)).join('')}</div>` : '<div class="empty" style="font-size:12px">Organisation de l’action non renseignée</div>'; })()}
-    ${rempli(x.indicateur) ? `<div class="v3-mes"><b>${e3(x.indicateur)}</b> : ${e3(fmtInd3(x.type_indicateur, x.valeur_actuelle)) || '—'} → <b>${e3(fmtInd3(x.type_indicateur, x.cible)) || '—'}</b></div>` : ''}
+    ${rempli(x.indicateur) ? `<div class="v3-mes"><b>${e3(x.indicateur)}</b> : ${e3(fmtInd3(x.type_indicateur, x.valeur_actuelle, x.unite)) || '—'} → <b>${e3(fmtInd3(x.type_indicateur, x.cible, x.unite)) || '—'}</b></div>` : ''}
   </div>`; };
   let h = renderPerfVisee3(n);
   if (!A.length) return h + aCompleter('Plan d’action non renseigné');

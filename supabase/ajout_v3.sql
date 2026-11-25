@@ -41,12 +41,12 @@ COMMENT ON COLUMN public.ppi_nageurs.performance_visee IS
   '{competition, debut, fin, epreuves:[{epreuve, perf, classement}]} — performance visée de la saison (CM Budapest 2027).';
 COMMENT ON COLUMN public.ppi_nageurs.axes_amelioration IS
   '[{id, type ''ind''|''coll'', epreuves:[…] (''*'' = toutes), observation, dimension,
-     indicateurs:[{libelle, type ''num''|''ech''|''desc'', actuel, requis}],
+     indicateurs:[{libelle, type ''num''|''ech''|''desc'', unite, actuel, requis}] (num : nombre avec point décimal, unité à part),
      progression_attendue, difficulte ''portee''|''optimal''|''hors'', priorite,
      contribution, indicateurs_individuels:[…] (collectif : rôle de l’athlète),
      action:{statut ''prio''|''mener''|''traite''|''cote'', rang, quoi, organisation, athlete,
              entraineur, federation, autres, manque, periode, dimension, indicateur,
-             type_indicateur, valeur_actuelle, cible, date_verification, ou_traite, raison_pas_prioritaire}}]';
+             type_indicateur, unite, valeur_actuelle, cible, date_verification, ou_traite, raison_pas_prioritaire}}]';
 COMMENT ON COLUMN public.ppi_nageurs.entrainement_etranger IS 'Vrai si l’athlète s’entraîne à l’étranger.';
 COMMENT ON COLUMN public.ppi_nageurs.structure_france     IS 'Structure de référence en France (athlète à l’étranger).';
 COMMENT ON COLUMN public.ppi_nageurs.entraineur_france    IS 'Entraîneur de référence en France (athlète à l’étranger).';
