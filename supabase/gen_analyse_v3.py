@@ -2,13 +2,14 @@
 """Synthèses V3 (docs/V3-synthese-entree.md) -> SQL ppi_v3_liste + ppi_v3_analyse (docs/V3-donnees-page2.md).
 
 Usage : python3 gen_analyse_v3.py synthese_NC.xlsx synthese_EL.xlsx correspondance_licences.csv sortie.sql [saison]
+        [--double=LICENCE,LICENCE]   athlètes en double projet natation course + eau libre
 Aucune donnée nominative dans ce script : tout vient des fichiers passés en argument.
 """
 import csv, json, re, sys, unicodedata
 from collections import OrderedDict, defaultdict
 import openpyxl
 
-SAISON = sys.argv[5] if len(sys.argv) > 5 else '2025-2026'
+SAISON = '2025-2026'
 
 EP_NC = {'Nage libre': 'Libre', '4 nages': '4 Nages'}
 MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août',
@@ -96,7 +97,7 @@ def analyse_nc(ath, wb, sources):
     nom = f"{ath['nom']} {ath['prenom']}"
     nk = norm(nom)
     mine = [r for r in res if r['type_ligne'] == 'athlete' and norm(r['nageur']) == nk]
-    blocs, epl, res_s, res_r, epr_s = [], [], [], [], []
+    blocs, epl, res_s, res_r, epr_s, kpi = [], [], [], [], [], []
 
     def refs_of(rows, ep, sexe):
         seen, out = set(), []
@@ -129,6 +130,9 @@ def analyse_nc(ath, wb, sources):
                       'note': 'Référence : les 3 meilleurs performers des saisons 2025 et 2026 dans la base Espadon '
                               '(meilleur temps de chaque nageur, bassin de 50 m).'})
         epr_s.append(f"{ep_nc(ep)} ({str(a['tour'] or '').lower()})")
+        if len(kpi) < 3:  # règle validée le 2026-11-26 : 3 premières épreuves, place · temps (écart 1er / 3e)
+            kpi.append([f"{ep_nc(ep)} · {a['competition']}",
+                        f"{place_fr(a['place'])} · {a['temps']} ({lignes[0][3]} / {lignes[0][4]} s)"])
         res_s.append(f"{ep_nc(ep)} : {place_fr(a['place'])} · {a['temps']}")
         res_r.append(f"{ep_nc(ep)} : " + ' · '.join(f"{r['nageur']} {r['temps']}" for r in refs))
 
@@ -220,7 +224,7 @@ def analyse_nc(ath, wb, sources):
                        'tagd': 'meilleur temps de chaque nageur, base Espadon',
                        'comp': 'Top 3 des performers — saisons 2025-2026', 'date': 'meilleur temps de chaque nageur',
                        'epr': eps + ' · bassin de 50 m', 'res': ' — '.join(res_r)}),
-        ('sources', sources), ('kpi', []), ('blocs', blocs)])
+        ('sources', sources), ('kpi', kpi), ('blocs', blocs)])
     return donnees
 
 
@@ -345,6 +349,18 @@ def analyse_el(ath, wb, sources):
 
     ref_rows = [r for r in mine if r['competition'] and ref_comp and r['competition'].split()[0] in ('CE', 'CEJ')
                 and r['competition'].split()[-1] in ref_comp]
+    kpi = []  # règle validée le 2026-11-26
+    main_r = next((r for r in ref_rows if r['epreuve'] == '10km'), ref_rows[0] if ref_rows else None)
+    if main_r:
+        nb = f" / {main_r['nb_classes']}" if main_r['nb_classes'] else ''
+        kpi.append([f"{main_r['epreuve']} · {main_r['competition']}", f"{place_fr(main_r['place'])}{nb} · {main_r['temps']}"])
+        if main_r['ecart_vainqueur_s']:
+            kpi.append(['Écart au vainqueur',
+                        f"+{main_r['ecart_vainqueur_s']:.2f} s (+{main_r['ecart_vainqueur_pct']:.2f} %)"])
+        else:
+            kpi.append(['Écart au vainqueur', 'vainqueur'])
+    if podium and any(r['epreuve'] == podium[0]['epreuve'] for r in mine):
+        kpi.append([f'Podium {pod_comp}', f"jusqu’à +{podium[-1]['ecart_vainqueur_pct']:.2f} % du vainqueur"])
     donnees = OrderedDict([
         ('epreuves', ', '.join(eps)), ('epreuves_liste', eps),
         ('saison', {'comp': ref_comp, 'date': date_fr(ath['dates']),
@@ -358,7 +374,7 @@ def analyse_el(ath, wb, sources):
                        'date': date_fr(podium[0]['date']) if podium else '',
                        'epr': podium[0]['epreuve'] if podium else '',
                        'res': 'Podium : ' + ' · '.join(p['nageur'] for p in podium)}),
-        ('sources', sources), ('kpi', []), ('blocs', blocs)])
+        ('sources', sources), ('kpi', kpi), ('blocs', blocs)])
     return donnees
 
 
@@ -366,26 +382,55 @@ def q(s):
     return "'" + str(s).replace("'", "''") + "'"
 
 
+def avec_epreuve(d):
+    """Double projet : chaque épreuve doit être ouverte par un bloc « epreuve »."""
+    if d['blocs'] and d['blocs'][0]['type'] != 'epreuve':
+        return [{'type': 'epreuve', 'titre': d['epreuves_liste'][0]}] + d['blocs']
+    return d['blocs']
+
+
+def fusion(el, nc):
+    """docs/V3-donnees-page2.md, section 5 bis : une seule ligne, eau libre en 1re discipline."""
+    d = OrderedDict(el)
+    d['epreuves'] = el['epreuves'] + ', ' + nc['epreuves']
+    d['epreuves_liste'] = el['epreuves_liste'] + [e for e in nc['epreuves_liste'] if e not in el['epreuves_liste']]
+    d['references_supplementaires'] = [{'saison': nc['saison'], 'reference': nc['reference']}]
+    d['sources'] = el['sources'] + [x for x in nc['sources'] if x not in el['sources']]
+    d['kpi'] = el['kpi'] + nc['kpi']
+    d['blocs'] = avec_epreuve(el) + avec_epreuve(nc)
+    d.move_to_end('blocs')
+    return d
+
+
 def main():
-    f_nc, f_el, f_lic, f_out = sys.argv[1:5]
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    global SAISON
+    SAISON = args[4] if len(args) > 4 else '2025-2026'
+    double = set()
+    for a in sys.argv[1:]:
+        if a.startswith('--double='):
+            double = {x.strip().upper() for x in a.split('=', 1)[1].split(',') if x.strip()}
+    f_nc, f_el, f_lic, f_out = args[:4]
     lic, officiel = {}, {}
     with open(f_lic, encoding='utf-8-sig') as fh:
         for r in csv.DictReader(fh, delimiter=';'):
             if r['statut'] != 'doublon':
                 l = r['licence'].replace(' ', '').upper()
                 lic[(r['discipline'], norm(r['nom_liste']), norm(r['prenom_liste']))] = l
+                lic.setdefault(('*', norm(r['nom_liste']), norm(r['prenom_liste'])), l)
                 m = re.search(r'nom dans la source : (.+)$', r['remarque'] or '')
                 if m:
                     officiel[l] = m.group(1).strip()
 
-    liste, analyses, notes = [], [], []
+    ident, par_disc, notes = OrderedDict(), {'natation-bassin': {}, 'eau-libre': {}}, []
     for f, disc, fn in [(f_nc, 'natation-bassin', analyse_nc), (f_el, 'eau-libre', analyse_el)]:
         wb = openpyxl.load_workbook(f, data_only=True)
         sources = [[s['source'], s['ce_qui_en_est_tire']] for s in feuille(wb, 'sources')]
         for a in feuille(wb, 'nageurs'):
             if a['statut'] == 'doublon':
                 continue
-            l = a['licence'] or lic.get((disc, norm(a['nom']), norm(a['prenom'])))
+            l = a['licence'] or lic.get((disc, norm(a['nom']), norm(a['prenom']))) \
+                or lic.get(('*', norm(a['nom']), norm(a['prenom'])))
             if not l:
                 notes.append(f"licence introuvable : {a['nom']} {a['prenom']}")
                 continue
@@ -394,24 +439,48 @@ def main():
             if l in officiel and officiel[l].upper().startswith(nom.upper() + ' '):
                 prenom = officiel[l][len(nom) + 1:]
                 notes.append(f"prénom corrigé d'après le fichier des licences : {nom} {a['prenom']} -> {prenom}")
-            liste.append((l, nom, prenom, disc))
+            ident.setdefault(l, [nom, prenom, disc])
             if a['statut'] == 'introuvable' or not a['competition_reference']:
-                notes.append(f"pas d'analyse : {a['nom']} {a['prenom']} ({a['statut']})")
+                notes.append(f"pas d'analyse {disc} : {a['nom']} {a['prenom']} ({a['statut']})")
                 continue
-            d = fn(a, wb, sources)
-            js = json.dumps(d, ensure_ascii=False, indent=1)
-            assert '$json$' not in js
-            for b in d['blocs']:
-                if b['type'] == 'tableau':
-                    assert all(len(x) == len(b['colonnes']) for x in b['lignes']), (a['nom'], b['titre'])
-            analyses.append((l, disc, a['competition_reference'], js, a['nom'], a['prenom']))
+            par_disc[disc][l] = (a['competition_reference'], fn(a, wb, sources))
+
+    liste, analyses = [], []
+    for l, (nom, prenom, disc) in ident.items():
+        nc, el = par_disc['natation-bassin'].get(l), par_disc['eau-libre'].get(l)
+        d2 = None
+        if l in double:
+            disc, d2 = 'eau-libre', 'natation-bassin'
+            if not (nc and el):
+                notes.append(f"double projet sans analyse {'natation course' if not nc else 'eau libre'} : {nom} {prenom}")
+        elif nc and el:
+            notes.append(f"présent dans les deux synthèses sans --double : {nom} {prenom} (analyses fusionnées)")
+            disc, d2 = 'eau-libre', 'natation-bassin'
+        liste.append((l, nom, prenom, disc, d2))
+        if nc and el:
+            comp, d = el[0], fusion(el[1], nc[1])
+        elif el or nc:
+            comp, d = (el or nc)
+        else:
+            continue
+        js = json.dumps(d, ensure_ascii=False, indent=1)
+        assert '$json$' not in js
+        for b in d['blocs']:
+            if b['type'] == 'tableau':
+                assert all(len(x) == len(b['colonnes']) for x in b['lignes']), (nom, b['titre'])
+        analyses.append((l, 'eau-libre' if el else 'natation-bassin', comp, js, nom, prenom))
+    for l in double - set(ident):
+        notes.append(f"licence --double absente des synthèses : {l}")
 
     out = ['-- Questionnaire V3 : liste et données d’analyse (page 2), saison ' + SAISON,
-           '-- Généré par supabase/gen_analyse_v3.py. Ne pas diffuser (données nominatives).', '', 'BEGIN;', '',
-           'INSERT INTO public.ppi_v3_liste (licence, nom, prenom, discipline) VALUES']
-    out.append(',\n'.join(f'  ({q(l)}, {q(n)}, {q(p)}, {q(d)})' for l, n, p, d in liste))
+           '-- Généré par supabase/gen_analyse_v3.py. Ne pas diffuser (données nominatives).',
+           '-- Prérequis : supabase/ajout_v3_double_projet.sql (colonne discipline_2).', '', 'BEGIN;', '',
+           'INSERT INTO public.ppi_v3_liste (licence, nom, prenom, discipline, discipline_2) VALUES']
+    out.append(',\n'.join(f'  ({q(l)}, {q(n)}, {q(p)}, {q(d)}, {q(d2) if d2 else "NULL"})'
+                           for l, n, p, d, d2 in liste))
     out += ['ON CONFLICT (licence) DO UPDATE',
-            '  SET actif = true, nom = excluded.nom, prenom = excluded.prenom, discipline = excluded.discipline;', '']
+            '  SET actif = true, nom = excluded.nom, prenom = excluded.prenom,',
+            '      discipline = excluded.discipline, discipline_2 = excluded.discipline_2;', '']
     for l, disc, comp, js, n, p in analyses:
         out += [f'-- {n} {p}',
                 'INSERT INTO public.ppi_v3_analyse (licence, saison, discipline, competition_reference, donnees)',
@@ -420,7 +489,7 @@ def main():
                 '  competition_reference = excluded.competition_reference, discipline = excluded.discipline, maj_le = now();',
                 '']
     out += ['COMMIT;', '', '-- Contrôle',
-            'SELECT l.licence, l.nom, l.prenom, l.discipline, l.actif,',
+            'SELECT l.licence, l.nom, l.prenom, l.discipline, l.discipline_2, l.actif,',
             '       (SELECT count(*) FROM public.ppi_nageurs n',
             "         WHERE upper(replace(n.licence, ' ', '')) = l.licence) AS fiches,",
             '       (SELECT max(a.saison) FROM public.ppi_v3_analyse a WHERE a.licence = l.licence) AS saison_analyse,',

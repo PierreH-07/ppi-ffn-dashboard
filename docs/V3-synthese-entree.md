@@ -45,7 +45,10 @@ Colonnes communes à toutes les feuilles de données (`id`) :
 | licence | libelle | valeur |
 |---|---|---|
 
-Trois lignes par athlète au plus. Feuille vide : Claude ne remplit pas les chiffres clés.
+Feuille ignorée pour l'instant : les chiffres clés sont calculés par `supabase/gen_analyse_v3.py` (règle validée par Pierre le 2026-11-26) :
+- natation course : les 3 premières épreuves de l'athlète, « place · temps (écart au 1er / au 3e performer) » ;
+- eau libre : place et temps à la compétition de référence (10 km en priorité), écart au vainqueur, écart du 3e du podium CM au vainqueur si l'athlète nage cette épreuve ;
+- double projet : les deux listes réunies (eau libre puis natation course).
 
 ---
 
@@ -88,3 +91,10 @@ Référence : podium du 10 km des derniers championnats du monde (saison 2025-20
 1. Chaque `licence` des feuilles de données existe dans `nageurs`.
 2. Chaque athlète `trouvé` a au moins une ligne dans `resultats`.
 3. Pas de ligne en double (même `licence`, `nageur`, `epreuve`, `competition`, segment / phase / passage).
+
+---
+
+## Double projet natation course + eau libre
+
+L'athlète figure dans les deux synthèses (même licence). Générer avec `--double=LICENCE,LICENCE` :
+eau libre en 1re discipline, natation course en `references_supplementaires` (`docs/V3-donnees-page2.md`, section 5 bis).
