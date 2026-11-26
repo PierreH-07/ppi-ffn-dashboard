@@ -64,3 +64,12 @@ Le dashboard lit `calendrier`, `semaine_type_data` et `competitions_calendrier` 
 - Plan d'action : bloc « Priorisation des actions » en tête (prioritaires dans l'ordre avec ▲ ▼, à mener, à arbitrer, écartées) ; statut modifiable sur chaque ligne ; bouton « Modifier » vers la fiche de l'action.
 - Statut « Mise de côté pour l'instant » remplacé par « Pas prioritaire », justification attendue.
 - Plongeon synchro : référence = top 3 de la finale de la compétition de référence de la saison (CE 2026 Paris). Exécution : la feuille Omega ne dit pas quel plongeur est jugé par E1-E3 ou E4-E6.
+
+## Double projet natation course + eau libre (2026-11-26)
+- Deux disciplines à égalité : colonnes `discipline` et `discipline_2` (fiches et `ppi_v3_liste`).
+- Ambition commune (CM 2027, JO 2028).
+- Épreuves des deux disciplines réunies (temps visé en natation course, classement seul en eau libre) ; dimensions des deux disciplines.
+- Performance visée : CM Budapest 2027, du 3 juillet (début eau libre) au 18 juillet (fin natation course).
+- Page 2 : une seule ligne `ppi_v3_analyse`, 2e compétition de référence dans `references_supplementaires`.
+- Accès : l'entraîneur national de l'une ou l'autre discipline voit toute la fiche et son carnet de bord.
+

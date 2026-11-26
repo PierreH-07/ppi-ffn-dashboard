@@ -234,6 +234,24 @@ Les courbes de position du prototype ne sont pas reproduites par un tableau. Pou
 
 ---
 
+## 5 bis. Double projet natation course + eau libre
+
+Une seule ligne dans `ppi_v3_analyse` pour l'athlète, avec `discipline` = l'une des deux (par ex. `natation-bassin`) ; les deux analyses vont dans le même `donnees` :
+
+- `saison` / `reference` : la compétition et la référence de la **première** discipline (section 4 ou 5) ;
+- `references_supplementaires` : la compétition et la référence de la **seconde** discipline, affichées dans un 2e bandeau :
+  ```json
+  "references_supplementaires": [
+    { "saison":    { "comp": "Championnats d’Europe — Paris 2026", "date": "4 août 2026", "epr": "10 km", "res": "12e · 1:56:30.00" },
+      "reference": { "tag": "Référence : podium CM 2025", "comp": "Championnats du monde — Singapour 2025",
+                     "date": "16 juillet 2025", "epr": "10 km", "res": "Podium : NOM1 · NOM2 · NOM3" } } ]
+  ```
+- `epreuves_liste` : les épreuves des **deux** disciplines (ex. `["800m Libre", "1500m Libre", "10km"]`) ;
+- `blocs` : un bloc `epreuve` par épreuve, suivi de ses tableaux et graphiques (section 4 pour les épreuves de bassin, section 5 pour l'eau libre) ;
+- `sources`, `kpi` : celles des deux disciplines, dans une même liste.
+
+`references_supplementaires` peut aussi servir hors double projet, pour toute 2e compétition de référence.
+
 ## 6. Noms d'épreuves (`epreuves_liste`)
 
 Écrire exactement :

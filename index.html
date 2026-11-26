@@ -1171,17 +1171,18 @@ async function genererQuestionnairePrerempli(n) {
 // saison la plus récente) et le rappel du PPI précédent (objectifs et plan d'action de la dernière fiche).
 const QUESTIONNAIRE_V3 = 'PPI-V3-prototype.html';
 const DISCIPLINES_V3 = ['natation-bassin', 'eau-libre'];
-let listeV3 = {};   // licence normalisée → discipline
+let listeV3 = {};   // licence normalisée → { d: discipline, d2: 2e discipline (double projet) }
 
 async function chargerListeV3() {
   listeV3 = {};
   try {
-    const { data, error } = await sb.from('ppi_v3_liste').select('licence,discipline').eq('actif', true);
+    let { data, error } = await sb.from('ppi_v3_liste').select('licence,discipline,discipline_2').eq('actif', true);
+    if (error && error.code === '42703') ({ data, error } = await sb.from('ppi_v3_liste').select('licence,discipline').eq('actif', true));
     if (error) return;   // table absente ou non lisible : pas de bouton V3
-    (data || []).forEach(r => { const l = licenceValide(r.licence); if (l) listeV3[l] = r.discipline; });
+    (data || []).forEach(r => { const l = licenceValide(r.licence); if (l) listeV3[l] = { d: r.discipline, d2: r.discipline_2 || null }; });
   } catch (e) { /* pas de bouton V3 */ }
 }
-const eligibleV3 = n => { const d = listeV3[licenceValide(n.licence)]; return !!d && DISCIPLINES_V3.includes(d); };
+const eligibleV3 = n => { const e = listeV3[licenceValide(n.licence)]; return !!e && [e.d, e.d2].filter(Boolean).every(d => DISCIPLINES_V3.includes(d)); };
 
 function adminPourV3(n) {
   const e = getEntraineursPrincipaux(n)[0] || {};
@@ -1241,7 +1242,8 @@ async function genererQuestionnaireV3(n, versions) {
   if (!analyse && !confirm('Aucune donnée d’analyse (page 2) n’est enregistrée pour cette licence.\nLa page 2 affichera « données à venir ».\n\nGénérer quand même le questionnaire ?')) return;
 
   const dataJson = JSON.stringify({
-    discipline: listeV3[lic] || derniere.discipline || '', genere_le: new Date().toISOString(),
+    discipline: (listeV3[lic] || {}).d || derniere.discipline || '', discipline_2: (listeV3[lic] || {}).d2 || null,
+    genere_le: new Date().toISOString(),
     admin: adminPourV3(derniere), analyse, precedent: precedentPourV3(derniere),
   }).replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '\\u003c!--').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const fin = '<' + '/script>';
@@ -1358,8 +1360,11 @@ async function loadNageurs() {
       }
     } else if (currentUser.role === 'entraineur_national') {
       // Entraîneur national : tous les nageurs de sa discipline
+      // (double projet : la 2e discipline compte aussi ; colonne absente → requête historique)
       if (currentUser.discipline) {
-        query = query.eq('discipline', currentUser.discipline);
+        query = avecMultiEntraineurs
+          ? query.or(`discipline.eq.${currentUser.discipline},discipline_2.eq.${currentUser.discipline}`)
+          : query.eq('discipline', currentUser.discipline);
       }
     }
     // dtn : pas de filtre → tous les nageurs
@@ -1403,6 +1408,11 @@ async function loadNageurs() {
 // ── Filtres de la colonne nageurs ──
 const anneeNaissance = n => (String(n.date_naissance || '').match(/\d{4}/) || [''])[0];
 
+const LIBELLES_DISCIPLINE = { 'natation-bassin':'Natation course', 'eau-libre':'Eau libre', 'synchro':'Natation artistique', 'water-polo':'Water-polo', 'plongeon':'Plongeon' };
+const disciplinesDe = n => [n.discipline, n.discipline_2].filter(Boolean);
+function libelleDiscipline(code) {
+  return LIBELLES_DISCIPLINE[code] || allNageurs.find(n => n.discipline === code && !n.discipline_2)?.discipline_label || code;
+}
 function buildListFilters() {
   const fill = (id, values, labelAll, labels) => {
     const el = document.getElementById(id);
@@ -1415,7 +1425,7 @@ function buildListFilters() {
   const uniq = arr => [...new Set(arr.map(v => (v || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
 
   const discLabels = {};
-  allNageurs.forEach(n => { if (n.discipline) discLabels[n.discipline] = n.discipline_label || n.discipline; });
+  allNageurs.forEach(n => disciplinesDe(n).forEach(d => { discLabels[d] = libelleDiscipline(d); }));
   fill('lf-disc', Object.keys(discLabels).sort((a, b) => discLabels[a].localeCompare(discLabels[b], 'fr')), 'Toutes disciplines', discLabels);
   fill('lf-club', uniq(allNageurs.map(n => n.club)), 'Tous les clubs');
   fill('lf-structure', uniq(allNageurs.map(n => n.structure_nom)), 'Toutes les structures');
@@ -1439,12 +1449,11 @@ function resetListFilters() {
 }
 
 function buildDiscFilter() {
-  const discs = [...new Set(allNageurs.map(n => n.discipline_label).filter(Boolean))];
+  const codes = [...new Set(allNageurs.flatMap(disciplinesDe))].sort((a, b) => libelleDiscipline(a).localeCompare(libelleDiscipline(b), 'fr'));
   const bar = document.getElementById('disc-filter');
   bar.innerHTML = `<button class="disc-chip active" data-disc="all" onclick="setDiscFilter(this,'all')">Tous</button>`;
-  discs.forEach(d => {
-    const key = allNageurs.find(n => n.discipline_label === d)?.discipline || d;
-    bar.innerHTML += `<button class="disc-chip" data-disc="${key}" onclick="setDiscFilter(this,'${key}')">${d}</button>`;
+  codes.forEach(key => {
+    bar.innerHTML += `<button class="disc-chip" data-disc="${key}" onclick="setDiscFilter(this,'${key}')">${libelleDiscipline(key)}</button>`;
   });
 }
 
@@ -1460,7 +1469,7 @@ function setDiscFilter(btn, disc) {
 function filterNageurs() {
   const q = document.getElementById('search-input').value.toLowerCase();
   const filtered = allNageurs.filter(n => {
-    const matchDisc = currentDisc === 'all' || n.discipline === currentDisc;
+    const matchDisc = currentDisc === 'all' || disciplinesDe(n).includes(currentDisc);
     const entraineurs = getEntraineursPrincipaux(n).map(e => e.nom || '').join(' ');
     const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''} ${entraineurs}`.toLowerCase().includes(q);
     const val = id => document.getElementById(id)?.value || '';

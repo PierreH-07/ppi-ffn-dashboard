@@ -7,10 +7,10 @@ Tout se fait dans Supabase → **SQL Editor** (coller → Run), puis dans le das
 
 ---
 
-## Étape 0 — Prérequis (une seule fois, déjà fait le 2026-11-25)
+## Étape 0 — Prérequis (une seule fois)
 
-Scripts passés : `supabase/ajout_v3.sql` et `supabase/ajout_v3_preremplissage.sql`
-(tables `ppi_v3_liste`, `ppi_v3_analyse`, colonnes V3 de `ppi_nageurs`).
+Scripts passés : `supabase/ajout_v3.sql` et `supabase/ajout_v3_preremplissage.sql` (le 2026-11-25 ; tables `ppi_v3_liste`, `ppi_v3_analyse`, colonnes V3 de `ppi_nageurs`).
+Pour le double projet natation course + eau libre : `supabase/ajout_v3_double_projet.sql` (colonne `discipline_2`, accès des entraîneurs nationaux des deux disciplines).
 
 ---
 
@@ -45,11 +45,23 @@ ON CONFLICT (licence) DO UPDATE
 Plusieurs athlètes d'un coup : une ligne par athlète entre `VALUES` et `ON CONFLICT`, séparées par des virgules.
 `discipline` : `natation-bassin` ou `eau-libre`.
 
+**Double projet natation course + eau libre** : renseigner aussi `discipline_2` (les deux disciplines sont à égalité ; l'ordre n'a pas d'importance) :
+
+```sql
+INSERT INTO public.ppi_v3_liste (licence, nom, prenom, discipline, discipline_2) VALUES
+  ('LICENCE', 'NOM', 'Prénom', 'natation-bassin', 'eau-libre')
+ON CONFLICT (licence) DO UPDATE
+  SET actif = true, nom = excluded.nom, prenom = excluded.prenom,
+      discipline = excluded.discipline, discipline_2 = excluded.discipline_2;
+```
+
+Le questionnaire généré propose alors les épreuves des deux disciplines, la performance visée aux CM de Budapest du 3 au 18 juillet 2027 (eau libre 3-8, natation course 10-18) et les dimensions des deux disciplines. L'ambition reste commune. La fiche envoyée porte les deux disciplines : elle apparaît dans les deux filtres du dashboard et l'entraîneur national de chacune des deux disciplines la voit en entier.
+
 ---
 
 ## Étape 3 — Déposer les données d'analyse (page 2)
 
-Mettre en forme les analyses de la compétition de référence selon **`docs/V3-donnees-page2.md`**, puis :
+Mettre en forme les analyses de la compétition de référence selon **`docs/V3-donnees-page2.md`** (double projet : section 5 bis, une seule ligne pour les deux disciplines), puis :
 
 ```sql
 INSERT INTO public.ppi_v3_analyse (licence, saison, discipline, competition_reference, donnees)
@@ -68,7 +80,7 @@ ON CONFLICT (licence, saison) DO UPDATE SET donnees = excluded.donnees,
 ## Étape 4 — Contrôler
 
 ```sql
-SELECT l.licence, l.nom, l.prenom, l.discipline, l.actif,
+SELECT l.licence, l.nom, l.prenom, l.discipline, l.discipline_2, l.actif,
        (SELECT count(*) FROM public.ppi_nageurs n
          WHERE upper(replace(n.licence, ' ', '')) = l.licence)            AS fiches,
        (SELECT max(a.saison) FROM public.ppi_v3_analyse a WHERE a.licence = l.licence) AS saison_analyse
