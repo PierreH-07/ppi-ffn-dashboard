@@ -237,6 +237,23 @@ def analyse_el(ath, wb, sources):
     blocs = []
     ref_comp = ath['competition_reference']
 
+    # Point aberrant : position supérieure au nombre de classés de la course -> passage retiré (« non publié »)
+    nbc = {(r['nageur'], r['epreuve'], r['competition']): r['nb_classes'] for r in res}
+    retires = defaultdict(list)
+    tours = [dict(t) for t in tours]
+    for t in tours:
+        n = nbc.get((t['nageur'], t['epreuve'], t['competition']))
+        p = num(t['position']) if isinstance(t['position'], (int, float)) or str(t['position']).isdigit() else None
+        if n and p and p > n:
+            retires[(t['epreuve'], t['competition'], t['sexe'])].append(f"{t['nageur']} au passage {t['passage']} "
+                                                             f"(position {int(p)} pour {n} classés)")
+            for c in ('position', 'temps_passage', 'ecart_leader_s', 'coups_bras_min'):
+                t[c] = 'non publié'
+
+    def note_retires(ep, comp, base):
+        R = retires.get((ep, comp, sexe))
+        return base + (' Passage retiré, incohérent dans la source : ' + ' ; '.join(R) + '.' if R else '')
+
     def tours_of(nageur_ok, ep, comp):
         return [t for t in tours if nageur_ok(t) and t['epreuve'] == ep and t['competition'] == comp]
 
@@ -268,12 +285,12 @@ def analyse_el(ath, wb, sources):
                               'axe': [str(t['passage']) for t in T], 'etiquette_axe': 'passage',
                               'series': [{'nom': f"{r['nageur']} — {r['competition']}",
                                           'valeurs': [num(t['position']) for t in T]}],
-                              'note': 'Position : 1 en haut. Trait pointillé = passage non publié.'})
+                              'note': note_retires(ep, r['competition'], 'Position : 1 en haut. Trait pointillé = passage non publié.')})
             blocs.append({'type': 'tableau', 'titre': f"{n}. Tour par tour — {r['competition']} (athlète)",
                           'colonnes': ['Passage', 'Position', 'Temps de passage', 'Écart au leader (s)', 'Coups de bras/min'],
                           'lignes': [[str(t['passage']), txt(t['position']), txt(t['temps_passage']),
                                       txt(t['ecart_leader_s']), txt(t['coups_bras_min'])] for t in T],
-                          'note': 'Passage non publié : « non publié ».'})
+                          'note': note_retires(ep, r['competition'], 'Passage non publié : « non publié ».')})
             n += 1
         if refs:
             PT = {p['nageur']: tours_of(lambda t, p=p: t['nageur'] == p['nageur'], ep, pod_comp) for p in refs}
@@ -285,13 +302,14 @@ def analyse_el(ath, wb, sources):
                                           'valeurs': [next((num(t['position']) for t in PT[p['nageur']]
                                                             if str(t['passage']) == x), None) for x in axe]}
                                          for p in refs],
-                              'note': 'Position : 1 en haut. Trait pointillé = passage non publié.'})
+                              'note': note_retires(ep, pod_comp, 'Position : 1 en haut. Trait pointillé = passage non publié.')})
                 blocs.append({'type': 'tableau', 'titre': f'{n}. Podium {pod_comp} — tour par tour',
                               'colonnes': ['Nageur', 'Passage', 'Position', 'Temps de passage', 'Écart au leader (s)',
                                            'Coups de bras/min'],
                               'lignes': [[p['nageur'], str(t['passage']), txt(t['position']), txt(t['temps_passage']),
                                           txt(t['ecart_leader_s']), txt(t['coups_bras_min'])]
-                                         for p in refs for t in PT[p['nageur']]]})
+                                         for p in refs for t in PT[p['nageur']]],
+                              'note': note_retires(ep, pod_comp, 'Passage non publié : « non publié ».')})
                 n += 1
 
     # niveau en bassin
