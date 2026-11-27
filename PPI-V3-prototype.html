@@ -391,7 +391,7 @@ REFS.wp={saison:{comp:'Tournoi de référence (fictif) — 2026',q:'au tournoi d
   src:[['Données fictives','Exemple de présentation : aucune donnée réelle. Référence collective = meilleure équipe de la compétition ; référence individuelle en attente.']]};
 KPI.wp=[['Place','5e (fictif)'],['Buts par match','10,2 / 13,1 meilleure équipe'],['Supériorité numérique','34 % / 52 %']];
 function refBanner(){const r=REFS[cur];const tile=(cls,tag,x)=>`<div class="rtile ${cls}"><span class="rtag">${tag}</span><div class="rcomp">${x.comp||''}</div><div class="rmeta">${x.date||''} · ${x.epr||''}</div><div class="rres">${x.res||''}</div></div>`;
- const ban=(sa,tag,mo)=>`<div class="rban">${tile('rsa','Compétition de référence de la saison',sa)}<div class="rvs">comparée à</div>${tile('rwo',tag||'Référence mondiale',mo)}</div>`;
+ const ban=(sa,tag,mo)=>`<div class="rban">${tile('rsa',sa.tag||'Compétition de référence de la saison',sa)}<div class="rvs">comparée à</div>${tile('rwo',tag||'Référence mondiale',mo)}</div>`;
  return ban(r.saison,r.tag,r.monde)+(r.autres||[]).map(x=>ban(x.saison||{},(x.reference||{}).tag,x.reference||{})).join('')+`
  <div class="srcbox"><div class="srct">Provenance des données</div>${r.src.map(([a,b])=>`<div class="srcl"><b>${a}</b><span>${b}</span></div>`).join('')}</div>`;}
 // Ambitions : seules les compétitions mondiales de référence (CM tous les 2 ans, années impaires ; JO 2028 et 2032)

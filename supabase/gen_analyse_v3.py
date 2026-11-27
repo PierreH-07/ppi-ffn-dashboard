@@ -235,9 +235,6 @@ def analyse_el(ath, wb, sources):
     lic = str(ath['licence'])
     sexe = ath['sexe']
     mine = [r for r in res if r['type_ligne'] == 'athlete' and str(r['licence']) == lic]
-    podium = sorted([r for r in res if r['type_ligne'] == 'reference' and r['sexe'] == sexe],
-                    key=lambda r: r['rang_reference'])
-    pod_comp = podium[0]['competition'] if podium else ''
     eps = list(OrderedDict.fromkeys(r['epreuve'] for r in mine))
     blocs = []
     ref_comp = ath['competition_reference']
@@ -262,106 +259,104 @@ def analyse_el(ath, wb, sources):
     def tours_of(nageur_ok, ep, comp):
         return [t for t in tours if nageur_ok(t) and t['epreuve'] == ep and t['competition'] == comp]
 
+    def top3(r):
+        """Top 3 de la course de l'athlète (même épreuve, même compétition, même sexe) ; décision du 2026-11-27."""
+        return sorted([x for x in res if x['type_ligne'] == 'reference' and x['epreuve'] == r['epreuve']
+                       and x['competition'] == r['competition'] and x['sexe'] == sexe],
+                      key=lambda x: x['rang_reference'])
+
+    def ec_v(r):
+        return '—' if not r['ecart_vainqueur_s'] else f"+{r['ecart_vainqueur_s']:.2f} s (+{r['ecart_vainqueur_pct']:.2f} %)"
+
+    def pos_courbe(series, comp):
+        axe = list(OrderedDict.fromkeys(str(t['passage']) for _, T in series for t in T))
+        return axe, [{'nom': nom, 'valeurs': [next((num(t['position']) for t in T if str(t['passage']) == x
+                                                    and str(t['position']).replace('.', '').isdigit()), None)
+                                              for x in axe]} for nom, T in series]
+
+    n = 1
     for ep in eps:
         if len(eps) > 1:
             blocs.append({'type': 'epreuve', 'titre': ep})
         rows = [r for r in mine if r['epreuve'] == ep]
-        refs = podium if ep == podium[0]['epreuve'] else []
-        lignes = []
-        for r in rows + refs:
-            pct = r['ecart_vainqueur_pct']
-            ec = '—' if not r['ecart_vainqueur_s'] else \
-                f"+{r['ecart_vainqueur_s']:.2f} s (+{pct:.2f} %)"
-            pl = f"{r['place']} / {r['nb_classes']}" if r['nb_classes'] else txt(r['place'])
-            lignes.append([r['nageur'], r['competition'], pl, txt(r['temps']), ec])
-        vq = '; '.join(f"vainqueur {r['competition']} : {r['temps_vainqueur']}" for r in rows)
-        blocs.append({'type': 'tableau', 'titre': f'1. Résultat — {ep}',
-                      'colonnes': ['Nageur', 'Compétition', 'Place', 'Temps', 'Écart au vainqueur de sa compétition'],
-                      'lignes': lignes, 'athlete': list(range(len(rows))),
-                      'note': (vq[0].upper() + vq[1:] + '. ' if vq else '') +
-                              'Les temps ne se comparent pas entre compétitions.'})
-        n = 2
+        n = 1
         for r in rows:
-            T = tours_of(lambda t: str(t['licence']) == lic, ep, r['competition'])
-            if not T:
-                continue
-            if len(T) > 1:
-                blocs.append({'type': 'courbe', 'titre': f"{n}. Position tour par tour — {r['competition']} (athlète)",
-                              'axe': [str(t['passage']) for t in T], 'etiquette_axe': 'passage',
-                              'series': [{'nom': f"{r['nageur']} — {r['competition']}",
-                                          'valeurs': [num(t['position']) for t in T]}],
-                              'note': note_retires(ep, r['competition'], 'Position : 1 en haut. Trait pointillé = passage non publié.')})
-            blocs.append({'type': 'tableau', 'titre': f"{n}. Tour par tour — {r['competition']} (athlète)",
-                          'colonnes': ['Passage', 'Position', 'Temps de passage', 'Écart au leader (s)', 'Coups de bras/min'],
-                          'lignes': [[str(t['passage']), txt(t['position']), txt(t['temps_passage']),
-                                      txt(t['ecart_leader_s']), txt(t['coups_bras_min'])] for t in T],
-                          'note': note_retires(ep, r['competition'], 'Passage non publié : « non publié ».')})
+            comp = r['competition']
+            refs = top3(r)
+            lignes = []
+            for x in [r] + refs:
+                pl = f"{x['place']} / {x['nb_classes']}" if x['nb_classes'] else txt(x['place'])
+                lignes.append([x['nageur'], pl, txt(x['temps']), ec_v(x)])
+            blocs.append({'type': 'tableau', 'titre': f"{n}. Résultat — {ep} — {comp}",
+                          'colonnes': ['Nageur', 'Place', 'Temps', 'Écart au vainqueur'],
+                          'lignes': lignes, 'athlete': [0],
+                          'note': f"Référence : les 3 premiers de la course ({comp})."
+                                  + ('' if refs else ' Top 3 non fourni dans la synthèse.')})
             n += 1
-        if refs:
-            PT = {p['nageur']: tours_of(lambda t, p=p: t['nageur'] == p['nageur'], ep, pod_comp) for p in refs}
-            axe = list(OrderedDict.fromkeys(str(t['passage']) for v in PT.values() for t in v))
-            if axe:
-                blocs.append({'type': 'courbe', 'titre': f'{n}. Podium {pod_comp} — position tour par tour',
-                              'axe': axe, 'etiquette_axe': 'passage',
-                              'series': [{'nom': p['nageur'],
-                                          'valeurs': [next((num(t['position']) for t in PT[p['nageur']]
-                                                            if str(t['passage']) == x), None) for x in axe]}
-                                         for p in refs],
-                              'note': note_retires(ep, pod_comp, 'Position : 1 en haut. Trait pointillé = passage non publié.')})
-                blocs.append({'type': 'tableau', 'titre': f'{n}. Podium {pod_comp} — tour par tour',
+            series = [(f"{r['nageur']} (athlète)", tours_of(lambda t: str(t['licence']) == lic and t['type_ligne'] == 'athlete', ep, comp))]
+            series += [(f"{p['rang_reference']}. {p['nageur']}",
+                        tours_of(lambda t, p=p: t['type_ligne'] == 'reference' and t['nageur'] == p['nageur'], ep, comp))
+                       for p in refs]
+            series = [(a, T) for a, T in series if T]
+            if series and series[0][0].endswith('(athlète)'):
+                axe, ser = pos_courbe(series, comp)
+                if len(axe) > 1:
+                    blocs.append({'type': 'courbe', 'titre': f"{n}. Position tour par tour — {comp}",
+                                  'axe': axe, 'etiquette_axe': 'passage', 'series': ser,
+                                  'note': note_retires(ep, comp, 'Position : 1 en haut. Athlète et 3 premiers de la course. '
+                                                                 'Trait pointillé = passage non publié.')})
+                blocs.append({'type': 'tableau', 'titre': f"{n}. Tour par tour — {comp}",
                               'colonnes': ['Nageur', 'Passage', 'Position', 'Temps de passage', 'Écart au leader (s)',
                                            'Coups de bras/min'],
-                              'lignes': [[p['nageur'], str(t['passage']), txt(t['position']), txt(t['temps_passage']),
-                                          txt(t['ecart_leader_s']), txt(t['coups_bras_min'])]
-                                         for p in refs for t in PT[p['nageur']]],
-                              'note': note_retires(ep, pod_comp, 'Passage non publié : « non publié ».')})
+                              'lignes': [[a, str(t['passage']), txt(t['position']), txt(t['temps_passage']),
+                                          txt(t['ecart_leader_s']), txt(t['coups_bras_min'])] for a, T in series for t in T],
+                              'athlete': list(range(len(series[0][1]))),
+                              'note': note_retires(ep, comp, 'Passage non publié : « non publié ».')})
                 n += 1
 
-    # niveau en bassin
+    ref_rows = [r for r in mine if r['competition'] and ref_comp and r['competition'].split()[0] in ('CE', 'CEJ')
+                and r['competition'].split()[-1] in ref_comp]
+    main_r = next((r for r in ref_rows if r['epreuve'] == '10km'), ref_rows[0] if ref_rows else None)
+    podium = top3(main_r) if main_r else []
+
+    # niveau en bassin : athlète et 3 premiers de sa course principale de référence
     B = [b for b in bas if b['type_ligne'] == 'athlete' and str(b['licence']) == lic]
-    if B:
-        BR = [b for b in bas if b['type_ligne'] == 'reference' and b['sexe'] == sexe]
+    if B and main_r:
+        BR = [b for b in bas if b['type_ligne'] == 'reference' and b['sexe'] == sexe
+              and b['epreuve'] == main_r['epreuve'] and b['competition'] == main_r['competition']]
         cell = lambda b: f"{b['temps']} ({str(b['date'])[:7]})" if b and b['temps'] else '—'
         lignes = []
         for e in ['400 NL', '800 NL', '1500 NL']:
             a = next((b for b in B if b['epreuve_bassin'] == e), None)
-            pr = [next((b for b in BR if b['epreuve_bassin'] == e and b['rang_reference'] == p['rang_reference']), None)
-                  for p in podium]
+            pr = [next((b for b in BR if b['epreuve_bassin'] == e and b['nageur'] == p['nageur']), None) for p in podium]
             vals = [sec(b['temps']) for b in pr if b and b['temps']]
             moy = sum(vals) / len(vals) if vals else None
             if moy is not None:
-                m, s = divmod(moy, 60)
-                moy_txt = f"{int(m)}:{s:05.2f} ({len(vals)} nageur{'s' if len(vals) > 1 else ''})"
+                m, s_ = divmod(moy, 60)
+                moy_txt = f"{int(m)}:{s_:05.2f} ({len(vals)} nageur{'s' if len(vals) > 1 else ''})"
             else:
                 moy_txt = '—'
             ta = sec(a['temps']) if a and a['temps'] else None
-            ecp = '—' if ta is None or moy is None else \
-                ('+' if ta >= moy else '−') + f'{abs(ta - moy) / moy * 100:.2f} %'
+            ecp = '—' if ta is None or moy is None else ('+' if ta >= moy else '−') + f'{abs(ta - moy) / moy * 100:.2f} %'
             lignes.append([e, cell(a)] + [cell(b) for b in pr] + [moy_txt, ecp])
         fa = B[0]
-        fp = BR[0] if BR else None
+        if len(eps) > 1:
+            blocs.append({'type': 'epreuve', 'titre': 'Niveau en bassin'})
         blocs.append({'type': 'tableau',
-                      'titre': f'{n}. Niveau en bassin (50 m) — meilleurs temps sur les 24 mois précédant chaque course',
+                      'titre': f"Niveau en bassin (50 m) — athlète et 3 premiers du {main_r['epreuve']} — {main_r['competition']}",
                       'colonnes': ['Épreuve', ath['nom']] + [p['nageur'] for p in podium] +
-                                  ['Moyenne podium', 'Écart de l’athlète à la moyenne'],
+                                  ['Moyenne des 3 premiers', 'Écart de l’athlète à la moyenne'],
                       'lignes': lignes,
-                      'note': f"Fenêtre : du {fa['fenetre_debut']} au {fa['fenetre_fin']} pour l’athlète"
-                              + (f" ; du {fp['fenetre_debut']} au {fp['fenetre_fin']} pour le podium." if fp else '.')})
+                      'note': f"Meilleurs temps sur les 24 mois précédant la course (du {fa['fenetre_debut']} au {fa['fenetre_fin']})."
+                              + ('' if BR else ' Temps des 3 premiers non fournis dans la synthèse.')})
 
-    ref_rows = [r for r in mine if r['competition'] and ref_comp and r['competition'].split()[0] in ('CE', 'CEJ')
-                and r['competition'].split()[-1] in ref_comp]
-    kpi = []  # règle validée le 2026-11-26
-    main_r = next((r for r in ref_rows if r['epreuve'] == '10km'), ref_rows[0] if ref_rows else None)
+    kpi = []  # règle validée le 2026-11-26 ; écart au 3e de la course (décision du 2026-11-27)
     if main_r:
         nb = f" / {main_r['nb_classes']}" if main_r['nb_classes'] else ''
         kpi.append([f"{main_r['epreuve']} · {main_r['competition']}", f"{place_fr(main_r['place'])}{nb} · {main_r['temps']}"])
-        if main_r['ecart_vainqueur_s']:
-            kpi.append(['Écart au vainqueur',
-                        f"+{main_r['ecart_vainqueur_s']:.2f} s (+{main_r['ecart_vainqueur_pct']:.2f} %)"])
-        else:
-            kpi.append(['Écart au vainqueur', 'vainqueur'])
-    if podium and any(r['epreuve'] == podium[0]['epreuve'] for r in mine):
-        kpi.append([f'Podium {pod_comp}', f"jusqu’à +{podium[-1]['ecart_vainqueur_pct']:.2f} % du vainqueur"])
+        kpi.append(['Écart au vainqueur', ec_v(main_r) if main_r['ecart_vainqueur_s'] else 'vainqueur'])
+        if len(podium) >= 3 and podium[-1]['ecart_vainqueur_pct'] is not None:
+            kpi.append([f"3e du {main_r['epreuve']}", f"+{podium[-1]['ecart_vainqueur_pct']:.2f} % du vainqueur"])
     donnees = OrderedDict([
         ('epreuves', ', '.join(eps)), ('epreuves_liste', eps),
         ('saison', {'comp': ref_comp, 'date': date_fr(ath['dates']),
@@ -369,14 +364,30 @@ def analyse_el(ath, wb, sources):
                     'res': ' — '.join(f"{r['epreuve']} : {place_fr(r['place'])}"
                                       f"{' / ' + str(r['nb_classes']) if r['nb_classes'] else ''} · {r['temps']}"
                                       for r in ref_rows)}),
-        ('reference', {'tag': f'Référence : podium {pod_comp}',
-                       'tagd': 'Championnats du monde — Singapour 2025' if 'Singapour' in pod_comp else pod_comp,
-                       'comp': 'Championnats du monde — Singapour 2025' if 'Singapour' in pod_comp else pod_comp,
-                       'date': date_fr(podium[0]['date']) if podium else '',
-                       'epr': podium[0]['epreuve'] if podium else '',
-                       'res': 'Podium : ' + ' · '.join(p['nageur'] for p in podium)}),
+        ('reference', {'tag': 'Référence : top 3 de la course',
+                       'tagd': ref_comp,
+                       'comp': f"Top 3 — {ref_comp}",
+                       'date': date_fr(main_r['date']) if main_r else '',
+                       'epr': main_r['epreuve'] if main_r else '',
+                       'res': ('Top 3 : ' + ' · '.join(f"{p['nageur']} {p['temps']}" for p in podium)) if podium
+                              else 'Top 3 à venir'}),
         ('sources', sources), ('kpi', kpi), ('blocs', blocs)])
     return donnees
+
+
+SOURCES_EL = ['World Aquatics', 'Omega', 'European Aquatics', 'MicroPlus', 'Extranat', 'SwimRankings']  # liste de Pierre, 2026-11-27
+SOURCES_CONNUES = [('world aquatics', 'World Aquatics'), ('omega', 'Omega'), ('european aquatics', 'European Aquatics'),
+                   ('microplus', 'MicroPlus'), ('extranat', 'Extranat'), ('swimrankings', 'SwimRankings'), ('espadon', 'Espadon')]
+
+
+def sources_courtes(lignes, disc):
+    """Une seule ligne de noms de sources (décision du 2026-11-27)."""
+    if disc == 'eau-libre':
+        noms = list(SOURCES_EL)
+    else:
+        t = ' '.join(' '.join(map(str, l)) for l in lignes).lower()
+        noms = [nom for cle, nom in SOURCES_CONNUES if cle in t]
+    return [['Sources', ' · '.join(noms)]]
 
 
 def q(s):
@@ -395,8 +406,11 @@ def fusion(el, nc):
     d = OrderedDict(el)
     d['epreuves'] = el['epreuves'] + ', ' + nc['epreuves']
     d['epreuves_liste'] = el['epreuves_liste'] + [e for e in nc['epreuves_liste'] if e not in el['epreuves_liste']]
-    d['references_supplementaires'] = [{'saison': nc['saison'], 'reference': nc['reference']}]
-    d['sources'] = el['sources'] + [x for x in nc['sources'] if x not in el['sources']]
+    d['saison'] = dict(el['saison'], tag='Compétition de référence en eau libre')
+    d['references_supplementaires'] = [{'saison': dict(nc['saison'], tag='Compétition de référence en bassin'),
+                                        'reference': nc['reference']}]
+    noms = el['sources'][0][1].split(' · ') + [x for x in nc['sources'][0][1].split(' · ') if x not in el['sources'][0][1]]
+    d['sources'] = [['Sources', ' · '.join(noms)]]
     d['kpi'] = el['kpi'] + nc['kpi']
     d['blocs'] = avec_epreuve(el) + avec_epreuve(nc)
     d.move_to_end('blocs')
@@ -426,7 +440,7 @@ def main():
     ident, par_disc, notes = OrderedDict(), {'natation-bassin': {}, 'eau-libre': {}}, []
     for f, disc, fn in [(f_nc, 'natation-bassin', analyse_nc), (f_el, 'eau-libre', analyse_el)]:
         wb = openpyxl.load_workbook(f, data_only=True)
-        sources = [[s['source'], s['ce_qui_en_est_tire']] for s in feuille(wb, 'sources')]
+        sources = sources_courtes([[s['source'], s['ce_qui_en_est_tire']] for s in feuille(wb, 'sources')], disc)
         for a in feuille(wb, 'nageurs'):
             if a['statut'] == 'doublon':
                 continue
