@@ -1176,10 +1176,11 @@ let listeV3 = {};   // licence normalisée → { d: discipline, d2: 2e disciplin
 async function chargerListeV3() {
   listeV3 = {};
   try {
-    let { data, error } = await sb.from('ppi_v3_liste').select('licence,discipline,discipline_2').eq('actif', true);
+    let { data, error } = await sb.from('ppi_v3_liste').select('licence,discipline,discipline_2,categorie').eq('actif', true);
+    if (error && error.code === '42703') ({ data, error } = await sb.from('ppi_v3_liste').select('licence,discipline,discipline_2').eq('actif', true));
     if (error && error.code === '42703') ({ data, error } = await sb.from('ppi_v3_liste').select('licence,discipline').eq('actif', true));
     if (error) return;   // table absente ou non lisible : pas de bouton V3
-    (data || []).forEach(r => { const l = licenceValide(r.licence); if (l) listeV3[l] = { d: r.discipline, d2: r.discipline_2 || null }; });
+    (data || []).forEach(r => { const l = licenceValide(r.licence); if (l) listeV3[l] = { d: r.discipline, d2: r.discipline_2 || null, cat: r.categorie || null }; });
   } catch (e) { /* pas de bouton V3 */ }
 }
 const eligibleV3 = n => { const e = listeV3[licenceValide(n.licence)]; return !!e && [e.d, e.d2].filter(Boolean).every(d => DISCIPLINES_V3.includes(d)); };
@@ -1243,6 +1244,7 @@ async function genererQuestionnaireV3(n, versions) {
 
   const dataJson = JSON.stringify({
     discipline: (listeV3[lic] || {}).d || derniere.discipline || '', discipline_2: (listeV3[lic] || {}).d2 || null,
+    categorie: (listeV3[lic] || {}).cat || null,
     genere_le: new Date().toISOString(),
     admin: adminPourV3(derniere), analyse, precedent: precedentPourV3(derniere),
   }).replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '\\u003c!--').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');

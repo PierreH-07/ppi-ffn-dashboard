@@ -396,6 +396,16 @@ function refBanner(){const r=REFS[cur];const tile=(cls,tag,x)=>`<div class="rtil
  <div class="srcbox"><div class="srct">Provenance des données</div>${r.src.map(([a,b])=>`<div class="srcl"><b>${a}</b><span>${b}</span></div>`).join('')}</div>`;}
 // Ambitions : seules les compétitions mondiales de référence (CM tous les 2 ans, années impaires ; JO 2028 et 2032)
 const CAL={'2027':['Championnats du monde'],'2028':['Jeux olympiques'],'2029':['Championnats du monde'],'2031':['Championnats du monde'],'2032':['Jeux olympiques']};
+// Relève et Espoir (ppi_v3_liste.categorie, natation course et eau libre) : ambition libre (décision du 2026-11-27).
+// CEJ chaque année ; CMJ un an sur deux : bassin les années impaires (2027), eau libre les années paires (2026) ; CM et JO selon CAL.
+let RELEVE=false;
+const CEJ='Championnats d’Europe juniors',CMJ='Championnats du monde juniors';
+function calAmb(){if(!RELEVE)return CAL;const d=DOUBLE?['nc','el']:[DKEY[cur]],C={};
+ for(let y=2027;y<=2032;y++){const L=[CEJ];
+  if(d.includes('nc')&&y%2===1)L.push(CMJ+(DOUBLE?' (bassin)':''));
+  if(d.includes('el')&&y%2===0)L.push(CMJ+(DOUBLE?' (eau libre)':''));
+  C[y]=L.concat(CAL[y]||[]);}
+ return C;}
 const OBJ=['Titre','Podium','Finale / top 8','Top 16','Sélection'];
 const EXREQ={ex_nc:'15,09 m',ex_el:'Niveau requis',ex_na:'8,15 / 10',ex_pl:'91,80'};
 const EXIND={ex_nc:['Coulée après le virage (m)','13,69 m'],ex_el:['Écart au leader au tour 7.5','+43,76 s'],ex_na:['Moyenne des juges, éléments du duo libre','7,45 / 10'],ex_pl:['Points obtenus sur le 407C','78,20']};
@@ -531,7 +541,7 @@ function bind(el){ // data-p = chemin dans l'état
     if(f.type==='checkbox') f.checked=!!get(); else f.value=get()??'';
     f.addEventListener(f.tagName==='SELECT'||f.type==='checkbox'?'change':'input',()=>{
       const ks=f.dataset.p.split('.'); const last=ks.pop(); const o=ks.reduce((o,k)=>o[k],S());
-      o[last]=f.type==='checkbox'?f.checked:f.value;refreshTabs(); if(/^amb\.\d+\.h$/.test(f.dataset.p)) o.c=f.value?CAL[f.value][0]:''; if(f.dataset.rr) render();
+      o[last]=f.type==='checkbox'?f.checked:f.value;refreshTabs(); if(/^amb\.\d+\.h$/.test(f.dataset.p)) o.c=f.value?calAmb()[f.value][0]:''; if(f.dataset.rr) render();
     });
   });
 }
@@ -539,15 +549,15 @@ const dimOpts=(v)=>'<option value="">— choisir —</option>'+ATH[cur].dims.map
 
 const PAGES=[
 // 1 Ambitions
-()=>{const s=S();return head('1. Ambitions','Par défaut : Championnats du monde 2027 et Jeux olympiques 2028 (objectif obligatoire). Des ambitions à plus long terme peuvent s’ajouter (championnats du monde 2029 et 2031, Jeux olympiques 2032).')+
+()=>{const s=S();return head('1. Ambitions',RELEVE?'Ambition libre (Relève, Espoir) : choisir l’année et la compétition parmi les Championnats d’Europe juniors, les Championnats du monde juniors, les Championnats du monde et les Jeux olympiques, de 2027 à 2032.':'Par défaut : Championnats du monde 2027 et Jeux olympiques 2028 (objectif obligatoire). Des ambitions à plus long terme peuvent s’ajouter (championnats du monde 2029 et 2031, Jeux olympiques 2032).')+
  `<div class="methode principe"><div class="mt">Organisation de l’entretien</div><ul><li><b>Participants</b> : au minimum l’athlète et son ou ses entraîneurs ; si besoin, le staff élargi et la DTN.</li><li><b>Animateur</b> (recommandé, pas obligatoire) : il fluidifie et cadre l’entretien, et complète l’outil. Le contenu, lui, appartient dans tous les cas à l’athlète et à ses entraîneurs.</li><li><b>Déroulement</b> :<ul><li>athlète en épreuve individuelle : une seule séance, d’environ 1 h ;</li><li>épreuve collective (duo, équipe) : deux temps, un temps collectif avec l’ensemble du collectif, puis un temps individuel avec chaque athlète.</li></ul></li><li><b>Méthode</b> : interroger les performances réalisées, en repartant de la compétition de référence, pour identifier les axes d’amélioration.</li></ul></div>`+
  `<div class="methode principe"><div class="mt">Principe du projet</div><p>Personne ne peut prévoir exactement la performance, ni tout le chemin qui mène à l’ambition. Ce projet sert à réunir les meilleures conditions, pas à garantir un résultat.</p><p>L’objectif est d’identifier <b>le prochain pas</b> : à partir du diagnostic d’aujourd’hui, l’étape juste au-dessus du niveau actuel. Assez exigeante pour faire progresser, assez proche pour être atteinte cette saison.</p><p>Progresser, c’est accepter de <b>bousculer ce qui fonctionne déjà</b> pour construire mieux. Cela peut demander de se transformer, de prendre du temps et d’accepter une part de <b>risque</b>.</p></div>`+
  methode('Ambitions',['Quel horizon fixer ?','Quelle ambition générale pour cet horizon ?','Cette ambition est-elle partagée par toutes les parties ?'],['Un horizon et une ambition générale, sur lesquels toutes les parties sont alignées.'])+
  `<div class="card"><h2>Ambitions</h2>${s.amb.map((a,i)=>a.fixed?`<div class="item act"><h3>${a.req?'Prochains Jeux olympiques — obligatoire':'Prochains championnats du monde'}</h3><div class="grid g3"><div><label>Année</label><input value="${a.h}" disabled></div><div><label>Compétition</label><input value="${a.c}" disabled></div><div><label>Objectif${a.req?' *':''}</label><select data-p="amb.${i}.r"><option value="">— choisir —</option>${OBJ.map(o=>`<option ${o===a.r?'selected':''}>${o}</option>`).join('')}</select></div></div></div>`:`<div class="item"><button class="rm" title="Supprimer" onclick="S().amb.splice(${i},1);render()">×</button><div class="grid g3">
- <div><label>Année</label><select data-p="amb.${i}.h" data-rr="1"><option value="">— choisir —</option>${Object.keys(CAL).filter(y=>+y>2028).map(y=>`<option ${y===a.h?'selected':''}>${y}</option>`).join('')}</select></div>
- <div><label>Compétition</label><select data-p="amb.${i}.c" ${a.h?'':'disabled'}>${a.h?CAL[a.h].map(c=>`<option ${c===a.c?'selected':''}>${c}</option>`).join(''):'<option>— choisir l’année —</option>'}</select></div>
+ <div><label>Année</label><select data-p="amb.${i}.h" data-rr="1"><option value="">— choisir —</option>${Object.keys(calAmb()).filter(y=>RELEVE||+y>2028).map(y=>`<option ${y===a.h?'selected':''}>${y}</option>`).join('')}</select></div>
+ <div><label>Compétition</label><select data-p="amb.${i}.c" ${a.h?'':'disabled'}>${a.h&&calAmb()[a.h]?calAmb()[a.h].map(c=>`<option ${c===a.c?'selected':''}>${c}</option>`).join(''):'<option>— choisir l’année —</option>'}</select></div>
  <div><label>Objectif</label><select data-p="amb.${i}.r"><option value="">— choisir —</option>${OBJ.map(o=>`<option ${o===a.r?'selected':''}>${o}</option>`).join('')}</select></div></div></div>`).join('')}
- <button class="add" onclick="S().amb.push({h:'',c:'',r:''});render()">+ Ajouter une ambition à plus long terme</button></div>`;},
+ <button class="add" onclick="S().amb.push({h:'',c:'',r:''});render()">+ Ajouter une ${RELEVE?'ambition':'ambition à plus long terme'}</button></div>`;},
 // 2 Bilan de la compétition de référence
 ()=>head('2. Bilan de la compétition de référence')+
  methode('Bilan de la compétition de référence',['Qu\'est-ce qui sépare l\'athlète des meilleurs ?','Quels points forts et quels axes d\'amélioration l\'analyse de la performance permet-elle de détecter ?','Qu\'est-ce que l\'analyse chiffrée ne dit pas de la performance : que manque-t-il, quels éléments de contexte ajouter ?'],['Des indicateurs d\'analyse précis','Un bilan sincère sur la saison écoulée et les performances réalisées lors de la compétition de référence','Une prise en compte de tous les paramètres ayant influencé cette performance'])+precCard()+`<div class="card note10"><div class="q">Globalement, quel est ton niveau de satisfaction sur ton bilan ${REFS[cur].saison.q||('aux '+REFS[cur].saison.comp.split(' — ')[0]+' de '+REFS[cur].saison.comp.split(' — ')[1])} ?</div><label for="bq_sat">Satisfaction globale : <b id="satv">${S().sat}</b> / 10</label>
@@ -962,7 +972,8 @@ function appliquerImport(){const I=IMPORT;
   tpl.innerHTML=blocsVersHtml(an.blocs);}
  else{A.epr=ad.epreuves||'';A.ref='';REFS[k]={saison:{comp:'Compétition de référence',q:'sur la saison écoulée',date:'à venir',epr:'',res:''},tag:'Référence',monde:{comp:'À venir',date:'',epr:'',res:''},src:[]};KPI[k]=[];EPREF[k]=[];
   tpl.innerHTML='<div class="card"><p class="empty">Données d’analyse de la compétition de référence à venir : elles seront ajoutées par la DTN.</p></div>';}
- const s=S();if(DOUBLE){s.perf.d1=WC27.el[0];s.perf.d2=WC27.nc[1];}Object.assign(s.adm,{lic:ad.licence||'',nom:ad.nom||'',prenom:ad.prenom||'',ddn:ad.date_naissance||'',genre:ad.genre||'',email:ad.email||'',tel:ad.telephone||'',club:ad.club||'',
+ RELEVE=/^(releve|espoir)$/.test(String(I.categorie||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase())&&(DOUBLE||k==='ex_nc'||k==='ex_el');
+ const s=S();if(RELEVE)s.amb=[{h:'',c:'',r:''}];if(DOUBLE){s.perf.d1=WC27.el[0];s.perf.d2=WC27.nc[1];}Object.assign(s.adm,{lic:ad.licence||'',nom:ad.nom||'',prenom:ad.prenom||'',ddn:ad.date_naissance||'',genre:ad.genre||'',email:ad.email||'',tel:ad.telephone||'',club:ad.club||'',
   struct:ad.structure_nom||'',ent:ad.entraineur_nom||'',entEmail:ad.entraineur_email||'',entTel:ad.entraineur_tel||'',staff:ad.staff||'',
   etr:!!ad.entrainement_etranger,structFr:ad.structure_france||'',entFr:ad.entraineur_france||''});
  if(I.precedent&&(I.precedent.items||[]).length)s.prec={date:I.precedent.date||'',version:I.precedent.version||'',items:I.precedent.items.map(x=>({type:x.type,libelle:x.libelle||'',cible:x.cible||'',realise:'',com:''}))};
