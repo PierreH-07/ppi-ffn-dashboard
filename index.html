@@ -1764,12 +1764,16 @@ const DIFF_V3 = { portee:['À portée','v3-d-portee'], optimal:['Exigeant mais a
 const STATUT_V3 = { prio:'Prioritaire', mener:'À mener', traite:'Déjà traité ailleurs', cote:'Pas prioritaire' };
 const fmtInd3 = (t, v, u) => !rempli(v) ? v : t === 'ech' ? v + '/5' : (t || 'num') === 'num' ? String(v).replace('.', ',') + (u ? ' ' + u : '') : v;
 
+// Format (individuel / relais) et épreuves visées d'une ambition V3
+const ambDet3 = a => [a.format, (a.epreuves || []).map(e => e.epreuve || e).filter(Boolean).join(', ')].filter(rempli).join(' · ');
+
 function renderAmbitionV3(n) {
   const L = (n.objectifs_pluriannuels || []).filter(a => a.competition);
   if (!L.length) return aCompleter('Ambition non renseignée');
   return `<div class="v3-amb">${L.map(a => `<div class="v3-amb-c${a.isJO ? ' jo' : ''}">
     <div class="v3-k">${e3(a.saison)}</div><div class="v3-amb-n">${e3(a.competition)}</div>
-    <div class="v3-amb-o">${rempli(a.objectif) ? e3(a.objectif) : '<span class="empty">objectif à préciser</span>'}</div></div>`).join('')}</div>`;
+    <div class="v3-amb-o">${rempli(a.objectif) ? e3(a.objectif) : '<span class="empty">objectif à préciser</span>'}</div>
+    ${ambDet3(a) ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${e3(ambDet3(a))}</div>` : ''}</div>`).join('')}</div>`;
 }
 
 function renderReferenceV3(n) {
