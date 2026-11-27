@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>PPI V3 Prototype</title>
+<style>
+:root{color-scheme:light;
+  --surface-0:#f4f4f2; --surface-1:#fcfcfb; --rule:#e2e1dc; --grid:#ecebe7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#7a7974;
+  --navy:#0E1655; --good:#1b7f3b; --bad:#c0262d;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-0);color:var(--text-primary);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:20px;margin:0 0 4px;color:var(--navy)}
+h2{font-size:15px;margin:0 0 10px;color:var(--navy)}
+.sub{color:var(--text-secondary);margin:0 0 16px}
+.card{background:var(--surface-1);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 6px;font-size:13px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--text-secondary);font-size:12px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.na{color:var(--text-muted);font-style:italic}
+.pos,.ph .lab b.pos{color:var(--bad)} .neg,.ph .lab b.neg{color:var(--good)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 10px;color:var(--text-secondary);font-size:13px}
+.lens{display:grid;grid-template-columns:1fr;gap:18px}
+.row3{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:760px){.row3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ph .lab{min-height:32px;align-items:flex-start;gap:6px}
+.len h3{font-size:13px;margin:0 0 6px;color:var(--text-primary)}
+.ph{margin:0 0 6px}
+.ph .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary)}
+.ph .lab b{color:var(--text-primary);font-weight:600}
+svg text{font:11px system-ui,sans-serif;fill:var(--text-secondary)}
+.note{font-size:12px;color:var(--text-muted);margin-top:8px}
+</style>
+
+<style>
+:root{--navy:#0E1655;--blue:#0090D4;--red:#E2001A;--green:#55CC85;--accent:#0090D4}
+body{background:var(--surface-0)}
+.top{background:#0E1655;color:#fff;padding:14px 16px}
+.top .in{max-width:1000px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.top b{font-size:17px;letter-spacing:.3px}
+.top small{opacity:.75}
+.ath{display:flex;flex-wrap:wrap;gap:8px}
+.ath button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:7px 10px;font:inherit;font-size:13px;cursor:pointer;text-align:left;line-height:1.25}
+.ath button[aria-pressed="true"]{background:#fff;color:#0E1655;border-color:#fff}
+.ath button span{display:block;font-size:11px;opacity:.75}
+.steps{max-width:1000px;margin:14px auto 0;padding:0 16px;display:flex;flex-wrap:wrap;gap:6px}
+.steps button{flex:0 0 auto;border:1px solid var(--rule);background:var(--surface-1);color:var(--text-secondary);border-radius:20px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.steps button[aria-current="step"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.steps button i{font-style:normal;font-weight:700;margin-right:5px}
+main{max-width:1000px}
+.ph-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.ph-title h1{margin:0}
+.who{color:var(--text-secondary);font-size:13px}
+.lead{color:var(--text-secondary);margin:0 0 14px}
+label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin:8px 0 3px}
+input,select,textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;background:var(--surface-1);color:var(--text-primary)}
+textarea{min-height:64px;resize:vertical}
+.grid{display:grid;gap:10px}
+@media(min-width:700px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:1.2fr 1fr 1fr 1fr}}
+.item{border:1px solid var(--rule);border-left:4px solid var(--blue);border-radius:8px;padding:10px 12px;margin:0 0 10px;background:var(--surface-1);position:relative}
+.item.act{border-left-color:var(--red)}
+.item.dev{border-left-color:var(--green)}
+.encart{margin-top:10px;padding:8px 10px;border-radius:6px;background:rgba(85,204,133,.12);border:1px solid rgba(85,204,133,.5)}
+.item h3{margin:0 0 4px;font-size:14px;color:var(--navy)}
+.rm{position:absolute;top:6px;right:8px;border:0;background:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1}
+.add{border:1px dashed var(--blue);background:transparent;color:var(--blue);border-radius:6px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+.ind{display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-top:6px}
+.ind button{border:0;background:none;color:var(--text-muted);cursor:pointer;font-size:16px}
+.checks label{display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--text-primary);font-size:13px;margin:4px 0}
+.checks input{width:auto;margin-top:3px}
+.nav{display:flex;justify-content:space-between;margin:16px 0 30px}
+.nav button{border:0;border-radius:6px;padding:9px 16px;font:inherit;cursor:pointer;background:var(--navy);color:#fff}
+.nav button.sec{background:var(--surface-1);color:var(--navy);border:1px solid var(--rule)}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;background:#e8f1fb;color:#0B4F8A;margin-left:6px;font-weight:600}
+.empty{color:var(--text-muted);font-style:italic}
+.chain{display:grid;gap:8px}
+.chain .row{display:grid;gap:8px}
+@media(min-width:760px){.chain .row{grid-template-columns:1fr 1.2fr 1fr}}
+.box{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:var(--surface-1);font-size:13px}
+.box b{color:var(--navy)}
+.box .k{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);display:block;margin-bottom:2px}
+.pill-r{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--red);margin-right:6px;vertical-align:-1px}
+.pill-g{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:6px;vertical-align:-1px}
+.rban{display:grid;gap:10px;margin:0 0 12px;align-items:stretch}
+@media(min-width:760px){.rban{grid-template-columns:1fr auto 1fr}}
+.rtile{border-radius:10px;padding:12px 14px;color:#fff}
+.rtile.rsa{background:#0E1655}
+.rtile.rwo{background:#0090D4}
+.rtag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-bottom:6px}
+.rcomp{font-size:17px;font-weight:700;line-height:1.25}
+.rmeta{font-size:13px;opacity:.85;margin-top:2px}
+.rres{font-size:14px;font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.25)}
+.rvs{align-self:center;justify-self:center;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.srcbox{border:1px solid var(--rule);border-left:4px solid #D59F49;border-radius:8px;background:var(--surface-1);padding:10px 14px;margin:0 0 14px}
+.srct{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8a6420;margin-bottom:6px}
+.srcl{display:grid;gap:2px 12px;font-size:13px;padding:4px 0;border-top:1px solid var(--grid)}
+.srcl:first-of-type{border-top:0}
+@media(min-width:700px){.srcl{grid-template-columns:240px 1fr}}
+.srcl span{color:var(--text-secondary)}
+.note10{border-left:5px solid #0E1655;background:#eef2fb}
+.note10 .q{font-size:18px;font-weight:700;color:#0E1655;line-height:1.3;margin:0 0 6px}
+.note10 input[type=range]{padding:0;border:0;background:none;accent-color:#0E1655}
+.slab{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)}
+.grp td{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#fff;text-align:left!important;padding:6px 10px!important;border:0}
+.grp.g-s td{background:#0E1655}
+.grp.g-m td{background:#0090D4}
+.grp.g-h td{background:#9a9a94}
+tr.grp + tr td{border-top:0}
+.row-ath td{background:#eef2fb;font-weight:600}
+tr.grp.g-m{border-top:10px solid transparent}
+.tw{overflow-x:visible}
+.tw table{width:100%;table-layout:auto}
+.tw th,.tw td{white-space:normal!important;overflow-wrap:normal;word-break:normal}
+.tw td b,.tw td{font-variant-numeric:tabular-nums}
+.tw th{font-size:11px;line-height:1.2;vertical-align:bottom}
+.tw td{font-size:12.5px}
+@media(max-width:760px){.tw th,.tw td{font-size:10.5px;padding:4px 3px!important}.tw td .na,.tw td span[style*="text-muted"]{display:block;font-size:10px}.card{padding:10px 8px}}
+@media(max-width:420px){.tw th,.tw td{font-size:9.5px;padding:3px 2px!important}.sw{width:7px;height:7px;margin-right:3px}}
+@media(max-width:420px){.tw table.dense th,.tw table.dense td{font-size:8.5px;padding:3px 1px!important}.tw table.xdense th,.tw table.xdense td{font-size:7.5px;padding:2px 1px!important;letter-spacing:-.2px}}
+.qq{display:flex;gap:10px;margin:12px 0 0}
+.qn{flex:0 0 26px;height:26px;border-radius:50%;background:#0E1655;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.qb{flex:1;min-width:0}
+.qt{font-weight:700;color:#0E1655;font-size:15px;margin-bottom:6px}
+.fil{margin-top:8px;padding:8px 10px;border-radius:8px;background:#fff;border:1px dashed #0090D4;font-size:13px}
+.fil .fk{font-weight:700;color:#0090D4;margin-right:4px}
+.chip{display:inline-block;background:#e6f4fb;color:#0B4F8A;border-radius:10px;padding:1px 8px;font-size:12px;margin:2px 0 0 4px}
+.inl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:#555}
+.inl select{width:auto;min-width:220px;flex:1}
+.mes{display:grid;gap:8px;align-items:end}
+@media(min-width:700px){.mes{grid-template-columns:1.4fr 1fr 20px 1fr .7fr 1fr}}
+.mes .ec{display:block;font-weight:700;color:#0E1655;text-align:center;padding:10px 0}
+.mes .arr{font-size:20px;font-weight:700;color:#0090D4;text-align:center;padding-bottom:6px}
+@media(max-width:699px){.mes .arr{display:none}}
+.foot{font-size:12px;color:var(--text-muted);margin:20px 0}
+@media print{.athbar,.steps,.buttons{display:none}body{background:#fff}.container{box-shadow:none}}
+/* ===== Habillage repris de la V2 ===== */
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#0E1655 0%,#0090D4 100%);min-height:100vh;padding:20px;margin:0;color:#333}
+.container{background:#fff;border-radius:20px;padding:40px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:1200px;margin:0 auto;box-sizing:border-box}
+@media(max-width:700px){body{padding:8px}.container{padding:16px 10px;border-radius:14px}}
+.header-section{text-align:center;margin-bottom:20px}
+.maintitle{text-align:center;color:#333;margin:0 0 10px;font-size:2em}
+.subtitle{text-align:center;color:#666;margin:0 0 6px;font-size:1.1em}
+.proto{text-align:center;color:#999;font-size:12px;margin:0}
+.athbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;margin:0 0 14px}
+.athlab{font-weight:600;color:#0E1655;font-size:14px}
+.ath button{background:#fff;color:#0E1655;border:2px solid #e0e0e0;border-radius:8px;padding:8px 12px;font-weight:600}
+.ath button span{color:#666;opacity:1;font-weight:400}
+.ath button[aria-pressed="true"]{background:#0E1655;color:#fff;border-color:#0E1655}
+.ath button[aria-pressed="true"] span{color:#cfd6f0}
+.steps{max-width:none;padding:0;margin:0 0 20px;justify-content:center}
+.steps button{border:2px solid #e0e0e0;background:#fff;color:#0E1655;font-weight:600;padding:7px 12px;border-radius:20px}
+.steps button[aria-current="step"]{background:#0090D4;border-color:#0090D4;color:#fff}
+main{max-width:none;padding:0}
+.whoc{text-align:center;color:#0E1655;font-weight:600;margin:0 0 6px}
+.lead{text-align:center;color:#666;margin:0 auto 20px;max-width:820px}
+.card{background:#fff;border-radius:15px;padding:25px;margin-bottom:25px;border:3px solid #0E1655;box-shadow:0 8px 20px rgba(14,22,85,.15)}
+@media(max-width:700px){.card{padding:14px 10px}}
+.card h2{color:#0E1655;margin:0 0 20px;font-size:1.4em;font-weight:700;padding-bottom:10px;border-bottom:3px solid #0090D4}
+.item{background:#f5f5f5;border-radius:10px;padding:20px;margin-bottom:20px;border:0;border-left:5px solid #0090D4}
+.item.act{border-left-color:#E2001A}
+.item.dev{border-left-color:#55CC85}
+.item h3{color:#0E1655;font-size:1.1em;margin:0 0 10px}
+label{color:#0E1655;font-weight:600;font-size:13px}
+input,select,textarea{padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1em;font-family:inherit;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#0090D4;box-shadow:0 0 0 3px rgba(0,144,212,.1)}
+textarea{min-height:80px}
+.buttons{margin:30px 0 10px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap}
+.buttons button{padding:12px 30px;font-size:1em;border:none;border-radius:8px;cursor:pointer;font-weight:600;color:#fff}
+.next-btn{background:#4caf50}.next-btn:hover{background:#45a049}
+.prev-btn{background:#f44336}.prev-btn:hover{background:#d32f2f}
+.home-btn{background:#9c27b0}
+.pdf-btn{background:#D59F49}
+.add{border:2px dashed #0090D4;font-weight:600}
+.note10{border:3px solid #0E1655;border-left:8px solid #0E1655;background:#eef2fb}
+.sq{margin-top:8px}
+.sub{font-weight:700;color:#0E1655;font-size:14px;margin:14px 0 0}
+textarea.sm{min-height:56px}
+.recap{background:#fff;border:1px dashed #0090D4;border-radius:8px;padding:8px 12px;margin:0 0 10px;font-size:13px}
+.recap .rt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#0090D4;margin-bottom:4px}
+.recap ul{margin:0;padding-left:18px}
+.eprow-na{color:#999;text-align:center;align-self:center}
+.prec-r{display:grid;grid-template-columns:1fr 190px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eee}
+.prec-t{font-size:11px;font-weight:700;text-transform:uppercase;color:#0090D4;margin-right:4px}.prec-c{font-size:12px;color:#666}
+@media (max-width:700px){.prec-r{grid-template-columns:1fr}}
+.methode{background:#F2F7FC;border:2px solid #0E1655;border-left:8px solid #0090D4;border-radius:10px;padding:12px 16px;margin:0 0 20px}
+.methode .mt{font-weight:800;color:#0E1655;text-transform:uppercase;letter-spacing:.5px;font-size:14px;margin-bottom:8px}
+.methode .mg{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
+.methode .ms{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#0090D4;margin-bottom:4px}
+.methode ul{margin:0;padding-left:18px;font-size:14px;color:#0E1655}
+.methode li{margin:2px 0}
+.methode.principe{background:#0E1655;border-color:#0E1655;color:#fff}
+.methode.principe .mt{color:#fff}
+.methode.principe ul{color:#fff}
+.methode.principe p{margin:4px 0;font-size:14px;line-height:1.45}
+@media (max-width:700px){.methode .mg{grid-template-columns:1fr}}
+table.grp2 th.gh{text-align:center!important;border-bottom:2px solid #0090D4}
+table.grp2 .dd{border-left:2px solid #e3eaf2;color:#555}
+.perfbox{border:2px solid #0090D4;border-radius:10px;padding:16px}
+.eprow,.ephead{display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:8px;align-items:center;margin-top:6px}
+.eprow.el,.ephead.el{grid-template-columns:2fr 1fr 32px}
+.ephead{font-size:12px;font-weight:600;color:#0E1655;margin-top:12px}
+.eprow button{background:none;border:none;color:#c00;cursor:pointer;font-size:1.1em}
+.ind4{display:grid;grid-template-columns:1.6fr 1fr 1fr .7fr 28px;gap:6px;margin-top:6px;align-items:center}
+.ind4.hd{font-size:11px;font-weight:600;color:#0E1655;margin-top:2px}
+.ind4 .ec{font-weight:700;color:#0E1655;text-align:center;font-variant-numeric:tabular-nums}
+.ind4 button{border:0;background:none;color:#999;cursor:pointer;font-size:16px}
+@media(max-width:700px){.ind4{grid-template-columns:1fr 1fr}.ind4.hd{display:none}.ind4 input:first-child{grid-column:1/-1}}
+.diff{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.dopt{display:flex;align-items:center;gap:6px;border:2px solid #e0e0e0;border-radius:8px;padding:6px 10px;font-weight:600;cursor:pointer;background:#fff}
+.dopt input{width:auto}
+.dopt.optimal{border-color:#55CC85}
+.dbadge{display:inline-block;border-radius:999px;padding:0 8px;font-size:11px;font-weight:700;vertical-align:1px}
+.dbadge.portee{background:#E8F6FD;color:#0B4F8A}.dbadge.optimal{background:#E3F6EA;color:#1F7A40}.dbadge.hors{background:#F1F1EF;color:#666}
+.eprow.wp,.ephead.wp{grid-template-columns:1fr 32px;max-width:420px}
+.fictif{background:#FFF4E0;border:2px dashed #C98A3C;color:#8a5a12;font-weight:700;text-align:center;border-radius:8px;padding:8px;margin:0 0 14px;text-transform:uppercase;letter-spacing:.5px;font-size:13px}
+.warn{color:#a35a00;font-size:13px;margin:6px 0 0}
+.ind5{display:grid;grid-template-columns:1.5fr .9fr .6fr 1fr 1fr .7fr 28px;gap:6px;margin-top:6px;align-items:center}
+.ind5.hd{font-size:11px;font-weight:600;color:#0E1655;margin-top:2px}
+.ind5 .ec{font-weight:700;color:#0E1655;text-align:center;font-size:13px}
+.ind5 button{border:0;background:none;color:#999;cursor:pointer;font-size:16px}
+.ind5 select{padding:8px 6px}
+@media(max-width:700px){.ind5{grid-template-columns:1fr 1fr}.ind5.hd{display:none}.ind5 input:first-child{grid-column:1/-1}}
+.hint{font-size:12px;color:#666;margin:0 0 4px}
+.grph{font-weight:800;color:#0E1655;text-transform:uppercase;letter-spacing:.5px;font-size:13px;background:#eef2fb;border-left:5px solid #0E1655;border-radius:6px;padding:8px 12px;margin:16px 0 10px}
+.eptag{display:inline-block;background:#E8F6FD;color:#0B4F8A;border-radius:999px;padding:0 8px;font-size:11px;font-weight:700;margin-right:4px}
+.stchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.stchips .dopt.prio{border-color:#E2001A}.stchips .dopt.cote,.stchips .dopt.traite{border-color:#cfcfcf;color:#666}
+.stchips select.rang{width:auto;min-width:130px}
+.item.off{opacity:.75;border-left-color:#bbb}
+.svc{background:#FFF1D6;color:#8a5a00;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle}
+.rolesum{margin-top:6px;background:#FFF8EA}
+.item.flash{outline:3px solid #0090D4;outline-offset:2px}
+.pb-g{margin:12px 0 4px;font-weight:700;color:#0B4F8A;font-size:13px;text-transform:uppercase;letter-spacing:.03em}.pb-g span{background:#e6f4fb;border-radius:999px;padding:0 7px;margin-left:4px}
+.pb-g.prio{color:#E2001A}.pb-g.off{color:#777}
+.pb-r{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid #e3e8ee;border-radius:10px;padding:8px 10px;margin:4px 0;background:#fff}
+.pb-r.prio{border-left:5px solid #E2001A}.pb-r.mener{border-left:5px solid #0090D4}.pb-r.none{border-left:5px solid #F28C28}.pb-r.traite,.pb-r.cote{opacity:.75;border-left:5px solid #bbb}
+.pb-k{font:800 20px/1 'Barlow Condensed',sans-serif;color:#E2001A;text-align:center}
+.pb-m{font-size:12px;color:#555;margin-top:2px}.pb-j{margin-top:6px;font-size:13px}
+.pb-c{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.pb-c select{width:auto}.pb-c button{border:1px solid #cfd8e3;background:#f6f9fc;border-radius:8px;padding:4px 8px;cursor:pointer}.pb-c button:disabled{opacity:.3;cursor:default}.pb-c .pb-e{color:#0B4F8A;font-weight:600}
+@media (max-width:640px){.pb-r{grid-template-columns:28px 1fr}.pb-c{grid-column:1/-1;justify-content:flex-start}}
+.rk{background:#E2001A;color:#fff;border-radius:999px;padding:1px 8px;font-size:12px;margin-left:6px}
+.checks.eps{display:flex;flex-wrap:wrap;gap:4px 14px}
+.eptabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.eptab{display:inline-flex;align-items:center;gap:8px;border:2px solid #e0e0e0;background:#fff;color:#0E1655;font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;font:inherit;font-weight:700}
+.eptab .dot{width:10px;height:10px;border-radius:50%}
+.eptab.todo{border-color:#F28C28;background:#FFF4E8}.eptab.todo .dot{background:#F28C28}
+.eptab.done{border-color:#55CC85;background:#EAF8EF}.eptab.done .dot{background:#2E9E5B}
+.eptab.neutral{border-color:#cfd6e4}
+.eptab.on{box-shadow:0 0 0 3px #0E1655 inset}
+.eptab.neutral.on{background:#0E1655;color:#fff;box-shadow:none}
+.sub2{font-weight:700;color:#0E1655;font-size:13px;margin:10px 0 2px}
+.card svg text{font-size:11px}
+.foot{text-align:center}
+
+</style>
+<style id="rzcss">
+.rz{--navy:#0B1F5C;--navy-2:#142B7B;--blue:#00AEEF;--blue-d:#0080BE;--blue-soft:#BEE6F7;--blue-bg:#E8F6FD;--red:#D7282F;--green:#6CB33F;--text:#0E1A3C;--text-2:#4A5478;--muted:#7C88A6;--line:#E3EAF2;--line-2:#EFF3F8;--bg-soft:#F6F9FC;font-family:'Barlow',system-ui,sans-serif;color:var(--text);font-size:9.5pt;line-height:1.35;width:210mm}
+.rz *{box-sizing:border-box;margin:0;padding:0}
+.rz .resume-page{width:210mm;height:297mm;background:#fff;box-shadow:0 4px 24px rgba(11,31,92,.12);overflow:hidden;padding:10mm 11mm 9mm;display:flex;flex-direction:column;gap:3.5mm;margin:0 0 16px}
+.rz .page-header{display:flex;align-items:center;gap:14px;padding-bottom:8px;border-bottom:2px solid var(--navy)}
+.rz .logo{display:flex;align-items:center;gap:10px}
+.rz .logo-mark{width:38px;height:38px;border-radius:50%;background:var(--navy);position:relative;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px}
+.rz .logo-mark::after{content:'';position:absolute;right:-3px;top:5px;width:11px;height:15px;background:var(--red);border-radius:50% 0 50% 50%;transform:rotate(20deg)}
+.rz .logo-text{line-height:1}.rz .logo-text .small{font-family:'Barlow Condensed',sans-serif;font-size:6.5pt;letter-spacing:.22em;color:var(--red);font-weight:600;text-transform:uppercase;display:block;margin-bottom:2px}
+.rz .logo-text .big{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:var(--navy);font-size:11pt;text-transform:uppercase}
+.rz .sep{width:1px;height:32px;background:var(--line)}
+.rz .title-block{flex:1}.rz .title-block .eyebrow{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7.5pt;text-transform:uppercase;letter-spacing:.2em;color:var(--blue-d)}
+.rz .title-block .name{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;color:var(--navy);font-size:18pt;text-transform:uppercase;line-height:1}
+.rz .pnum{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8pt;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;text-align:right;line-height:1.3}.rz .pnum b{display:block;color:var(--navy);font-size:11pt}
+.rz .identity{display:grid;grid-template-columns:1fr 62mm;gap:5mm;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:10px;padding:4mm 4.5mm}
+.rz .ident-main .role{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7.5pt;letter-spacing:.2em;text-transform:uppercase;color:var(--blue-soft)}
+.rz .ident-main .nom{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:22pt;line-height:.95;text-transform:uppercase}
+.rz .discipline{margin-top:6px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);padding:3px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase}
+.rz .discipline .dot{width:5px;height:5px;border-radius:50%;background:var(--blue)}
+.rz .ident-side .row{display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.15)}.rz .ident-side .row:last-child{border:0}
+.rz .ident-side .lbl{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:6.5pt;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.6);width:22mm;flex-shrink:0;padding-top:2px}
+.rz .ident-side .val{font-weight:600;font-size:8.5pt}
+.rz .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;display:flex;flex-direction:column;gap:6px;box-shadow:none;margin:0}
+.rz .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:5px;border-bottom:1px dashed var(--line)}
+.rz .card-head .t{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:var(--navy);font-size:11pt;text-transform:uppercase;letter-spacing:.04em;line-height:1}.rz .card-head .t .acc{color:var(--blue)}
+.rz .card-head .meta{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:7.5pt;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;text-align:right}
+.rz .rz-two{display:grid;grid-template-columns:1fr 1.15fr;gap:3.5mm}
+.rz .amb{display:flex;flex-direction:column;gap:4px}.rz .ambi{display:flex;gap:8px;align-items:baseline}
+.rz .ambi .y{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13pt;color:var(--red);width:12mm}
+.rz .ambi .c{font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;color:var(--navy);font-size:9pt;flex:1}
+.rz .ambi .o{font-weight:700;color:var(--navy)}
+.rz .why{font-style:italic;color:var(--text-2);font-size:8.5pt;border-left:3px solid var(--blue);padding-left:6px}
+.rz .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.rz .kpi{background:var(--bg-soft);border-radius:6px;padding:5px 7px;display:flex;flex-direction:column;gap:1px}
+.rz .kpi .l{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:6.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-d)}
+.rz .kpi .v{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10.5pt;color:var(--navy);line-height:1.1}
+.rz .sat{font-size:8.5pt;color:var(--text-2)}.rz .sat b{color:var(--navy)}
+.rz .fil-h{display:grid;grid-template-columns:1.25fr 5mm 1fr 5mm 1fr;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7pt;letter-spacing:.16em;text-transform:uppercase;color:var(--blue-d)}
+.rz .fil-r{display:grid;grid-template-columns:1.25fr 5mm 1fr 5mm 1fr;align-items:stretch}
+.rz .fc{border-radius:6px;padding:6px 8px;font-size:8.3pt;line-height:1.3}
+.rz .fc.obs{background:var(--bg-soft);border:1px solid var(--line)}
+.rz .fc.act{background:var(--blue-bg);border:1px solid var(--blue-soft)}
+.rz .fc.res{background:#FDF0F0;border:1px solid #F3C9CB}
+.rz .fa{display:flex;align-items:center;justify-content:center;color:var(--blue);font-weight:800;font-size:12pt}
+.rz .fc .ind{display:inline-block;margin:3px 4px 0 0;background:#fff;border:1px solid var(--line);border-radius:999px;padding:0 6px;font-size:7.5pt}
+.rz .an{font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase;color:var(--navy);font-size:9pt;margin-right:3px}
+.rz .fc .dim{margin-top:3px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:var(--blue-d)}
+.rz .fc .cible{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12pt;color:var(--navy);margin-top:2px}.rz .fc .cible span{color:var(--red)}
+.rz .fc .dt{font-size:7.5pt;color:var(--text-2)}
+.rz .nt{margin-top:2px;border-top:1px dashed var(--line);padding-top:5px;font-size:8pt;color:var(--text-2);display:flex;flex-direction:column;gap:2px}
+.rz .nt-h{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7pt;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.rz .card.perf{flex-direction:row;align-items:center;gap:10px}.rz .card.perf .card-head{border:0;padding:0}
+.rz .pv{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12pt;color:var(--red);text-transform:uppercase;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}.rz .pvd{font-size:8pt;color:var(--muted)}.rz .pve{background:#FDF0F0;border-radius:999px;padding:1px 8px;font-size:9.5pt;color:var(--navy)}
+.rz .pa{border:1px solid var(--line);border-left:4px solid var(--red);border-radius:6px;padding:6px 8px}
+.rz .pa-h{font-size:9pt;font-weight:600;color:var(--navy);display:flex;gap:6px;align-items:baseline}.rz .pa-h .per{margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7.5pt;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-d)}
+.rz .pa-g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 10px;margin-top:4px}
+.rz .pa-c{font-size:8pt;line-height:1.3}.rz .pa-c .l{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:6.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rz .cal{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.rz .cc{border:1px solid var(--line);border-left:4px solid var(--red);border-radius:6px;padding:5px 7px;font-size:8pt}.rz .cc.dev{border-left-color:var(--green)}
+.rz .cc .d{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rz .cc .n{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10pt;color:var(--navy);text-transform:uppercase;line-height:1.1}
+.rz .cc .pg{font-style:italic;color:var(--text-2);margin-top:2px}
+.rz .lg{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 3px 0 6px;vertical-align:-1px}.rz .lg.r{background:var(--red)}.rz .lg.g{background:var(--green)}
+.rz .sig{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rz .sg{border:1px solid var(--line);border-radius:6px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;font-size:8pt}
+.rz .sg .l{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7pt;letter-spacing:.16em;text-transform:uppercase;color:var(--blue-d)}
+.rz .sg .nm{font-weight:700;color:var(--navy)}.rz .sg .dt{color:var(--text-2)}.rz .sg .cm{color:var(--text-2);font-style:italic}
+.rz .sg .line{margin-top:auto;padding-top:14mm;border-bottom:1px solid var(--muted);font-size:6.5pt;color:var(--muted);text-transform:uppercase;letter-spacing:.14em}
+.rz .page-footer{margin-top:auto;padding-top:6px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.rz .page-footer b{color:var(--navy)}
+.rz .sep{margin-top:3px;font-size:7.8pt;color:var(--text-2);font-style:italic}
+.rz .dbadge{font-size:6.8pt}
+.rz .contr{margin-top:4px;padding-top:4px;border-top:1px dashed var(--line);font-size:8pt}
+.rz .grp-h{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:8.5pt;letter-spacing:.12em;text-transform:uppercase;color:var(--navy);background:var(--bg-soft);border-radius:4px;padding:2px 6px;margin-top:2px}
+.rz .eptag{display:inline-block;background:#E8F6FD;color:#0080BE;border-radius:999px;padding:0 6px;font-size:6.8pt;font-weight:600;margin-left:3px}
+.rz .rz-empty{color:var(--muted);font-style:italic}
+</style>
+<style>.rz-wrap{overflow:hidden;margin:0 auto;max-width:794px}.rz-wrap .rz{background:transparent}</style>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+ <div class="header-section">
+  <h1 class="maintitle">Projet de Performance - FFN</h1>
+  <p class="subtitle" id="pageSubtitle"></p>
+  <p class="proto">Prototype V3 · exemple pour présentation · envoi en base par le bouton de la page « Bilan PDF »</p>
+ </div>
+ <div class="athbar"><span class="athlab">Athlète (exemple) :</span><div class="ath" id="ath"></div></div>
+ <div class="steps" id="steps"></div>
+ <main id="main"></main>
+</div>
+
+<template id="tpl-nc"><div class="fictif">Exemple sans données : la page 2 est remplie à partir de Supabase dans le questionnaire pré-rempli généré par le dashboard.</div></template>
+<template id="tpl-el"><div class="fictif">Exemple sans données : la page 2 est remplie à partir de Supabase dans le questionnaire pré-rempli généré par le dashboard.</div></template>
+<template id="tpl-na"><div class="fictif">Exemple sans données : la page 2 est remplie à partir de Supabase dans le questionnaire pré-rempli généré par le dashboard.</div></template>
+<template id="tpl-pl"><div class="fictif">Exemple sans données : la page 2 est remplie à partir de Supabase dans le questionnaire pré-rempli généré par le dashboard.</div></template>
+<template id="tpl-plind"><div class="fictif">Exemple sans données : la page 2 est remplie à partir de Supabase dans le questionnaire pré-rempli généré par le dashboard.</div></template>
+<template id="tpl-wp"><div class="fictif">Données fictives — exemple de présentation, aucune donnée réelle</div><div class="card"><h2>1. Résultat</h2><div class="tw"><table><tbody><tr><th>Équipe</th><th>Compétition</th><th>Place</th><th>Bilan</th><th>Différence de buts</th></tr><tr><td><span class="sw" style="background:var(--s1)"></span>Équipe A (équipe de l’athlète)</td><td>Compétition de la saison</td><td>5</td><td>4 V · 1 N · 3 D</td><td>+3</td></tr><tr><td><span class="sw" style="background:var(--s2)"></span>Équipe B</td><td>Compétition mondiale</td><td>1</td><td>8 V · 0 N · 0 D</td><td>+38</td></tr></tbody></table></div><p class="note">Référence collective : la meilleure équipe de la compétition mondiale de référence.</p></div><div class="card"><h2>2. Statistiques collectives par match</h2><div class="tw"><table><tbody><tr><th>Indicateur</th><th><span class="sw" style="background:var(--s1)"></span>Équipe A</th><th><span class="sw" style="background:var(--s2)"></span>Meilleure équipe</th><th>Écart</th></tr><tr><td>Buts marqués</td><td>10.2</td><td>13.1</td><td class="pos">−2.9</td></tr><tr><td>Buts encaissés</td><td>9.8</td><td>8.4</td><td class="pos">+1.4</td></tr><tr><td>Réussite au tir</td><td>31 %</td><td>40 %</td><td class="pos">−9.0 pts</td></tr><tr><td>Conversion en supériorité numérique</td><td>34 %</td><td>52 %</td><td class="pos">−18.0 pts</td></tr><tr><td>Infériorités numériques défendues</td><td>61 %</td><td>68 %</td><td class="pos">−7.0 pts</td></tr><tr><td>Buts en contre-attaque</td><td>1.1</td><td>2.4</td><td class="pos">−1.3</td></tr><tr><td>Pertes de balle</td><td>11.5</td><td>8</td><td class="pos">+3.5</td></tr><tr><td>Sprints gagnés</td><td>38 %</td><td>60 %</td><td class="pos">−22.0 pts</td></tr><tr><td>Arrêts du gardien</td><td>33 %</td><td>39 %</td><td class="pos">−6.0 pts</td></tr></tbody></table></div><p class="note">Moyennes par match. Écart = équipe − meilleure équipe ; vert = favorable, rouge = défavorable.</p></div></template>
+<template id="tpl-wpind"><div class="fictif">Données fictives — exemple de présentation, aucune donnée réelle</div><div class="card"><h2>Statistiques individuelles (ailier)</h2><div class="tw"><table><tbody><tr><th>Indicateur</th><th><span class="sw" style="background:var(--s1)"></span>Joueur</th><th>Référence au poste</th></tr><tr><td>Minutes jouées par match</td><td>19</td><td class="na">en attente</td></tr><tr><td>Buts / tirs par match</td><td>1,4 / 5,1 (27 %)</td><td class="na">en attente</td></tr><tr><td>Buts en supériorité numérique</td><td>0,4</td><td class="na">en attente</td></tr><tr><td>Réussite au tir en supériorité</td><td>25 %</td><td class="na">en attente</td></tr><tr><td>Exclusions provoquées</td><td>0,8</td><td class="na">en attente</td></tr><tr><td>Exclusions subies</td><td>1,6</td><td class="na">en attente</td></tr><tr><td>Pertes de balle</td><td>1,8</td><td class="na">en attente</td></tr></tbody></table></div><p class="note">Moyennes par match. Le choix de la référence individuelle est en attente.</p></div></template>
+
+
+<script id="embedded-data" type="application/json"></script>
+<script>
+const ATH={
+  ex_nc:{nom:'Athlète EXEMPLE',disc:'Natation course',epr:'100 et 50 m papillon',ref:'CE 2026 Paris',tpl:'tpl-nc',
+    synth:'Exemple sans données : la synthèse vient de Supabase.',
+    dims:['Dimension Physique','Dimension Mentale','Tactique','Technique','Nutrition','Récupération','Gestion des conditions de compétition',"Gestion de l'environnement personnel"]},
+  ex_el:{nom:'Athlète EXEMPLE',disc:'Eau libre',epr:'10 km',ref:'CE 2026 Paris',tpl:'tpl-el',
+    synth:'Exemple sans données : la synthèse vient de Supabase.',
+    dims:['Dimension Physique','Dimension Mentale','Tactique','Technique','Nutrition','Récupération','Gestion des conditions de la course',"Gestion de l'environnement personnel"]},
+  ex_na:{coll:true,collNom:'le duo',nom:'Athlète EXEMPLE',disc:'Natation artistique',epr:'Duo libre et duo technique',ref:'CE 2026 Paris',tpl:'tpl-na',
+    synth:'Exemple sans données : la synthèse vient de Supabase.',
+    dims:['Dimension Physique','Dimension Mentale','Stratégique','Technique','Acrobatie','Exécution','Dimension Artistique','Dimension Collective','Nutrition','Récupération',"Gestion de l'environnement personnel"]},
+  ex_pl:{collEp:['Synchro tremplin 3m'],collNom:'le duo synchro',tplInd:'tpl-plind',nom:'Athlète EXEMPLE',disc:'Plongeon',epr:'Synchro 3 m et tremplin 3 m',ref:'CE 2026 Paris',tpl:'tpl-pl',
+    synth:'Exemple sans données : la synthèse vient de Supabase.',
+    dims:['Dimension Physique','Dimension Mentale','Tactique','Technique','Nutrition','Récupération',"Gestion de l'environnement personnel"]},
+  wp:{coll:true,collNom:'l’équipe',fictif:true,tplInd:'tpl-wpind',nom:'Joueur FICTIF',disc:'Water-polo',epr:'Tournoi (exemple fictif)',ref:'Tournoi de référence (fictif)',tpl:'tpl-wp',
+    synth:'Exemple fictif : équipe 5e du tournoi de référence ; conversion en supériorité 34 % contre 52 % pour la meilleure équipe.',
+    dims:['Dimension Physique','Dimension Mentale','Tactique','Technique','Dimension Collective','Nutrition','Récupération',"Gestion de l'environnement personnel"]}
+};
+const REFS={
+ ex_nc:{saison:{comp:'Compétition de référence (exemple)',date:'exemple',epr:'',res:''},tag:'Référence',tagd:'',monde:{comp:'Référence (exemple)',date:'',epr:'',res:''},src:[['Exemple sans données','Les données réelles viennent de Supabase (questionnaire pré-rempli généré par le dashboard).']]},
+ ex_el:{saison:{comp:'Compétition de référence (exemple)',date:'exemple',epr:'',res:''},tag:'Référence',tagd:'',monde:{comp:'Référence (exemple)',date:'',epr:'',res:''},src:[['Exemple sans données','Les données réelles viennent de Supabase (questionnaire pré-rempli généré par le dashboard).']]},
+ ex_na:{saison:{comp:'Compétition de référence (exemple)',date:'exemple',epr:'',res:''},tag:'Référence',tagd:'',monde:{comp:'Référence (exemple)',date:'',epr:'',res:''},src:[['Exemple sans données','Les données réelles viennent de Supabase (questionnaire pré-rempli généré par le dashboard).']]},
+ ex_pl:{saison:{comp:'Compétition de référence (exemple)',date:'exemple',epr:'',res:''},tag:'Référence',tagd:'',monde:{comp:'Référence (exemple)',date:'',epr:'',res:''},src:[['Exemple sans données','Les données réelles viennent de Supabase (questionnaire pré-rempli généré par le dashboard).']]}};
+const KPI={ex_nc:[],ex_el:[],ex_na:[],ex_pl:[]};
+REFS.wp={saison:{comp:'Tournoi de référence (fictif) — 2026',q:'au tournoi de référence (fictif) de 2026',date:'exemple',epr:'Tournoi',res:'5e · 4 V · 1 N · 3 D'},
+  monde:{comp:'Compétition mondiale (fictive) — 2025',date:'exemple',epr:'Tournoi',res:'Référence : la meilleure équipe (Équipe B)'},
+  src:[['Données fictives','Exemple de présentation : aucune donnée réelle. Référence collective = meilleure équipe de la compétition ; référence individuelle en attente.']]};
+KPI.wp=[['Place','5e (fictif)'],['Buts par match','10,2 / 13,1 meilleure équipe'],['Supériorité numérique','34 % / 52 %']];
+function refBanner(){const r=REFS[cur];const tile=(cls,tag,x)=>`<div class="rtile ${cls}"><span class="rtag">${tag}</span><div class="rcomp">${x.comp||''}</div><div class="rmeta">${x.date||''} · ${x.epr||''}</div><div class="rres">${x.res||''}</div></div>`;
+ const ban=(sa,tag,mo)=>`<div class="rban">${tile('rsa','Compétition de référence de la saison',sa)}<div class="rvs">comparée à</div>${tile('rwo',tag||'Référence mondiale',mo)}</div>`;
+ return ban(r.saison,r.tag,r.monde)+(r.autres||[]).map(x=>ban(x.saison||{},(x.reference||{}).tag,x.reference||{})).join('')+`
+ <div class="srcbox"><div class="srct">Provenance des données</div>${r.src.map(([a,b])=>`<div class="srcl"><b>${a}</b><span>${b}</span></div>`).join('')}</div>`;}
+// Ambitions : seules les compétitions mondiales de référence (CM tous les 2 ans, années impaires ; JO 2028 et 2032)
+const CAL={'2027':['Championnats du monde'],'2028':['Jeux olympiques'],'2029':['Championnats du monde'],'2031':['Championnats du monde'],'2032':['Jeux olympiques']};
+const OBJ=['Titre','Podium','Finale / top 8','Top 16','Sélection'];
+const EXREQ={ex_nc:'15,09 m',ex_el:'Niveau requis',ex_na:'8,15 / 10',ex_pl:'91,80'};
+const EXIND={ex_nc:['Coulée après le virage (m)','13,69 m'],ex_el:['Écart au leader au tour 7.5','+43,76 s'],ex_na:['Moyenne des juges, éléments du duo libre','7,45 / 10'],ex_pl:['Points obtenus sur le 407C','78,20']};
+const DKEY={ex_nc:'nc',ex_el:'el',ex_na:'na',ex_pl:'pl'};
+const EXA={
+ nc:{quoi:'Améliorer la sortie de virage.',org:'Un bloc virages filmé chaque mardi.',ath:'Revoit sa vidéo après chaque bloc.',ent:'Mesure les coulées sur vidéo chaque semaine.',fed:'Met à disposition l’analyse vidéo Espadon.',aut:'Préparateur physique : gainage 2 fois par semaine.',man:'Caméra sous-marine, créneau de bassin en plus.',per:'De septembre à décembre.'},
+ el:{quoi:'Mieux se placer dans le peloton.',org:'Une séance en groupe serré en eau libre chaque mois.',ath:'Note après chaque course sa place aux moments clés.',ent:'Relève les écarts tour par tour sur chaque course.',fed:'Organise un stage en eau libre avec l’équipe de France.',aut:'Nutritionniste : plan de ravitaillement.',man:'Accès à un plan d’eau, bateau d’accompagnement.',per:'De janvier à juin.'},
+ na:{quoi:'Gagner en hauteur sur les poussées.',org:'Un bloc hybrides filmé à chaque séance.',ath:'S’auto-note sur vidéo après chaque séance.',ent:'Note chaque hybride avec la grille des juges.',fed:'Organise une notation blanche par un juge.',aut:'Préparateur physique : travail de jambes (rétropédalage).',man:'Créneau en bassin profond.',per:'D’octobre à mars.'},
+ pl:{quoi:'Fiabiliser l’entrée dans l’eau.',org:'Des séries d’entrées en fin de séance.',ath:'Revoit chaque plongeon en vidéo différée.',ent:'Compare les plongeons à ceux du podium mondial.',fed:'Finance un stage avec un juge international.',aut:'Préparateur mental : routine avant le plongeon.',man:'Vidéo en différé au bord du bassin, salle de préparation à sec.',per:'Toute la saison.'}};
+const ex=k=>'Ex. : '+EXA[DKEY[cur]][k];
+const EPR={
+ nc:['50m Libre','100m Libre','200m Libre','400m Libre','800m Libre','1500m Libre','50m Dos','100m Dos','200m Dos','50m Brasse','100m Brasse','200m Brasse','50m Papillon','100m Papillon','200m Papillon','200m 4 Nages','400m 4 Nages'],
+ el:['5km','10km','25km','Knock-out (KO)','4x1500m'],
+ na:['Solo technique','Solo libre','Duo technique','Duo libre','Duo mixte technique','Duo libre mixte','Par équipes libre','Par équipes technique','Par équipes acrobatique'],
+ pl:['Tremplin 1m','Tremplin 3m','Plateforme 10m','Synchro tremplin 3m','Synchro plateforme 10m','Synchro plateforme 10m mixte','Synchro 3m mixte','High Diving 27m','High Diving 20m','Team Event']};
+const TOPS=[...Array.from({length:20},(_,i)=>i+1),25,30,40,50,100];
+function epHead(opt){const k=DKEY[cur];if(k==='wp')return `<div class="ephead wp"><span>Classement${opt?' (facultatif)':' visé'}</span><span></span></div>`;return `<div class="ephead ${k==='el'?'el':''}"><span>Épreuve</span>${k==='el'?'':`<span>${k==='nc'?'Temps':'Points'}${opt?' (facultatif)':' visé'+(k==='nc'?'':'s')}</span>`}<span>Classement${opt?' (facultatif)':' visé'}</span><span></span></div>`;}
+function epRows(path){const k=DKEY[cur];if(DOUBLE)return epRowsDouble(path);const arr=path.split('.').reduce((o,x)=>o[x],S());const js='S()'+path.split('.').map(x=>isNaN(x)?'.'+x:`[${x}]`).join('');
+  return arr.map((e,j)=>{const sel=`<select data-p="${path}.${j}.e"><option value="">-- Épreuve --</option>${EPR[k].map(x=>`<option ${x===e.e?'selected':''}>${x}</option>`).join('')}</select>`;
+   const top=`<select data-p="${path}.${j}.top"><option value="">TOP</option>${TOPS.map(n=>`<option value="${n}" ${String(n)===e.top?'selected':''}>TOP ${n}</option>`).join('')}</select>`;
+   const perf=k==='el'?'':(k==='nc'?`<input class="time-input" inputmode="numeric" data-p="${path}.${j}.r" placeholder="MM:SS.CC" maxlength="8" title="Format MM:SS.CC (ex. 00:49.40)">`:`<input type="number" step="0.01" min="0" data-p="${path}.${j}.r" placeholder="Points">`);
+   if(k==='wp')return `<div class="eprow wp">${top}<button title="Retirer" onclick="${js}.splice(${j},1);render()">✕</button></div>`;
+   return `<div class="eprow ${k==='el'?'el':''}">${sel}${perf}${top}<button title="Retirer" onclick="${js}.splice(${j},1);render()">✕</button></div>`;}).join('');}
+// Double projet : épreuves des deux disciplines (groupes), temps saisi pour la natation course, classement pour toutes
+function epRowsDouble(path){const arr=path.split('.').reduce((o,x)=>o[x],S());const js='S()'+path.split('.').map(x=>isNaN(x)?'.'+x:`[${x}]`).join('');
+ const og=(lab,L,v)=>`<optgroup label="${lab}">${L.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('')}</optgroup>`;
+ return arr.map((e,j)=>{const sel=`<select data-p="${path}.${j}.e" data-rr="1"><option value="">-- Épreuve --</option>${og('Natation course',EPR.nc,e.e)}${og('Eau libre',EPR.el,e.e)}</select>`;
+  const top=`<select data-p="${path}.${j}.top"><option value="">TOP</option>${TOPS.map(n=>`<option value="${n}" ${String(n)===e.top?'selected':''}>TOP ${n}</option>`).join('')}</select>`;
+  const perf=EPR.el.includes(e.e)?'<span class="eprow-na" title="Pas de temps visé en eau libre">—</span>':`<input class="time-input" inputmode="numeric" data-p="${path}.${j}.r" placeholder="MM:SS.CC" maxlength="8" title="Format MM:SS.CC (ex. 15:02.40)">`;
+  return `<div class="eprow">${sel}${perf}${top}<button title="Retirer" onclick="${js}.splice(${j},1);render()">✕</button></div>`;}).join('');}
+function perfRows(){return epRows('perf.ep');}
+function numv(v){if(v==null)return null;v=String(v).trim().replace(/,/g,'.');if(!v)return null;
+  if(/\d+:\d/.test(v)){const m=v.match(/[\d:.]+/)[0].split(':').map(Number);if(m.some(isNaN))return null;return {n:m.reduce((a,x)=>a*60+x,0),t:true,u:'s'};}
+  const m=v.match(/[-+]?\d+(\.\d+)?/);if(!m)return null;return {n:parseFloat(m[0]),t:false,u:v.slice(m.index+m[0].length).trim()};}
+function ecart(a,q,uu){const A=numv(a),Q=numv(q);if(!A||!Q)return '';const d=A.n-Q.n;const u=A.t||Q.t?'s':(uu||A.u||Q.u);
+  const dec=x=>{const m=String(x).replace(',','.').match(/\.(\d+)/);return m?m[1].length:0;};const n=Math.min(2,Math.max(dec(a),dec(q)));
+  return (d>0?'+':d<0?'−':'±')+Math.abs(d).toFixed(n).replace('.',',')+(u?' '+u:'');}
+function upEcart(i,j){upEc(`ind-${i}-${j}`);}
+const ITYPES=[['num','Chiffré'],['ech','Échelle 1 à 5'],['desc','Descriptif']];
+const ECH=['1 · très insuffisant','2 · insuffisant','3 · moyen','4 · bon','5 · très bon'];
+function ecartT(t,a,q,u){if(t==='desc')return '';if(t==='ech'){const A=+a,Q=+q;if(!A||!Q)return '';const d=A-Q;return (d>0?'+':d<0?'−':'±')+Math.abs(d)+' niveau'+(Math.abs(d)>1?'x':'');}return ecart(a,q,u);}
+function fmtV(d,x){if(!x)return x;if(d.t==='ech')return x+'/5';if((d.t||'num')==='num'&&/^[+-]?\d*[.,]?\d*$/.test(String(x)))return String(x).replace('.',',')+(d.u?' '+d.u:'');return x;}
+function indRow(path,id,d,ex){if(!d.t)d.t='num';const t=d.t;const P=path;
+  const val=(k,ph)=>t==='ech'?`<select data-k="${k}" data-p="${P}.${k}" onchange="upEc('${id}')"><option value="">—</option>${ECH.map((l,n)=>`<option value="${n+1}" ${String(n+1)===String(d[k])?'selected':''}>${l}</option>`).join('')}</select>`
+    :`<input data-k="${k}" data-p="${P}.${k}" ${t==='num'?'class="num-input" inputmode="decimal"':''} placeholder="${t==='desc'?(k==='v'?'ex. raideur en fin de mouvement':'ex. amplitude complète, sans compensation'):'ex. '+esc(String(ph).replace(/[^0-9.,+\-]/g,''))}" oninput="upEc('${id}')">`;
+  const uni=t==='num'?`<input data-k="u" data-p="${P}.u" placeholder="ex. ${esc((String(ex[1]).match(/[a-zA-Zµ%°/]+$/)||['m'])[0])}" title="Unité (libre)" oninput="upEc('${id}')">`:'<span></span>';
+  return `<div class="ind5" id="${id}" data-t="${t}"><input data-p="${P}.l" placeholder="ex. ${esc(t==='num'?ex[0]:(t==='ech'?'Compréhension tactique (évaluation entraîneur)':'Souplesse des épaules'))}"><select data-p="${P}.t" data-rr="1">${ITYPES.map(([v,l])=>`<option value="${v}" ${v===t?'selected':''}>${l}</option>`).join('')}</select>${uni}${val('v',ex[1])}${val('q',ex[2])}<span class="ec">${ecartT(t,d.v,d.q,d.u)||(t==='desc'?'qualitatif':'—')}</span><button title="Retirer" onclick="${'S()'+P.split('.').slice(0,-1).map(x=>isNaN(x)?'.'+x:`[${x}]`).join('')}.splice(${P.split('.').pop()},1);render()">×</button></div>`;}
+const IND_HEAD=(l1,l3)=>`<div class="ind5 hd"><span>${l1}</span><span>Type</span><span>Unité</span><span>Valeur actuelle</span><span>${l3}</span><span>Écart</span><span></span></div>`;
+function upEc(id){const r=document.getElementById(id);if(!r)return;const t=r.dataset.t||'num';const v=r.querySelector('[data-k="v"]').value,q=r.querySelector('[data-k="q"]').value,uq=r.querySelector('[data-k="u"]'),u=uq?uq.value:(r.dataset.u||'');r.querySelector('.ec').textContent=ecartT(t,v,q,u)||(t==='desc'?'qualitatif':'—');}
+const DIFF=[['portee','À portée'],['optimal','Exigeant mais atteignable'],['hors','Hors de portée cette saison']];
+EXREQ.wp='45 %';EXIND.wp=['Conversion en supériorité numérique','34 %'];DKEY.wp='wp';EPR.wp=[];
+EXREQ.wp='52 %';
+EXA.wp={quoi:'Améliorer la réussite au tir en supériorité.',org:'Un bloc de supériorité numérique filmé à chaque séance.',ath:'Tire depuis le poste 1 sous pression en fin de séance.',ent:'Compte les tirs et la réussite par poste chaque semaine.',fed:'Organise un stage avec opposition internationale.',aut:'Analyste vidéo : découpe des supériorités de chaque match.',man:'Temps de bassin en plus, opposition de niveau.',per:'De septembre à décembre.'};
+const EXOBS={nc:'ex. sur la 2e longueur, la coulée de virage est plus courte que celle des meilleurs…',el:'ex. perte de nombreuses places dans le dernier tour…',na:'ex. davantage d’erreurs de synchronisation que le top 3 en duo technique…',pl:'ex. notes plus basses que le podium sur les mêmes plongeons…',wp:'ex. conversion en supériorité numérique nettement inférieure à celle de la meilleure équipe…'};
+const EXCONTRIB={pl:'ex. fiabiliser mon exécution sur le 407C pour ne pas pénaliser le duo',na:'ex. tenir le tempo commun sur les D-TRE et les transitions',wp:'ex. réussite au tir depuis le poste 1 en supériorité numérique'};
+const EXCIND={pl:['Exécution sur le 407C (note des juges)','3','6,5'],na:['Note moyenne des D-TRE','8,0 / 10','8,3 / 10'],wp:['Réussite au tir en supériorité','25 %','45 %']};
+// Épreuves du projet : épreuves de la compétition de référence + épreuves des objectifs (performance visée)
+const EPREF={ex_nc:['100m Papillon','50m Papillon'],ex_el:['10km'],ex_na:['Duo technique','Duo libre'],ex_pl:['Synchro tremplin 3m','Tremplin 3m'],wp:[]};
+const MIX=()=>!!ATH[cur].collEp;
+let DOUBLE=false; // double projet natation course + eau libre (questionnaire pré-rempli)
+const isCollC=c=>!!ATH[cur].coll||(MIX()&&c.k==='coll');
+let CTX=null; // 'coll' : partie collective · 'ind' : analyse individuelle · null : tout le projet
+const kindOk=c=>CTX==='coll'?isCollC(c):CTX==='ind'?!isCollC(c):true;
+function cNum(c){return S().constats.filter(x=>isCollC(x)===isCollC(c)).indexOf(c)+1;}
+function cLab(c){return (isCollC(c)?'Axe d’amélioration collectif ':(MIX()?'Axe d’amélioration individuel ':'Axe d’amélioration '))+cNum(c);}
+function epList(){let L=[...(EPREF[cur]||[])];S().perf.ep.forEach(e=>{if(e.e&&!L.includes(e.e))L.push(e.e);});const ce=ATH[cur].collEp;
+  if(ce&&CTX==='coll')L=L.filter(e=>ce.includes(e));else if(ce&&CTX==='ind')L=L.filter(e=>!ce.includes(e));return L;}
+let EPT='*', BT={};
+function isCom(c){return !c.ep||c.ep.includes('*')||c.ep.length!==1;}
+function inTab(c){if(!kindOk(c))return false;if(epList().length<=1)return true;return EPT==='*'?isCom(c):(!isCom(c)&&c.ep[0]===EPT);}
+const cFilled=c=>!!(c.txt||c.inds.some(d=>d.l));
+const aFilled=c=>!!(c.a&&c.a.st&&((c.a.st!=='prio'&&c.a.st!=='mener')||actOk(c.a)));
+function epTabs(step){const L=epList();if(L.length<=1)return '';if(EPT!=='*'&&!L.includes(EPT))EPT='*';
+  const T=[['*','Toutes épreuves / communs'],...L.map(e=>[e,e])];
+  return `<div class="eptabs" data-step="${step}">${T.map(([v,l])=>{const it=S().constats.filter(c=>kindOk(c)&&(v==='*'?isCom(c):(!isCom(c)&&c.ep[0]===v)));const ok=it.some(step===3?cFilled:aFilled);
+   return `<button type="button" data-v="${esc(v)}" class="eptab ${ok?'done':(v==='*'&&!it.length?'neutral':'todo')} ${EPT===v?'on':''}" onclick="EPT='${v.replace(/'/g,"\\'")}';render()">${esc(l)}<span class="dot"></span></button>`;}).join('')}</div><p class="hint">Orange : rien de rempli pour cette épreuve. Vert : au moins ${step===3?'un axe d’amélioration':'une action'} renseigné${step===3?'':'e'}.</p>`;}
+function refreshTabs(){const bar=document.querySelector('.eptabs[data-step]');if(!bar)return;const step=+bar.dataset.step;
+  bar.querySelectorAll('.eptab').forEach(b=>{const v=b.dataset.v;const it=S().constats.filter(c=>kindOk(c)&&(v==='*'?isCom(c):(!isCom(c)&&c.ep[0]===v)));const ok=it.some(step===3?cFilled:aFilled);const nt=v==='*'&&!it.length;b.classList.toggle('done',ok);b.classList.toggle('todo',!ok&&!nt);b.classList.toggle('neutral',!ok&&nt);});}
+function tabifyBilan(m){const hs=[...m.querySelectorAll('.grph')];if(hs.length<2)return;const bar=document.createElement('div');bar.className='eptabs';hs[0].parentNode.insertBefore(bar,hs[0]);
+  const panels=hs.map(h=>{const pn=document.createElement('div');pn.className='eppanel';let n=h.nextSibling;const nodes=[];while(n&&!(n.classList&&n.classList.contains('grph'))){nodes.push(n);n=n.nextSibling;}h.parentNode.insertBefore(pn,h);nodes.forEach(x=>pn.appendChild(x));const t=h.textContent;h.remove();return {t,pn};});
+  const show=i=>{BT[cur]=i;panels.forEach((p,k)=>p.pn.style.display=k===i?'':'none');[...bar.children].forEach((b,k)=>b.classList.toggle('on',k===i));};
+  panels.forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.className='eptab neutral';b.textContent=p.t;b.onclick=()=>show(i);bar.appendChild(b);});show(BT[cur]||0);}
+const newAct=()=>({st:'',rang:'',quoi:'',org:'',ath:'',ent:'',fed:'',aut:'',man:'',per:'',levier:'',ind:'',it:'num',actuel:'',cible:'',date:'',ou:'',pq:''});
+const STL={prio:'Prioritaire',mener:'À mener',traite:'Déjà traité ailleurs',cote:'Pas prioritaire'};const ST=Object.entries(STL);
+function epTags(c){const e=c.ep||['*'];return e.includes('*')||!e.length?'<span class="eptag">Toutes épreuves</span>':e.map(x=>`<span class="eptag">${esc(x)}</span>`).join('');}
+function grpConstats(cs){const L=epList();const items=cs.map((c,i)=>({c,i}));if(L.length<=1)return [{t:'',items}];
+  const com=items.filter(({c})=>!c.ep||c.ep.includes('*')||c.ep.length!==1);const G=[];if(com.length)G.push({t:'Toutes épreuves et axes d’amélioration communs',items:com});
+  L.forEach(e=>{const it=items.filter(({c})=>c.ep&&c.ep.length===1&&c.ep[0]===e);if(it.length)G.push({t:e,items:it});});return G;}
+function setEp(i,v,on){const c=S().constats[i];let e=c.ep||['*'];if(v==='*')e=on?['*']:[];else{e=e.filter(x=>x!=='*');e=on?[...new Set([...e,v])]:e.filter(x=>x!==v);}if(!e.length)e=['*'];c.ep=e;render();}
+const actOk=a=>a&&(a.st==='prio'||a.st==='mener')&&(a.quoi||a.ind||a.org||a.ath||a.ent||a.fed||a.aut||a.man);
+function actsOrdered(){const cs=S().constats;const L=cs.map((c,i)=>({c,i,a:c.a})).filter(x=>actOk(x.a));
+  return L.sort((x,y)=>(x.a.st==='prio'?0:1)-(y.a.st==='prio'?0:1)||(+x.a.rang||99)-(+y.a.rang||99)||x.i-y.i);}
+const LAB=['Ambitions','Bilan de la compétition de référence','Analyse conjointe','Plan d’action 2026-27','Calendrier','Engagement','Administratif et staff','Bilan PDF','Mon rôle','Analyse individuelle'];
+// Individuel : analyse conjointe → plan d'action. Purement collectif : analyse collective → « Mon rôle » fusionné avec le plan d'action.
+// Mixte (collectif + individuel) : analyse collective → mon rôle → analyse individuelle → plan d'action (arbitrage).
+const ORDER=()=>ATH[cur].coll?[0,1,2,8,4,5,6,7]:MIX()?[0,1,2,8,9,3,4,5,6,7]:[0,1,2,3,4,5,6,7];
+const lab=id=>id===2&&(ATH[cur].coll||MIX())?'Analyse collective':id===8?'Mon rôle dans '+ATH[cur].collNom+(ATH[cur].coll?' et plan d’action':''):LAB[id];
+const store={}; let cur='ex_nc', step=0;
+// Championnats du monde Budapest 2027 : dates par discipline (annonce officielle World Aquatics du 29 janvier 2026)
+const WC27={nc:['2027-07-10','2027-07-18'],el:['2027-07-03','2027-07-08'],na:['2027-07-10','2027-07-17'],pl:['2027-06-26','2027-07-04'],wp:['2027-06-26','2027-07-09']};
+const S=()=>store[cur]||(store[cur]={sat:'5',amb:[{h:'2027',c:'Championnats du monde',r:'',fixed:true},{h:'2028',c:'Jeux olympiques',r:'',fixed:true,req:true}],constats:[],perf:{c:'Championnats du monde — Budapest 2027',d1:WC27[DKEY[cur]][0],d2:WC27[DKEY[cur]][1],ep:[{e:'',r:'',top:''}]},actions:[{},{},{}].map(()=>({quoi:'',org:'',ath:'',ent:'',fed:'',aut:'',man:'',per:'',levier:'',constats:[],ind:'',actuel:'',cible:'',date:''})),comps:[],eng:{},adm:{etr:false}});
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let uid=1; const nid=()=> 'c'+(Date.now().toString(36))+(uid++);
+
+function renderAth(){
+  document.getElementById('ath').innerHTML=Object.entries(ATH).map(([k,a])=>`<button type="button" aria-pressed="${k===cur}" onclick="pick('${k}')">${a.nom}<span>${a.disc} · ${a.epr.split(' (')[0]}</span></button>`).join('');
+}
+function renderSteps(){
+  document.getElementById('steps').innerHTML=ORDER().map((id,i)=>`<button type="button" ${i===step?'aria-current="step"':''} onclick="go(${i})"><i>${i+1}</i>${lab(id)}</button>`).join('');
+}
+function pick(k){const pid=ORDER()[step];cur=k;const i=ORDER().indexOf(pid);step=i>=0?i:2;renderAth();render();}
+function go(i){step=i;render();window.scrollTo(0,0);}
+function head(t,lead){const a=ATH[cur];document.getElementById('pageSubtitle').textContent=(step+1)+'. '+t.replace(/^\d+\.\s*/,'');return `<p class="whoc">${a.nom} · ${a.disc} · ${a.epr}</p>${lead?`<p class="lead">${lead}</p>`:''}`;}
+// Encadré de méthode en haut de page : questions à se poser / ce qui doit émerger
+// q : liste de textes ; un élément {t,l} donne un sous-titre suivi d'une sous-liste ; qh : précision ajoutée au titre des questions
+function methode(t,q,e,qh){const li=a=>'<ul>'+a.map(x=>typeof x==='string'?'<li>'+x+'</li>':'<li>'+x.t+li(x.l)+'</li>').join('')+'</ul>';
+ return `<div class="methode"><div class="mt">Méthode : ${t}</div><div class="mg"><div><div class="ms">1. Les questions à se poser${qh?', '+qh:''}</div>${li(q)}</div><div><div class="ms">2. Ce qui doit émerger de cette partie de l’entretien</div>${li(e)}</div></div></div>`;}
+// Cadrage simple des attendus (pages 6 à 8)
+function cadrage(t,x){return `<div class="methode"><div class="mt">Cadrage : ${t}</div><p style="margin:0;font-size:14px;color:#0E1655;line-height:1.45">${x}</p></div>`;}
+function nav(){return `<div class="buttons">${step>0?`<button class="prev-btn" onclick="go(${step-1})">Précédent</button>`:''}${step>0?`<button class="home-btn" onclick="go(0)">Accueil</button>`:''}${step<ORDER().length-1?`<button class="next-btn" onclick="go(${step+1})">Suivant</button>`:'<button class="pdf-btn" onclick="window.print()">Imprimer</button>'}</div>`;}
+// Masque de saisie des temps MM:SS.CC (repris de la V2) : formaté avant l'enregistrement dans l'état
+document.addEventListener('input',e=>{const t=e.target;if(!t.classList||!t.classList.contains('time-input'))return;
+ const v=t.value.replace(/[^0-9]/g,'').slice(0,6);let f='';if(v.length>=1)f=v.substring(0,2);if(v.length>=2)f+=':';if(v.length>=3)f+=v.substring(2,4);if(v.length>=4)f+='.';if(v.length>=5)f+=v.substring(4,6);t.value=f;},true);
+document.addEventListener('focusout',e=>{const t=e.target;if(!t.classList||!t.classList.contains('time-input')||!t.value)return;
+ if(t.value.length<8){const d=t.value.replace(/[^0-9]/g,'').padEnd(6,'0');t.value=d.substring(0,2)+':'+d.substring(2,4)+'.'+d.substring(4,6);t.dispatchEvent(new Event('input',{bubbles:true}));}
+ const ok=/^\d{2}:[0-5]\d\.\d{2}$/.test(t.value);t.setCustomValidity(ok?'':'Format requis : MM:SS.CC (ex. 00:49.40)');t.style.borderColor=ok?'':'#E2001A';if(!ok)t.reportValidity();},true);
+// Valeurs chiffrées des indicateurs : nombre seul (signe et décimale autorisés), l'unité est saisie à part
+document.addEventListener('input',e=>{const t=e.target;if(!t.classList||!t.classList.contains('num-input'))return;
+ let v=t.value.replace(/[^0-9.,+\-]/g,'');const sg=/^[+\-]/.test(v)?v[0]:'';v=v.replace(/[+\-]/g,'');const i=v.search(/[.,]/);if(i>=0)v=v.slice(0,i+1)+v.slice(i+1).replace(/[.,]/g,'');t.value=sg+v;},true);
+function bind(el){ // data-p = chemin dans l'état
+  el.querySelectorAll('[data-p]').forEach(f=>{
+    const get=()=>f.dataset.p.split('.').reduce((o,k)=>o?.[k],S());
+    if(f.type==='checkbox') f.checked=!!get(); else f.value=get()??'';
+    f.addEventListener(f.tagName==='SELECT'||f.type==='checkbox'?'change':'input',()=>{
+      const ks=f.dataset.p.split('.'); const last=ks.pop(); const o=ks.reduce((o,k)=>o[k],S());
+      o[last]=f.type==='checkbox'?f.checked:f.value;refreshTabs(); if(/^amb\.\d+\.h$/.test(f.dataset.p)) o.c=f.value?CAL[f.value][0]:''; if(f.dataset.rr) render();
+    });
+  });
+}
+const dimOpts=(v)=>'<option value="">— choisir —</option>'+ATH[cur].dims.map(d=>`<option ${d===v?'selected':''}>${esc(d)}</option>`).join('');
+
+const PAGES=[
+// 1 Ambitions
+()=>{const s=S();return head('1. Ambitions','Par défaut : Championnats du monde 2027 et Jeux olympiques 2028 (objectif obligatoire). Des ambitions à plus long terme peuvent s’ajouter (championnats du monde 2029 et 2031, Jeux olympiques 2032).')+
+ `<div class="methode principe"><div class="mt">Organisation de l’entretien</div><ul><li><b>Participants</b> : au minimum l’athlète et son ou ses entraîneurs ; si besoin, le staff élargi et la DTN.</li><li><b>Animateur</b> (recommandé, pas obligatoire) : il fluidifie et cadre l’entretien, et complète l’outil. Le contenu, lui, appartient dans tous les cas à l’athlète et à ses entraîneurs.</li><li><b>Déroulement</b> :<ul><li>athlète en épreuve individuelle : une seule séance, d’environ 1 h ;</li><li>épreuve collective (duo, équipe) : deux temps, un temps collectif avec l’ensemble du collectif, puis un temps individuel avec chaque athlète.</li></ul></li><li><b>Méthode</b> : interroger les performances réalisées, en repartant de la compétition de référence, pour identifier les axes d’amélioration.</li></ul></div>`+
+ `<div class="methode principe"><div class="mt">Principe du projet</div><p>Personne ne peut prévoir exactement la performance, ni tout le chemin qui mène à l’ambition. Ce projet sert à réunir les meilleures conditions, pas à garantir un résultat.</p><p>L’objectif est d’identifier <b>le prochain pas</b> : à partir du diagnostic d’aujourd’hui, l’étape juste au-dessus du niveau actuel. Assez exigeante pour faire progresser, assez proche pour être atteinte cette saison.</p><p>Progresser, c’est accepter de <b>bousculer ce qui fonctionne déjà</b> pour construire mieux. Cela peut demander de se transformer, de prendre du temps et d’accepter une part de <b>risque</b>.</p></div>`+
+ methode('Ambitions',['Quel horizon fixer ?','Quelle ambition générale pour cet horizon ?','Cette ambition est-elle partagée par toutes les parties ?'],['Un horizon et une ambition générale, sur lesquels toutes les parties sont alignées.'])+
+ `<div class="card"><h2>Ambitions</h2>${s.amb.map((a,i)=>a.fixed?`<div class="item act"><h3>${a.req?'Prochains Jeux olympiques — obligatoire':'Prochains championnats du monde'}</h3><div class="grid g3"><div><label>Année</label><input value="${a.h}" disabled></div><div><label>Compétition</label><input value="${a.c}" disabled></div><div><label>Objectif${a.req?' *':''}</label><select data-p="amb.${i}.r"><option value="">— choisir —</option>${OBJ.map(o=>`<option ${o===a.r?'selected':''}>${o}</option>`).join('')}</select></div></div></div>`:`<div class="item"><button class="rm" title="Supprimer" onclick="S().amb.splice(${i},1);render()">×</button><div class="grid g3">
+ <div><label>Année</label><select data-p="amb.${i}.h" data-rr="1"><option value="">— choisir —</option>${Object.keys(CAL).filter(y=>+y>2028).map(y=>`<option ${y===a.h?'selected':''}>${y}</option>`).join('')}</select></div>
+ <div><label>Compétition</label><select data-p="amb.${i}.c" ${a.h?'':'disabled'}>${a.h?CAL[a.h].map(c=>`<option ${c===a.c?'selected':''}>${c}</option>`).join(''):'<option>— choisir l’année —</option>'}</select></div>
+ <div><label>Objectif</label><select data-p="amb.${i}.r"><option value="">— choisir —</option>${OBJ.map(o=>`<option ${o===a.r?'selected':''}>${o}</option>`).join('')}</select></div></div></div>`).join('')}
+ <button class="add" onclick="S().amb.push({h:'',c:'',r:''});render()">+ Ajouter une ambition à plus long terme</button></div>`;},
+// 2 Bilan de la compétition de référence
+()=>head('2. Bilan de la compétition de référence')+
+ methode('Bilan de la compétition de référence',['Qu\'est-ce qui sépare l\'athlète des meilleurs ?','Quels points forts et quels axes d\'amélioration l\'analyse de la performance permet-elle de détecter ?','Qu\'est-ce que l\'analyse chiffrée ne dit pas de la performance : que manque-t-il, quels éléments de contexte ajouter ?'],['Des indicateurs d\'analyse précis','Un bilan sincère sur la saison écoulée et les performances réalisées lors de la compétition de référence','Une prise en compte de tous les paramètres ayant influencé cette performance'])+precCard()+`<div class="card note10"><div class="q">Globalement, quel est ton niveau de satisfaction sur ton bilan ${REFS[cur].saison.q||('aux '+REFS[cur].saison.comp.split(' — ')[0]+' de '+REFS[cur].saison.comp.split(' — ')[1])} ?</div><label for="bq_sat">Satisfaction globale : <b id="satv">${S().sat}</b> / 10</label>
+ <input type="range" id="bq_sat" min="1" max="10" data-p="sat" oninput="document.getElementById('satv').textContent=this.value">
+ <div class="slab"><span>Très insatisfait</span><span>Très satisfait</span></div></div>`+refBanner()+
+ document.getElementById(ATH[cur].tpl).innerHTML,
+// 3 Analyse conjointe / collective (page 10 = analyse individuelle des athlètes mixtes)
+()=>anaPage(),
+// 4 Plan d'action
+()=>planPage(),
+// 5 Compétitions
+()=>{const s=S();return head('5. Calendrier','Planning de compétition : pour chaque compétition, les épreuves et le résultat attendu ; pour une compétition de développement, les objectifs de progrès.')+
+ methode('Calendrier',['Quelles sont les compétitions incontournables (sélection, expérience, etc.) ?','Pourquoi ajouter cette compétition au calendrier ?'],['Un calendrier cohérent avec le plan d’action, qui permet de valider des compétences ou de les mettre à l’épreuve de la compétition.'])+
+ `<div class="card"><h2>Compétitions</h2>${s.comps.length?'':'<p class="empty">Aucune compétition.</p>'}${s.comps.map((c,i)=>`<div class="item ${c.t==='res'?'act':'dev'}"><button class="rm" onclick="S().comps.splice(${i},1);render()">×</button><div class="grid g4">
+ <div><label>Compétition</label><input data-p="comps.${i}.n"></div><div><label>Début</label><input type="date" data-p="comps.${i}.d1"></div><div><label>Fin</label><input type="date" data-p="comps.${i}.d2"></div>
+ <div><label>Type</label><select data-p="comps.${i}.t" data-rr="1"><option value="res" ${c.t==='res'?'selected':''}>Objectif de résultats</option><option value="dev" ${c.t==='dev'?'selected':''}>Objectif de développement</option></select></div></div>
+ ${c.ep.length?epHead(c.t==='dev'):''}${epRows('comps.'+i+'.ep')}
+ <button class="add" style="margin-top:6px" onclick="S().comps[${i}].ep.push({e:'',r:'',top:''});render()">+ Épreuve</button>
+ ${c.t==='dev'?`<div class="encart"><label>Objectifs et attendus de progrès</label><textarea data-p="comps.${i}.prog" placeholder="Ce que l’on veut tester, travailler ou observer sur cette compétition, et comment on saura que ça a progressé"></textarea></div>`:''}</div>`).join('')}
+ <button class="add" onclick="S().comps.push({n:'',d1:'',d2:'',t:'res',ep:[{e:'',r:'',top:''}],prog:''});render()">+ Ajouter une compétition</button></div>`;},
+// 6 Engagement (texte repris de V2) + rappel automatique de ce que chacun change dans les actions
+()=>{const s=S();const rec=k=>{const L=actsOrdered().map(({c,a})=>a[k]?`<li><b>${a.st==='prio'&&a.rang?'Priorité '+a.rang:'Action'} — ${cLab(c).toLowerCase()}${a.quoi?' — '+esc(a.quoi):''}</b> : ${esc(a[k])}</li>`:'').filter(Boolean);
+  return `<div class="recap"><div class="rt">Repris du plan d’action</div>${L.length?'<ul>'+L.join('')+'</ul>':'<p class="empty">Rien de renseigné dans les actions pour l’instant.</p>'}</div>`;};
+ return head('6. Engagement')+cadrage('Engagement','Chaque partie (athlète, entraîneur, Fédération) formalise ce à quoi elle s’engage pour mettre en œuvre le plan d’action. Les engagements déjà inscrits dans les actions sont repris automatiquement ; il reste à les compléter si besoin, puis à les signer.')+`<div class="card"><h2>Charte d'Engagement Mutuel</h2><p class="lead" style="text-align:left;margin-left:0">Ce questionnaire constitue un engagement mutuel entre le nageur, son entraîneur et la Fédération Française de Natation. Chaque partie s'engage à respecter les objectifs et moyens définis dans ce document.</p>
+ ${[['ent',"Engagement de l'Entraîneur","Commentaires de l'entraîneur sur l'engagement...","Nom de l'entraîneur",'ent'],['nag','Engagement du Nageur','Commentaires du nageur sur l\'engagement...','Nom du nageur','ath'],['fed','Engagement de la Fédération','Commentaires de la Fédération sur l\'engagement...','Nom du représentant FFN','fed']].map(([k,t,p,n,ak])=>`<div class="item"><h3>${t}</h3>${rec(ak)}<textarea data-p="eng.${k}c" placeholder="${esc(p)}"></textarea><div class="grid g2" style="margin-top:6px"><input data-p="eng.${k}n" placeholder="${esc(n)}"><input type="date" data-p="eng.${k}d"></div></div>`).join('')}</div>`;},
+// 7 Administratif
+()=>{const s=S();return head('7. Administratif et staff','Pré-rempli depuis la base (fiche précédente) ; à vérifier.')+cadrage('Administratif et staff','Vérifier et corriger les informations pré-remplies : structure et entraîneur d’entraînement, structure et entraîneur de référence en France si l’athlète s’entraîne à l’étranger, staff complémentaire et coordonnées.')+
+ `<div class="card"><h2>Entraînement</h2><div class="grid g2"><div><label>Structure d’entraînement</label><input data-p="adm.struct"></div><div><label>Entraîneur</label><input data-p="adm.ent"></div></div>
+ <div class="checks" style="margin-top:10px"><label><input type="checkbox" data-p="adm.etr" data-rr="1"> L’athlète s’entraîne à l’étranger</label></div>
+ ${s.adm.etr?`<div class="grid g2"><div><label>Structure de référence en France</label><input data-p="adm.structFr"></div><div><label>Entraîneur de référence en France</label><input data-p="adm.entFr"></div></div>`:''}
+ <label>Staff complémentaire</label><textarea data-p="adm.staff" placeholder="Préparateur physique, kiné, préparateur mental…"></textarea></div>
+ <div class="card"><h2>Renseignements administratifs</h2><div class="grid g3">
+ <div><label>N° de licence</label><input data-p="adm.lic"></div><div><label>Nom</label><input data-p="adm.nom"></div><div><label>Prénom</label><input data-p="adm.prenom"></div>
+ <div><label>Date de naissance</label><input type="date" data-p="adm.ddn"></div><div><label>Genre</label><select data-p="adm.genre"><option value="">—</option><option value="F">Femme</option><option value="H">Homme</option></select></div><div><label>Club</label><input data-p="adm.club"></div>
+ <div><label>E-mail</label><input type="email" data-p="adm.email"></div><div><label>Téléphone</label><input type="tel" data-p="adm.tel"></div><div></div>
+ <div><label>E-mail de l’entraîneur</label><input type="email" data-p="adm.entEmail"></div><div><label>Téléphone de l’entraîneur</label><input type="tel" data-p="adm.entTel"></div></div></div>`;},
+// 8 Bilan PDF (2 pages A4, style du résumé V2)
+()=>head('8. Bilan','Document de référence en 2 pages : de l’analyse au plan d’action. Le bouton ouvre directement l’impression en PDF.')+cadrage('Bilan PDF','Relire le bilan avant de le télécharger. Ce document de 2 pages, de l’analyse au plan d’action, est la référence partagée du projet pour la saison : il est transmis à toutes les parties.')+
+ `<div class="buttons" style="margin-top:0"><button class="pdf-btn" onclick="printBilan()">Télécharger le bilan PDF</button> <button class="pdf-btn" onclick="printFrise()">Télécharger la frise athlète (PDF)</button> <button class="pdf-btn" style="background:#E2001A" onclick="envoyerV3(this)">Envoyer la fiche à la FFN</button></div><div class="rz-wrap"><div class="rz" id="rz">${buildBilan()}</div></div>`
+,
+// 9 Mon rôle dans le collectif
+()=>rolePage(),
+// 10 Analyse individuelle (athlètes mixtes)
+()=>anaPage()
+];
+
+const Q_CONSTAT=['À quelle dimension de la performance se rapporte cet axe d’amélioration ?','Quel indicateur (chiffré, qualitatif, etc.) l’explique ?','Quel est l’écart, sur cet indicateur, entre ce qui doit être obtenu et le niveau actuel ?','Quelle est la difficulté de l’objectif ?'];
+function anaMethode(C,I){
+ if(C)return methode('Analyse collective',['Que doit mieux faire le collectif pour atteindre les meilleurs ?',{t:'Pour chaque axe d’amélioration :',l:Q_CONSTAT}],['Les axes d’amélioration collectifs formalisés, avec leurs clés d’analyse']);
+ return methode(I?'Analyse individuelle':'Analyse conjointe',Q_CONSTAT,['Les axes d’amélioration identifiés suite à l’analyse précédente, formalisés','Pour chaque axe d’amélioration, les clés d’analyse qui ont servi à le définir'],I?'pour chaque axe d’amélioration, sur les épreuves individuelles':'pour chaque axe d’amélioration');}
+function anaPage(){const s=S();const C=CTX==='coll';const I=CTX==='ind';const nom=ATH[cur].collNom;
+ const T=C?'Analyse collective':I?'Analyse individuelle':'Analyse conjointe';
+ const lead=(C?'Partie 1 — à remplir en séance avec le collectif (entraîneur et athlètes). Les axes d’amélioration portent sur '+nom+(MIX()?' (épreuve synchronisée)':'')+' ; ils sont repris tels quels dans le projet individuel de chaque athlète.':I?'Épreuves individuelles — analyse menée par l’entraîneur et l’athlète, à partir du bilan de la compétition de référence.':'Analyse menée ensemble par l’entraîneur et l’athlète.')+' Chaque axe d’amélioration part de ce que l’on observe, est rattaché à une dimension, justifié par des indicateurs précis (valeur actuelle et niveau requis pour l’objectif), puis précise la progression attendue et la difficulté de l’écart pour la saison. La priorité classe les axes d’amélioration.';
+ return head(T,lead)+anaMethode(C,I)+
+ `<div class="card"><h2>Ce qu’il faut améliorer pour atteindre l’objectif${C?' — collectif':I?' — épreuves individuelles':''}</h2>${epTabs(3)}${s.constats.filter(inTab).length?'':'<p class="empty">Aucun axe d’amélioration '+(epList().length>1?(EPT==='*'?'commun ou global':'pour cette épreuve'):'pour l’instant')+'.</p>'}${s.constats.map((c,i)=>!inTab(c)?'':`<div class="item"><button class="rm" title="Supprimer" onclick="delConstat(${i})">×</button>
+ <h3>${cLab(c)}</h3>
+ ${epList().length>1?`<label>Épreuve(s) concernée(s)</label><div class="checks eps">${[['*','Toutes (axe d’amélioration global)'],...epList().map(e=>[e,e])].map(([v,l])=>`<label><input type="checkbox" ${(c.ep||['*']).includes(v)?'checked':''} onchange="setEp(${i},'${v}',this.checked)"> ${esc(l)}</label>`).join('')}</div>`:''}
+ <label>1. Ce qui est observé, et pourquoi c’est important pour la performance</label><textarea data-p="constats.${i}.txt" placeholder="${EXOBS[DKEY[cur]]}"></textarea>
+ <label>2. Dimension de la performance concernée</label><select data-p="constats.${i}.dim" data-rr="1">${dimOpts(c.dim)}</select>
+ <label>3. Indicateurs : où en est ${C?nom:'l’athlète'}, et ce que demande l’objectif</label><p class="hint">Chiffré (temps, distance, note…), échelle de 1 à 5 évaluée par l’entraîneur, ou descriptif pour ce qui se mesure mal (souplesse, compréhension tactique…).</p>
+ ${IND_HEAD('Indicateur','Niveau requis pour l’objectif')}
+ ${c.inds.map((d,j)=>indRow(`constats.${i}.inds.${j}`,`ind-${i}-${j}`,d,[EXIND[cur][0],EXIND[cur][1],EXREQ[cur]])).join('')}
+ <button class="add" style="margin-top:6px" onclick="S().constats[${i}].inds.push({l:'',v:'',q:''});render()">+ Indicateur</button>
+ <label style="margin-top:10px">4. Progression attendue</label><textarea class="sm" data-p="constats.${i}.sep" placeholder="Ce que l’on cherche à faire progresser cette saison, de la valeur actuelle vers le niveau requis"></textarea>
+ <label>5. Cet écart, pour cette saison, est…</label><div class="diff">${DIFF.map(([v,l])=>`<label class="dopt ${v}"><input type="radio" name="diff-${i}" value="${v}" ${c.diff===v?'checked':''} onchange="S().constats[${i}].diff='${v}';render()"> ${l}</label>`).join('')}</div>
+ <div style="margin-top:8px"><div class="grid g2"><div><label>Priorité</label><select data-p="constats.${i}.prio" data-rr="1"><option value="">—</option>${s.constats.map((_,k)=>`<option ${String(k+1)===c.prio?'selected':''}>${k+1}</option>`).join('')}</select></div><div></div></div></div></div>`).join('')}
+ <button class="add" onclick="S().constats.push({id:nid(),dim:'',prio:'',txt:'',sep:'',diff:'',k:CTX==='coll'?'coll':'ind',ep:(epList().length===1&&MIX()?[epList()[0]]:EPT==='*'||epList().length<=1?['*']:[EPT]),a:newAct(),inds:[{l:'',v:'',q:''}]});render()">+ Ajouter un axe d’amélioration</button></div>`;;}
+
+// ===== Actions : rôle dans le collectif, plan d'action, priorisation =====
+const chipsI=L=>L.filter(d=>d.l).map(d=>` <span class="chip">${esc(d.l)} : ${esc(fmtV(d,d.v))}${d.q?' → '+esc(fmtV(d,d.q)):''}</span>`).join('');
+function rappel(c){return `<div class="fil" style="margin-top:0"><span class="fk">${cLab(c)}</span> ${epTags(c)}${c.diff?` <span class="dbadge ${c.diff}">${DIFF.find(x=>x[0]===c.diff)[1]}</span>`:''} ${esc(c.txt)||'<span class=empty>sans texte</span>'}${chipsI(c.inds)}</div>`;}
+function roleSum(c){return `<div class="fil rolesum"><span class="fk">Mon rôle</span> ${esc(c.contrib)||'<span class=empty>non renseigné</span>'}${chipsI(c.cinds||[])}</div>`;}
+function roleFields(c,i){const k=DKEY[cur];const ex=EXCIND[k]||['Indicateur individuel','Valeur actuelle','Niveau requis'];if(!c.cinds)c.cinds=[{l:'',v:'',q:''}];const ok=c.cinds.some(d=>d.l);
+ return `<div class="qq"><span class="qn">1</span><div class="qb"><div class="qt">Mon rôle dans ${esc(ATH[cur].collNom)}</div>
+ <div class="sq"><label>Ce que cet axe d’amélioration demande à l’athlète</label><textarea class="sm" data-p="constats.${i}.contrib" placeholder="${esc(EXCONTRIB[k]||'')}"></textarea></div>
+ <label>Indicateurs individuels (au moins un, mesurable sur l’athlète seul)</label>
+ ${IND_HEAD('Indicateur individuel','Niveau requis')}
+ ${c.cinds.map((d,j)=>indRow(`constats.${i}.cinds.${j}`,`cind-${i}-${j}`,d,ex)).join('')}
+ <button class="add" style="margin-top:6px" onclick="S().constats[${i}].cinds.push({l:'',v:'',q:''});render()">+ Indicateur individuel</button>
+ ${ok?'':'<p class="warn">Aucun indicateur individuel renseigné pour cet axe d’amélioration.</p>'}</div></div>`;}
+function actFields(c,i,n0){const a=c.a,P=`constats.${i}.a`;
+ const f=(k,lab)=>`<div class="sq"><label>${lab}</label><textarea class="sm" data-p="${P}.${k}" placeholder="${esc(ex(k))}"></textarea></div>`;
+ const indOpts='<option value="">— choisir parmi les indicateurs '+(isCollC(c)?'de mon rôle':'de l’axe d’amélioration')+' —</option>'+srcInd(c).filter(d=>d.l).map(d=>`<option ${d.l===a.ind?'selected':''}>${esc(d.l)}</option>`).join('');
+ const req=(()=>{for(const d of srcInd(c))if(d.l===a.ind&&d.q)return d.q;return '';})();
+ return `<div class="qq"><span class="qn">${n0}</span><div class="qb"><div class="qt">Organisation de l’action</div>
+   <div class="sq"><label>L’action, en une phrase</label><input data-p="${P}.quoi" placeholder="${esc(ex('quoi'))}"></div>
+   <div class="sub">Ce qui change par rapport à d’habitude…</div>
+   <div class="grid g2">${f('org','… dans l’organisation')}${f('ath','… dans ce que fait l’athlète')}${f('ent','… dans ce que fait l’entraîneur')}${f('fed','… dans ce que fait la Fédération')}</div>
+   <div class="grid g2">${f('aut','Qui d’autre intervient, et pour quoi')}${f('man','Ce qui manque aujourd’hui')}</div>
+   <div class="grid g2"><div class="sq"><label>Quand (période)</label><input data-p="${P}.per" placeholder="${esc(ex('per'))}"></div><div class="sq"><label>Dimension travaillée</label><select data-p="${P}.levier">${dimOpts(a.levier||c.dim)}</select></div></div></div></div>
+  <div class="qq"><span class="qn">${n0+1}</span><div class="qb"><div class="qt">Mesure de la réussite</div>
+   <div class="mes" id="mes-${i}" data-t="${a.it||'num'}" data-u="${esc(a.u||'')}"><div><label>Indicateur suivi</label><select onchange="setInd(${i},this)">${indOpts}</select></div>${mesFields(a,P,'mes-'+i,req)}<div><label>Date de vérification</label><input type="date" data-p="${P}.date"></div></div></div></div>`;}
+// o.role : saisie du rôle (page « Mon rôle ») · o.st : statut et rang (arbitrage)
+function actCard({c,i},o){const a=c.a,P=`constats.${i}.a`;if(!a.levier&&c.dim)a.levier=c.dim;const on=a.st==='prio'||a.st==='mener';const svc=isCollC(c)&&MIX();
+ const nP=S().constats.filter(x=>x.a&&x.a.st==='prio').length;
+ return `<div class="item ${a.st==='prio'?'act':a.st==='traite'||a.st==='cote'?'off':''}" id="act-${i}"><h3>${o.role?cLab(c):'Action — '+cLab(c).toLowerCase()}${a.st==='prio'&&a.rang?` <span class="rk">priorité ${a.rang}</span>`:''}${svc?' <span class="svc">au service du collectif</span>':''}</h3>${rappel(c)}
+  ${o.role?roleFields(c,i):isCollC(c)?roleSum(c):''}
+  ${o.st?`<div class="stchips">${ST.map(([v,l])=>`<label class="dopt ${v}"><input type="radio" name="st-${i}" ${a.st===v?'checked':''} onchange="setSt(${i},'${v}')"> ${l}</label>`).join('')}
+  ${a.st==='prio'?`<select class="rang" onchange="setRang(${i},this.value)">${Array.from({length:nP},(_,n)=>`<option value="${n+1}" ${String(n+1)===String(a.rang)?'selected':''}>priorité ${n+1}</option>`).join('')}</select>`:''}</div>
+  ${a.st==='traite'?`<div class="sq"><label>Où cet axe d’amélioration est-il traité ?</label><input data-p="${P}.ou" placeholder="ex. dans l’action d’un autre axe d’amélioration, ou en dehors du PPI"></div>`:''}
+  ${a.st==='cote'?`<div class="sq"><label>Pourquoi cette action n’est-elle pas prioritaire ? (à justifier)</label><textarea class="sm" data-p="${P}.pq"></textarea>${a.pq?'':'<p class="warn">Justification attendue.</p>'}</div>`:''}
+  ${!a.st?'<p class="hint" style="margin-top:6px">Choisir un statut pour construire l’action, l’écarter, ou la garder pour plus tard.</p>':''}`
+  :(a.st&&a.st!=='mener'?`<p class="hint" style="margin-top:6px">Arbitrage dans le plan d’action : <b>${STL[a.st]}${a.st==='prio'&&a.rang?' '+a.rang:''}</b></p>`:'')}
+  ${on||!o.st?actFields(c,i,o.role?2:1):''}
+  </div>`;}
+function normRang(){const P=S().constats.map((c,i)=>({c,i})).filter(x=>x.c.a&&x.c.a.st==='prio').sort((x,y)=>(+x.c.a.rang||999)-(+y.c.a.rang||999)||x.i-y.i);P.forEach((x,n)=>x.c.a.rang=String(n+1));return P;}
+function setSt(i,v){const a=S().constats[i].a;a.st=v;a.rang=v==='prio'?(a.rang||'999'):'';normRang();render();}
+function setRang(i,v){const P=normRang().filter(x=>x.i!==i);P.splice(Math.max(0,Math.min(P.length,+v-1)),0,{c:S().constats[i],i});P.forEach((x,n)=>x.c.a.rang=String(n+1));render();}
+function mv(i,d){setRang(i,+S().constats[i].a.rang+d);}
+function editAct(i){const c=S().constats[i];if(epList().length>1)EPT=isCom(c)?'*':c.ep[0];render();const e=document.getElementById('act-'+i);if(e){e.scrollIntoView({block:'start'});e.classList.add('flash');}}
+function prioBoard(){const cs=S().constats;const P=normRang();const all=cs.map((c,i)=>({c,i}));
+ const row=({c,i})=>{const a=c.a;const svc=isCollC(c)&&MIX();
+  return `<div class="pb-r ${a.st||'none'}"><span class="pb-k">${a.st==='prio'?a.rang:''}</span>
+   <div class="pb-t"><b>${esc(a.quoi)||'<span class="empty">action à définir</span>'}</b><div class="pb-m">${cLab(c)} ${epTags(c)}${svc?'<span class="svc">au service du collectif</span>':''}</div>
+   ${a.st==='cote'?`<input class="pb-j" data-p="constats.${i}.a.pq" placeholder="Pourquoi pas prioritaire ? (à justifier)">`:''}${a.st==='traite'?`<input class="pb-j" data-p="constats.${i}.a.ou" placeholder="Où est-ce traité ?">`:''}</div>
+   <div class="pb-c">${a.st==='prio'?`<button type="button" title="Monter" ${a.rang==='1'?'disabled':''} onclick="mv(${i},-1)">▲</button><button type="button" title="Descendre" ${+a.rang===P.length?'disabled':''} onclick="mv(${i},1)">▼</button>`:''}
+   <select onchange="setSt(${i},this.value)"><option value="">— à arbitrer —</option>${ST.map(([v,l])=>`<option value="${v}" ${a.st===v?'selected':''}>${l}</option>`).join('')}</select>
+   <button type="button" class="pb-e" onclick="editAct(${i})">Modifier</button></div></div>`;};
+ const grp=(tt,L,cls)=>L.length?`<div class="pb-g ${cls}">${tt} <span>${L.length}</span></div>`+L.map(row).join(''):'';
+ return `<div class="card"><h2>Priorisation des actions</h2><p class="hint">Ordre de priorité sur l’ensemble du projet${MIX()?' : actions au service du collectif (reprises de « Mon rôle ») et actions individuelles':''}. ▲ ▼ pour changer le rang. Le statut permet d’arbitrer : une action peut être modifiée (bouton « Modifier »), ou écartée comme « pas prioritaire », avec une justification.</p>
+ ${cs.length?`<div class="pb">${grp('Prioritaires, dans l’ordre',P,'prio')+grp('À mener, sans rang',all.filter(x=>x.c.a.st==='mener'),'mener')+grp('À arbitrer',all.filter(x=>!x.c.a.st),'none')+grp('Écartées',all.filter(x=>x.c.a.st==='traite'||x.c.a.st==='cote'),'off')}</div>`:'<p class="empty">Ajouter d’abord des axes d’amélioration.</p>'}</div>`;}
+function perfCard(){return `<div class="card"><h2>Performance visée cette saison</h2><div class="perfbox"><div class="grid g3"><div><label>Compétition de référence</label><input value="Championnats du monde — Budapest 2027" disabled></div><div><label>Date de début</label><input type="date" value="${S().perf.d1||WC27[DKEY[cur]][0]}" disabled></div><div><label>Date de fin</label><input type="date" value="${S().perf.d2||WC27[DKEY[cur]][1]}" disabled></div></div>
+ <p class="note" style="margin:6px 0 0">${DOUBLE?'Double projet : eau libre du 3 au 8 juillet, natation course du 10 au 18 juillet 2027':'Dates de la discipline aux Championnats du monde de Budapest 2027'} (calendrier officiel World Aquatics).</p>
+ ${S().perf.ep.length?epHead(false):''}${perfRows()}
+ <button class="add" style="margin-top:6px" onclick="S().perf.ep.push({e:'',r:'',top:''});render()">+ Épreuve</button></div></div>`;}
+function initActs(){S().constats.forEach(c=>{if(!c.a)c.a=newAct();if(!c.ep)c.ep=['*'];});}
+const STLEAD='Pour chaque action, un statut : prioritaire (avec un rang sur l’ensemble du projet), à mener, déjà traité ailleurs, ou pas prioritaire (à justifier). Rien n’est obligatoire.';
+function actsCard(o,filt){const cs=S().constats;const L=cs.map((c,i)=>({c,i})).filter(({c})=>filt(c));
+ return `<div class="card"><h2>${o.role?'Mon rôle et les actions associées':'Actions'}</h2>${L.length?epTabs(4)+(L.filter(({c})=>inTab(c)).map(x=>actCard(x,o)).join('')||'<p class="empty">Aucun axe d’amélioration pour cet onglet.</p>'):'<p class="empty">Ajouter d’abord des axes d’amélioration '+(o.role||MIX()?'collectifs ':'')+'à l’étape « '+lab(2)+' »'+(MIX()?' ou « '+lab(9)+' »':'')+'.</p>'}</div>`;}
+const PLAN_METHODE=()=>methode('Plan d’action',['Quelles actions traiter en priorité, et lesquelles peuvent attendre ?','Quel est le prochain pas, directement accessible depuis le diagnostic ?','Quelle compétence chaque action vise-t-elle à construire, et en combien de temps ?','À quel indicateur verra-t-on que l’athlète a progressé ?'],['<b>Une hiérarchie des actions</b> : toutes les compétences ne peuvent pas être travaillées en même temps.','<b>Le prochain pas en ligne de mire</b> : l’étape directement accessible, parce que située à un niveau de difficulté optimal.','<b>Des objectifs de compétences</b>, qui tiennent compte du temps nécessaire pour se transformer : le résultat en émergera.','<b>Pour chaque action, un indicateur de progrès</b> : ce qui montrera que l’athlète a changé.']);
+function planPage(){initActs();
+ return head(lab(3),(MIX()?'Reprend les actions définies dans « '+lab(8)+' » (au service du collectif) et ajoute une action par axe d’amélioration individuel. C’est ici que l’on arbitre : une action au service du collectif peut être modifiée, ou écartée comme « pas prioritaire ». ':'Une action par axe d’amélioration. ')+STLEAD)+
+ PLAN_METHODE()+perfCard()+actsCard({st:true},()=>true)+prioBoard();}
+function rolePage(){initActs();const C=ATH[cur].coll;
+ if(!C)S().constats.forEach(c=>{if(isCollC(c)&&!c.a.st)c.a.st='mener';});
+ return head(lab(8),'Partie 2 — à remplir individuellement par l’athlète et son entraîneur, à partir des axes d’amélioration collectifs. Pour chaque axe d’amélioration : mon rôle (ce que l’axe d’amélioration demande à l’athlète, mesuré par au moins un indicateur individuel), puis l’action associée.'+(C?' '+STLEAD:' L’arbitrage (rang, pas prioritaire) se fait dans le plan d’action, avec les actions individuelles.'))+methode(lab(8),['Quelle est la contribution de l’athlète à cet objectif : que doit-il mieux faire, lui ?'],['La contribution claire de l’athlète au projet, ce qu’il doit faire pour permettre au collectif de progresser','Des objectifs clairs et mesurables'])+(C?PLAN_METHODE():'')+
+ (ATH[cur].tplInd?document.getElementById(ATH[cur].tplInd).innerHTML:'')+(C?perfCard():'')+actsCard({role:true,st:C},c=>isCollC(c))+(C?prioBoard():'');}
+
+// ===== Bilan PDF =====
+const fmtD=d=>{if(!d)return '';const m=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];const [y,mo,da]=d.split('-');return `${+da} ${m[+mo-1]} ${y}`;};
+function rzHeader(n){return `<header class="page-header"><div class="logo"><div class="logo-mark">FFN</div><div class="logo-text"><span class="small">Fédération Française</span><span class="big">de Natation</span></div></div><div class="sep"></div><div class="title-block"><div class="eyebrow">Projet de Performance · Saison 2026-2027</div><div class="name">${n===1?'Le projet en un coup d’œil':'Le plan d’action détaillé'}</div></div><div class="pnum">Page<br><b>0${n} / 02</b></div></header>`;}
+function rzFooter(){const a=ATH[cur];return `<footer class="page-footer"><span><b>${esc(a.nom)}</b> · ${esc(a.disc)} · ${esc(a.epr)}</span><span>Document de travail — FFN · DTN</span></footer>`;}
+function buildBilan(){CTX=null;
+  const s=S(),a=ATH[cur],r=REFS[cur],cs=s.constats,idx=id=>cs.findIndex(c=>c.id===id)+1;
+  const amb=s.amb.filter(x=>x.h&&x.r);
+  const acts=actsOrdered();const nt=cs.map((c,k)=>({c,k})).filter(({c})=>c.a&&(c.a.st==='traite'||c.a.st==='cote'));
+  const multi=epList().length>1;const G=grpConstats(cs).map(g=>({t:g.t,items:acts.filter(x=>g.items.some(y=>y.i===x.i))})).filter(g=>g.items.length);
+  const vide=t=>`<span class="rz-empty">${t}</span>`;
+  // ---------- Page 1 ----------
+  let h=`<section class="resume-page">${rzHeader(1)}
+  <div class="identity"><div class="ident-main"><div><div class="role">Athlète · ${esc(a.disc)}</div><div class="nom">${esc(a.nom)}</div></div><div><div class="discipline"><span class="dot"></span>${esc(a.epr)}</div></div></div>
+   <div class="ident-side"><div class="row"><span class="lbl">Entraîneur</span><span class="val">${esc(s.adm.ent)||'—'}</span></div><div class="row"><span class="lbl">Structure</span><span class="val">${esc(s.adm.struct)||'—'}</span></div>${s.adm.etr?`<div class="row"><span class="lbl">Réf. France</span><span class="val">${esc([s.adm.structFr,s.adm.entFr].filter(Boolean).join(' · '))||'—'}</span></div>`:''}</div></div>
+  <div class="rz-two">
+   <div class="card"><div class="card-head"><span class="t">Ambition</span><span class="meta">prochains JO obligatoires</span></div>
+    ${amb.length?`<div class="amb">${amb.map(x=>`<div class="ambi"><span class="y">${esc(x.h)}</span><span class="c">${esc(x.c)}</span><span class="o">${esc(x.r)}</span></div>`).join('')}</div>`:vide('Non renseignée')}
+    </div>
+   <div class="card"><div class="card-head"><span class="t">Point de départ</span><span class="meta">${esc(r.saison.comp.split(' — ')[1])} → ${esc(r.monde.comp.split(' — ')[1])}</span></div>
+    <div class="kpis">${KPI[cur].map(([l,v])=>`<div class="kpi"><span class="l">${l}</span><span class="v">${v}</span></div>`).join('')}</div>
+    <div class="sat">Satisfaction de l’athlète sur ce bilan : <b>${esc(s.sat)} / 10</b></div></div>
+  </div>
+  <div class="card"><div class="card-head"><span class="t">${ATH[cur].coll?'De l’analyse collective <span class="acc">au plan d’action individuel</span>':'De l’analyse <span class="acc">au plan d’action</span>'}</span><span class="meta">${acts.filter(x=>x.a.st==='prio').length} prioritaire(s) · ${acts.filter(x=>x.a.st==='mener').length} à mener</span></div>
+   <div class="fil-h"><span>${ATH[cur].coll?'Axe d’amélioration collectif → mon rôle':MIX()?'Ce qui est observé (collectif → mon rôle)':'Ce qui est observé'}</span><span></span><span>Ce qui va être fait</span><span></span><span>Comment on saura que ça marche</span></div>
+   ${acts.length?G.map(g=>(multi&&g.t?`<div class="grp-h">${esc(g.t)}</div>`:'')+g.items.map(({c,i,a:x})=>`<div class="fil-r">
+    <div class="fc obs"><div><b>${cLab(c)}</b> · ${esc(c.dim)||'—'}${multi?' '+epTags(c):''}${c.diff?` <span class="dbadge ${c.diff}">${DIFF.find(z=>z[0]===c.diff)[1]}</span>`:''}<br>${esc(c.txt)}${c.inds.filter(d=>d.l).map(d=>`<span class="ind">${esc(d.l)} : <b>${esc(fmtV(d,d.v))}</b>${d.q?` → ${esc(fmtV(d,d.q))}${ecartT(d.t,d.v,d.q,d.u)?' ('+ecartT(d.t,d.v,d.q,d.u)+')':''}`:''}</span>`).join('')}${c.sep?`<div class="sep">Progression attendue : ${esc(c.sep)}</div>`:''}${isCollC(c)&&(c.contrib||(c.cinds||[]).some(d=>d.l))?`<div class="contr"><b>Mon rôle</b> : ${esc(c.contrib)}${(c.cinds||[]).filter(d=>d.l).map(d=>`<span class="ind">${esc(d.l)} : <b>${esc(fmtV(d,d.v))}</b>${d.q?` → ${esc(fmtV(d,d.q))}${ecartT(d.t,d.v,d.q,d.u)?' ('+ecartT(d.t,d.v,d.q,d.u)+')':''}`:''}</span>`).join('')}</div>`:''}</div></div>
+    <div class="fa">→</div>
+    <div class="fc act"><span class="an">${x.st==='prio'?'Priorité '+(x.rang||'?'):'À mener'}</span> ${esc(x.quoi)||vide('—')}<div class="dim">${esc(x.levier||c.dim)||''}${x.per?' · '+esc(x.per):''}</div></div>
+    <div class="fa">→</div>
+    <div class="fc res">${x.ind?`<b>${esc(x.ind)}</b><div class="cible">${esc(fmtV({t:x.it,u:x.u},x.actuel))||'?'} <span>→</span> <b>${esc(fmtV({t:x.it,u:x.u},x.cible))||'?'}</b></div>${ecartT(x.it||'num',x.actuel,x.cible,x.u)?`<div class="dt">écart à combler : ${ecartT(x.it||'num',x.actuel,x.cible,x.u)}</div>`:''}${x.date?`<div class="dt">vérifié le ${fmtD(x.date)}</div>`:''}`:vide('Non renseigné')}</div></div>`).join('')).join(''):vide('Aucune action renseignée')}
+   ${nt.length?`<div class="nt"><div class="nt-h">Axes d’amélioration identifiés, sans action retenue dans ce projet</div>${nt.map(({c,k})=>`<div><b>${cLab(c)}</b> — ${esc(c.txt)} <i>${c.a.st==='traite'?'Déjà traité ailleurs'+(c.a.ou?' : '+esc(c.a.ou):''):'Pas prioritaire'+(c.a.pq?' : '+esc(c.a.pq):'')}</i></div>`).join('')}</div>`:''}
+  </div>
+  <div class="card perf"><div class="card-head"><span class="t">Performance visée <span class="acc">cette saison</span></span></div><div class="pv">${s.perf.c?esc(s.perf.c)+(s.perf.d1?` <span class="pvd">${fmtD(s.perf.d1)}</span>`:''):''}${s.perf.ep.filter(e=>e.e).map(e=>`<span class="pve">${esc(e.e)}${e.r?' · '+esc(e.r):''}${e.top?' · TOP '+esc(e.top):''}</span>`).join('')||(s.perf.c?'':vide('Non renseignée'))}</div></div>
+  ${rzFooter()}</section>`;
+  // ---------- Page 2 ----------
+  const L=[['org','Organisation'],['ath','Athlète'],['ent','Entraîneur'],['fed','Fédération'],['aut','Autres intervenants'],['man','Ce qui manque']];
+  h+=`<section class="resume-page">${rzHeader(2)}
+  <div class="card"><div class="card-head"><span class="t">Ce qui change <span class="acc">par rapport à d’habitude</span></span><span class="meta">par action</span></div>
+   ${acts.length?acts.map(({c,a:x})=>`<div class="pa"><div class="pa-h"><span class="an">${x.st==='prio'?'Priorité '+(x.rang||'?'):'À mener'}</span> ${esc(x.quoi)||''} <span class="rz-empty">(${cLab(c).toLowerCase()})</span><span class="per">${esc(x.per)}</span></div><div class="pa-g">${L.map(([k,l])=>`<div class="pa-c"><span class="l">${l}</span>${esc(x[k])||'<span class="rz-empty">—</span>'}</div>`).join('')}</div></div>`).join(''):vide('Aucune action renseignée')}
+  </div>
+  <div class="card"><div class="card-head"><span class="t">Calendrier <span class="acc">des compétitions</span></span><span class="meta"><span class="lg r"></span>objectif de résultats · <span class="lg g"></span>objectif de développement</span></div>
+   ${s.comps.filter(c=>c.n).length?`<div class="cal">${s.comps.filter(c=>c.n).map(c=>`<div class="cc ${c.t}"><div class="d">${fmtD(c.d1)}${c.d2&&c.d2!==c.d1?' → '+fmtD(c.d2):''}</div><div class="n">${esc(c.n)}</div>${c.ep.filter(e=>e.e).map(e=>`<div class="e">${esc(e.e)}${e.r?' · <b>'+esc(e.r)+'</b>':''}${e.top?' · <b>TOP '+esc(e.top)+'</b>':''}</div>`).join('')}${c.t==='dev'&&c.prog?`<div class="pg">Progrès attendus : ${esc(c.prog)}</div>`:''}</div>`).join('')}</div>`:vide('Non renseigné')}
+  </div>
+  <div class="card"><div class="card-head"><span class="t">Engagement <span class="acc">mutuel</span></span></div>
+   <div class="sig">${[['ent',"Entraîneur"],['nag','Athlète'],['fed','Fédération']].map(([k,t])=>`<div class="sg"><span class="l">${t}</span><div class="nm">${esc(s.eng[k+'n'])||'&nbsp;'}</div><div class="dt">${fmtD(s.eng[k+'d'])}</div>${s.eng[k+'c']?`<div class="cm">${esc(s.eng[k+'c'])}</div>`:''}<div class="line">Signature</div></div>`).join('')}</div>
+  </div>
+  ${rzFooter()}</section>`;
+  return h;
+}
+function fitBilan(root){root.querySelectorAll('.resume-page').forEach(sec=>{sec.style.fontSize='';let fs=9.5;const max=sec.clientHeight;while(sec.scrollHeight>max+1&&fs>6.5){fs-=.25;sec.style.fontSize=fs+'pt';}});}
+function scaleBilan(){const w=document.querySelector('.rz-wrap');if(!w)return;const z=Math.min(1,w.clientWidth/794);const rz=document.getElementById('rz');rz.style.transform=`scale(${z})`;rz.style.transformOrigin='top left';w.style.height=(rz.scrollHeight*z)+'px';}
+// ===== Frise athlète (A4 paysage) : ambition, calendrier jusqu'à la compétition de référence, fil des actions prioritaires =====
+const FRISE_CSS=`@page{size:A4 landscape;margin:0}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff}
+.fz{width:297mm;height:210mm;padding:10mm 12mm;font-family:'Barlow',sans-serif;color:#0E1655;display:flex;flex-direction:column;gap:5mm;overflow:hidden}
+.fz-h{display:flex;align-items:center;gap:5mm;border-bottom:1.2mm solid #0090D4;padding-bottom:3mm}
+.fz-logo{background:#0E1655;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13pt;padding:2mm 3mm;border-radius:1.5mm}
+.fz-id{flex:1}.fz-nom{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20pt;text-transform:uppercase;line-height:1}
+.fz-sub{font-size:9.5pt;color:#555}.fz-sea{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10pt;letter-spacing:.12em;text-transform:uppercase;color:#0090D4;text-align:right}
+.fz-amb{display:flex;gap:3mm;align-items:stretch}
+.fz-amb .t{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10pt;letter-spacing:.14em;text-transform:uppercase;background:#E2001A;color:#fff;padding:2mm 3mm;border-radius:1.5mm;display:flex;align-items:center}
+.fz-amb .a{border:.4mm solid #0E1655;border-radius:1.5mm;padding:1.5mm 3mm;display:flex;flex-direction:column;justify-content:center}
+.fz-amb .a b{font-family:'Barlow Condensed',sans-serif;font-size:13pt;text-transform:uppercase;line-height:1.05}.fz-amb .a span{font-size:8.5pt;color:#555}
+.fz-sec{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:10pt;letter-spacing:.14em;text-transform:uppercase;color:#0090D4;margin-bottom:1mm}
+.fz-tl{position:relative;height:56mm}
+.fz-axis{position:absolute;left:0;right:0;top:44mm;height:1.6mm;background:#0E1655;border-radius:1mm}
+.fz-m{position:absolute;top:47mm;font-size:7.5pt;color:#555;transform:translateX(-50%);white-space:nowrap}
+.fz-mt{position:absolute;top:43mm;width:.3mm;height:3.6mm;background:#fff}
+.fz-c{position:absolute;width:40mm;font-size:7.8pt;line-height:1.15;border-left:.8mm solid #E2001A;padding:0 0 0 1.5mm;background:#fff}
+.fz-c.dev{border-left-color:#55CC85}.fz-c b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:9.5pt;text-transform:uppercase}
+.fz-c i{font-style:normal;color:#555}
+.fz-st{position:absolute;width:.3mm;background:#bbb}
+.fz-dot{position:absolute;top:42.8mm;width:4mm;height:4mm;margin-left:-2mm;border-radius:50%;background:#E2001A;border:.6mm solid #fff}
+.fz-dot.dev{background:#55CC85}
+.fz-ref{position:absolute;right:0;top:0;width:52mm;background:#0E1655;color:#fff;border-radius:2mm;padding:2mm 3mm;font-size:8pt;line-height:1.2}
+.fz-ref b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:11pt;text-transform:uppercase}
+.fz-ref .l{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:#7FD0F5}
+.fz-ad{position:absolute;top:51mm;width:5mm;height:5mm;margin-left:-2.5mm;border-radius:50%;background:#0090D4;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:8pt;display:flex;align-items:center;justify-content:center}
+.fz-fil{display:flex;align-items:stretch;gap:2mm;flex:1;min-height:0}
+.fz-fil{font-size:8.5pt}
+.fz-a{flex:1;overflow:hidden;border:.4mm solid #0E1655;border-top:1.6mm solid #0090D4;border-radius:1.5mm;padding:2mm 3mm;font-size:1em;line-height:1.25;display:flex;flex-direction:column;gap:1.2mm;min-width:0}
+.fz-a .n{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.05em;letter-spacing:.12em;text-transform:uppercase;color:#0090D4}
+.fz-a .q{font-weight:700;font-size:1.15em}.fz-a .k{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8em;letter-spacing:.12em;text-transform:uppercase;color:#888;display:block}
+.fz-role{background:#E8F6FD;border-left:1mm solid #0090D4;border-radius:1mm;padding:1.5mm 2mm;font-size:1.05em;font-weight:600}
+.fz-role .k{color:#0080BE}
+.fz-arr{display:flex;align-items:center;font-size:14pt;color:#0090D4}
+.fz-e{color:#999;font-style:italic}
+.fz-f{font-size:7pt;color:#888;display:flex;justify-content:space-between;border-top:.3mm solid #ddd;padding-top:1.5mm}`;
+function buildFrise(){
+ const s=S(),a=ATH[cur],k=DKEY[cur];
+ const t0=new Date('2026-09-01T00:00:00'),fin=s.perf.d2||WC27[k][1],t1=new Date(fin+'T23:59:59');
+ const W=273,span=t1-t0,X=d=>Math.max(0,Math.min(W,(new Date(d+'T12:00:00')-t0)/span*W));
+ const inR=d=>d&&new Date(d+'T12:00:00')>=t0&&new Date(d+'T12:00:00')<=t1;
+ const MO=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+ const dd=(d1,d2)=>{if(!d1)return '';const a1=d1.split('-'),a2=(d2||d1).split('-');return d2&&d2!==d1?(a1[1]===a2[1]?`${+a1[2]}-${+a2[2]} ${MO[+a1[1]-1]}`:`${+a1[2]} ${MO[+a1[1]-1]} - ${+a2[2]} ${MO[+a2[1]-1]}`):`${+a1[2]} ${MO[+a1[1]-1]}`;};
+ // Mois
+ let months='';for(let d=new Date(t0);d<=t1;d.setMonth(d.getMonth()+1)){const iso=d.toISOString().slice(0,10);const xm=X(iso);if(xm>0)months+=`<div class="fz-mt" style="left:${xm}mm"></div>`;const mid=new Date(d.getFullYear(),d.getMonth(),15);if(mid<=t1)months+=`<div class="fz-m" style="left:${X(mid.toISOString().slice(0,10))}mm">${MO[d.getMonth()]}</div>`;}
+ // Compétitions : étiquettes au-dessus de l'axe, sur 3 niveaux sans chevauchement
+ const C=s.comps.filter(c=>inR(c.d1)).sort((p,q)=>p.d1<q.d1?-1:1);const lv=[-1e9,-1e9,-1e9];const REFW=54;
+ let comps='';C.forEach(c=>{const xc=X(c.d1);const left=Math.min(xc,W-REFW-41);let l=lv.findIndex(v=>v<=left);if(l<0)l=lv.indexOf(Math.min(...lv));lv[l]=left+42;const top=l*13;
+  comps+=`<div class="fz-st" style="left:${xc}mm;top:${top+4}mm;height:${40-top}mm"></div><div class="fz-c ${c.t==='dev'?'dev':''}" style="left:${left}mm;top:${top}mm"><b>${esc(c.n)||'Compétition'}</b><i>${dd(c.d1,c.d2)}</i></div><div class="fz-dot ${c.t==='dev'?'dev':''}" style="left:${xc}mm"></div>`;});
+ const pe=(s.perf.ep||[]).filter(e=>e.e).map(e=>`${esc(e.e)}${e.r?' : <b style="display:inline;font-size:9pt">'+esc(e.r)+'</b>':''}`).join('<br>');
+ const ref=`<div class="fz-ref"><span class="l">Compétition de référence</span><b>${esc(s.perf.c)}</b>${dd(s.perf.d1,s.perf.d2)}${pe?'<br>'+pe:''}</div><div class="fz-st" style="left:${W}mm;top:14mm;height:30mm;background:#0E1655"></div>`;
+ // Actions prioritaires, dans l'ordre
+ const P=actsOrdered().filter(x=>x.a.st==='prio');
+ let marks='';P.forEach((x,n)=>{if(inR(x.a.date))marks+=`<div class="fz-ad" style="left:${X(x.a.date)}mm">${n+1}</div>`;});
+ const t=x=>x.a.it||'num';
+ const cards=P.length?P.map((x,n)=>{const A=x.a;const ind=A.ind?`<div><span class="k">Indicateur</span>${esc(A.ind)}${A.actuel||A.cible?' : '+esc(fmtV({t:t(x),u:A.u},A.actuel))+' → <b>'+esc(fmtV({t:t(x),u:A.u},A.cible))+'</b>':''}</div>`:'';
+  const nl=v=>esc(v).replace(/\n/g,'<br>');
+  const role=`<div class="fz-role"><span class="k">Ce que fait l’athlète, concrètement</span>${A.ath?nl(A.ath):'<span class=fz-e>À préciser</span>'}</div>`;
+  const contrib=isCollC(x.c)&&x.c.contrib?`<div><span class="k">Rôle dans le collectif</span>${nl(x.c.contrib)}</div>`:'';
+  const der=A.org?`<div><span class="k">Déroulé de l’action</span>${nl(A.org)}</div>`:'';
+  return (n?'<div class="fz-arr">➜</div>':'')+`<div class="fz-a"><span class="n">Priorité ${n+1}</span><span class="q">${esc(A.quoi)||'<span class=fz-e>Action à formuler</span>'}</span>${contrib}${role}${der}${ind}${A.per||A.date?`<div><span class="k">Quand</span>${esc(A.per)}${A.per&&A.date?' · ':''}${A.date?'vérification le '+fmtD(A.date):''}</div>`:''}</div>`;}).join(''):'<div class="fz-e">Aucune action prioritaire pour l’instant.</div>';
+ const amb=s.amb.filter(x=>x.h&&x.c).map(x=>`<div class="a"><b>${esc(x.c)} ${esc(x.h)}</b><span>${x.r?esc(x.r):'objectif à préciser'}</span></div>`).join('');
+ return `<section class="fz"><div class="fz-h"><div class="fz-logo">FFN</div><div class="fz-id"><div class="fz-nom">${esc(a.nom)}</div><div class="fz-sub">${esc(a.disc)} · ${esc(a.epr)}</div></div><div class="fz-sea">Projet de Performance<br>Saison 2026-2027</div></div>
+ <div class="fz-amb"><div class="t">Ambition</div>${amb}</div>
+ <div><div class="fz-sec">Calendrier jusqu’à la compétition de référence</div><div class="fz-tl">${comps}${ref}<div class="fz-axis"></div>${months}${marks}</div></div>
+ <div style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="fz-sec">Le fil du plan d’action : actions prioritaires, dans l’ordre</div><div class="fz-fil">${cards}</div></div>
+ <div class="fz-f"><span><span style="color:#E2001A">■</span> Objectif de résultats · <span style="color:#55CC85">■</span> Objectif de développement · <span style="color:#0090D4">●</span> Vérification d’une action prioritaire</span><span>FFN · DTN · Projet de Performance</span></div></section>`;}
+function fitFrise(root){const fil=root.querySelector('.fz-fil');if(!fil)return;let fs=8.5;fil.style.fontSize=fs+'pt';
+ const over=()=>[...fil.querySelectorAll('.fz-a')].some(c=>c.scrollHeight>c.clientHeight+1);
+ while(over()&&fs>6){fs-=.25;fil.style.fontSize=fs+'pt';}}
+function printFrise(){
+ const win=window.open('','_blank');
+ if(!win){alert('Le navigateur a bloqué l’ouverture de la fenêtre. Autorisez les fenêtres pour ce fichier.');return;}
+ win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Frise PPI ${esc(ATH[cur].nom)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"><style>${FRISE_CSS}</style></head><body>${buildFrise()}</body></html>`);
+ win.document.close();
+ let done=false;const go=()=>{if(done)return;done=true;fitFrise(win.document);win.focus();win.print();};
+ win.onload=()=>{(win.document.fonts?win.document.fonts.ready:Promise.resolve()).then(go);};
+ setTimeout(go,2000);
+}
+// ===== Envoi Supabase (une nouvelle ligne par envoi, rien n'est écrasé) =====
+const SUPABASE_URL  = 'https://nyasokzqnuhngfwpnmhg.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXNva3pxbnVobmdmd3BubWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0OTQyMDQsImV4cCI6MjA5NDA3MDIwNH0.f5nx3-17vGrF9BrqbnezvzSgFCJiu--O5gr2yIlDiHw';
+const DCODE={nc:'natation-bassin',el:'eau-libre',na:'synchro',pl:'plongeon',wp:'water-polo'};
+const nul=v=>(v===undefined||v===null||String(v).trim()==='')?null:v;
+function identV3(){const mots=(ATH[cur].nom||'').trim().split(/\s+/);
+ const nom=mots.filter(m=>m===m.toUpperCase()&&/[A-ZÀ-Ý]/.test(m)).join(' ');const prenom=mots.filter(m=>!(m===m.toUpperCase()&&/[A-ZÀ-Ý]/.test(m))).join(' ');
+ return {nom:nom||ATH[cur].nom,prenom};}
+const epV3=L=>(L||[]).filter(e=>e.e||e.r||e.top).map(e=>({epreuve:e.e||'',perf:e.r||'',classement:e.top||''}));
+const numV3=(t,v)=>(t||'num')==='num'&&v?String(v).replace(',','.'):(v||'');
+const indV3=L=>(L||[]).filter(d=>d.l||d.v||d.q).map(d=>({libelle:d.l||'',type:d.t||'num',unite:(d.t||'num')==='num'?(d.u||''):'',actuel:numV3(d.t,d.v),requis:numV3(d.t,d.q)}));
+function payloadV3(){initActs();const s=S(),a=ATH[cur],k=DKEY[cur],adm=s.adm||{},eng=s.eng||{};const id0=identV3(),id={nom:adm.nom||id0.nom,prenom:adm.prenom||id0.prenom};
+ const lic=String(adm.lic||'').replace(/\s/g,'').toUpperCase();
+ const PRI=t=>t==='dev'?'developpement':'resultats',COL={resultats:'#E2001A',developpement:'#55CC85'};
+ return {
+  version_questionnaire:'V3',
+  licence:lic||('SANS_LICENCE_'+id.nom+'_'+id.prenom),
+  date_export:new Date().toISOString(),
+  discipline:IMPORT&&IMPORT.discipline?IMPORT.discipline:(DCODE[k]||k), discipline_2:IMPORT&&IMPORT.discipline_2?IMPORT.discipline_2:null, discipline_label:a.disc,
+  nom:id.nom, prenom:id.prenom, date_naissance:nul(adm.ddn), genre:nul(adm.genre), email:nul(adm.email), telephone:nul(adm.tel), club:nul(adm.club),
+  entraineur_email:nul(adm.entEmail), entraineur_tel:nul(adm.entTel),
+  bilan_plan_precedent:s.prec?{date_fiche:s.prec.date,version:s.prec.version,items:s.prec.items.map(x=>({type:x.type,libelle:x.libelle,cible:x.cible,realise:x.realise||'',commentaire:x.com||''}))}:null,
+  structure_nom:nul(adm.struct), entraineur_nom:nul(adm.ent),
+  entrainement_etranger:!!adm.etr, structure_france:adm.etr?nul(adm.structFr):null, entraineur_france:adm.etr?nul(adm.entFr):null,
+  staff_complementaire:nul(adm.staff),
+  bq_satisfaction:parseInt(s.sat)||null,
+  competition_reference:REFS[cur]?REFS[cur].saison.comp:null,
+  objectifs_pluriannuels:s.amb.filter(x=>x.h&&x.c).map(x=>({saison:x.h,competition:x.c,isJO:x.c==='Jeux olympiques',objectif:x.r||'',epreuves:[]})),
+  performance_visee:{competition:s.perf.c,debut:s.perf.d1,fin:s.perf.d2,epreuves:epV3(s.perf.ep)},
+  objectifs_saison:s.comps.map(c=>({nom:c.n||'',priorite:PRI(c.t),debut:c.d1||'',fin:c.d2||'',commentaire:c.prog||'',epreuves:epV3(c.ep)})),
+  competitions_calendrier:s.comps.filter(c=>c.d1).map((c,i)=>({sourceId:'v3-'+i,nom:c.n||'',startDate:c.d1,endDate:c.d2||c.d1,priorite:PRI(c.t),color:COL[PRI(c.t)],type:'objectif-competition',comment:c.prog||''})),
+  axes_amelioration:s.constats.map(c=>{const x=c.a||{};return {id:c.id,type:isCollC(c)?'coll':'ind',epreuves:c.ep||['*'],observation:c.txt||'',dimension:c.dim||'',
+   indicateurs:indV3(c.inds),progression_attendue:c.sep||'',difficulte:c.diff||'',priorite:c.prio||'',contribution:c.contrib||'',indicateurs_individuels:indV3(c.cinds),
+   action:{statut:x.st||'',rang:x.rang||'',quoi:x.quoi||'',organisation:x.org||'',athlete:x.ath||'',entraineur:x.ent||'',federation:x.fed||'',autres:x.aut||'',manque:x.man||'',
+    periode:x.per||'',dimension:x.levier||'',indicateur:x.ind||'',type_indicateur:x.it||'num',unite:x.u||'',valeur_actuelle:numV3(x.it,x.actuel),cible:numV3(x.it,x.cible),date_verification:x.date||'',
+    ou_traite:x.ou||'',raison_pas_prioritaire:x.pq||''}};}),
+  engagement_entraineur:nul(eng.entc), nom_entraineur_signe:nul(eng.entn), date_entraineur:nul(eng.entd),
+  engagement_nageur:nul(eng.nagc),     nom_nageur_signe:nul(eng.nagn),     date_nageur:nul(eng.nagd),
+  engagement_federation:nul(eng.fedc), nom_federation:nul(eng.fedn),       date_federation:nul(eng.fedd)
+ };}
+async function envoyerV3(btn){
+ if(!confirm('Envoyer cette fiche à la FFN ?\n\nUne nouvelle version est créée à chaque envoi ; les envois précédents sont conservés.'))return;
+ btn.disabled=true;const old=btn.textContent;btn.textContent='Envoi…';
+ try{const r=await fetch(`${SUPABASE_URL}/rest/v1/ppi_nageurs`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`,'Prefer':'return=minimal'},body:JSON.stringify((pl=>{if(!pl.discipline_2)delete pl.discipline_2;return pl;})(payloadV3()))});
+  if(!r.ok){const t=await r.text();throw new Error(/version_questionnaire|axes_amelioration|performance_visee|competition_reference|bilan_plan_precedent|discipline_2/.test(t)?'la base n’a pas encore les colonnes V3 (script supabase/ajout_v3.sql à passer).':`erreur ${r.status} : ${t}`);}
+  alert('Fiche envoyée à la FFN.');
+ }catch(e){alert('Envoi impossible : '+e.message);}
+ finally{btn.disabled=false;btn.textContent=old;}
+}
+function printBilan(){
+  const css=document.getElementById('rzcss').textContent;
+  const win=window.open('','_blank');
+  if(!win){alert('Le navigateur a bloqué l’ouverture de la fenêtre. Autorisez les fenêtres pour ce fichier, ou utilisez Ctrl+P / Cmd+P.');return;}
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bilan PPI ${esc(ATH[cur].nom)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"><style>${css}
+@page{size:A4;margin:0}html,body{background:#fff;margin:0;padding:0}.rz{transform:none!important}.resume-page{box-shadow:none!important;margin:0!important;page-break-after:always}.resume-page:last-child{page-break-after:auto}</style></head><body><div class="rz">${buildBilan()}</div></body></html>`);
+  win.document.close();
+  let done=false;const go=()=>{if(done)return;done=true;fitBilan(win.document);win.focus();win.print();};
+  win.onload=()=>{(win.document.fonts?win.document.fonts.ready:Promise.resolve()).then(go);};
+  setTimeout(go,2000);
+}
+function delConstat(i){const id=S().constats[i].id;S().constats.splice(i,1);S().actions.forEach(a=>a.constats=a.constats.filter(x=>x!==id));render();}
+function tog(i,id,on){const a=S().actions[i];a.constats=on?[...new Set([...a.constats,id])]:a.constats.filter(x=>x!==id);if(on&&!a.levier){const c=S().constats.find(c=>c.id===id);if(c&&c.dim)a.levier=c.dim;}render();}
+function srcInd(c){return isCollC(c)?(c.cinds||[]):c.inds;}
+function setInd(i,sel){const c=S().constats[i];const a=c.a;const prev=a.ind;a.ind=sel.value;const d=srcInd(c).find(x=>x.l===a.ind)||null;
+  const t=d?(d.t||'num'):'num';if(t!==(a.it||'num')||prev!==a.ind){a.cible='';}a.it=t;a.u=d?(d.u||''):'';if(d&&prev!==a.ind)a.actuel=d.v||'';render();}
+function mesFields(a,P,id,req){const t=a.it||'num';
+  const f=(k,lab,ph)=>t==='ech'?`<div><label>${lab}</label><select data-k="${k}" data-p="${P}.${k==='v'?'actuel':'cible'}" onchange="upEc('${id}')"><option value="">—</option>${ECH.map((l,n)=>`<option value="${n+1}" ${String(n+1)===String(a[k==='v'?'actuel':'cible'])?'selected':''}>${l}</option>`).join('')}</select></div>`
+    :`<div><label>${lab}${t==='num'&&a.u?' ('+esc(a.u)+')':''}</label><input data-k="${k}" data-p="${P}.${k==='v'?'actuel':'cible'}" ${t==='num'?'class="num-input" inputmode="decimal"':''} placeholder="${esc(ph)}" oninput="upEc('${id}')"></div>`;
+  const L=t==='desc'?['État actuel','État visé']:['Valeur actuelle','Valeur visée'];
+  const ph=req?'Niveau requis : '+fmtV({t,u:a.u},req):'';
+  return f('v',L[0],'')+'<div class="arr">→</div>'+f('q',L[1],ph)+`<div><label>Écart à combler</label><span class="ec">${ecartT(t,a.actuel,a.cible,a.u)||(t==='desc'?'qualitatif':'—')}</span></div>`;}
+// Tableaux « Résultat » : séparer visuellement l'athlète et le podium de référence
+function splitResultTables(m){
+  const r=REFS[cur];
+  m.querySelectorAll('.card').forEach(card=>{
+    const h=card.querySelector('h2'); if(!h||!/Résultat/.test(h.textContent)) return;
+    const t=card.querySelector('table'); if(!t) return;
+    const rows=[...t.querySelectorAll('tr')]; const headRow=rows.shift(); const n=headRow.children.length;
+    const ath=rows.filter(x=>/athlète/.test(x.textContent)), hors=rows.filter(x=>/hors référence/.test(x.textContent)), ref=rows.filter(x=>!ath.includes(x)&&!hors.includes(x));
+    const grp=(cls,txt)=>{const tr=document.createElement('tr');tr.className='grp '+cls;tr.innerHTML=`<td colspan="${n}">${txt}</td>`;return tr;};
+    const tb=headRow.parentNode;
+    tb.append(grp('g-s','Compétition de référence de la saison · '+r.saison.comp));
+    ath.forEach(x=>{x.classList.add('row-ath');tb.append(x);});
+    tb.append(grp('g-m',t.dataset.ref||((r.tag||'Référence mondiale')+' · '+(r.tagd||('podium '+r.monde.comp)))));
+    ref.forEach(x=>{x.classList.add('row-ref');tb.append(x);});
+    if(hors.length){tb.append(grp('g-h','Pour information (hors référence)'));hors.forEach(x=>tb.append(x));}
+  });
+}
+function render(){renderSteps();const m=document.getElementById('main');const pid=ORDER()[step];CTX=pid===2?((ATH[cur].coll||MIX())?'coll':null):pid===9?'ind':pid===8?'coll':null;m.innerHTML=PAGES[pid]()+nav()+(IMPORT?'':'<p class="foot">Prototype de présentation. Données de la page 2 : Espadon, World Aquatics, PDF Omega (European Aquatics), profils de performance EL 2026. Rien n’est enregistré ni envoyé.</p>');bind(m);if(pid===7){fitBilan(m);scaleBilan();}if(pid===1){tabifyBilan(m);splitResultTables(m);m.querySelectorAll('.tw table').forEach(t=>{const n=Math.max(...[...t.querySelectorAll('tr')].map(r=>r.children.length));if(n>=7)t.classList.add('dense');if(n>=11)t.classList.add('xdense');});}}
+// ===== Pré-remplissage : questionnaire généré depuis le dashboard (balise #embedded-data) =====
+// IMPORT = { discipline, genere_le, admin:{…}, analyse:{saison, competition_reference, donnees:{…}} | null, precedent:{…} | null }
+let IMPORT=null;
+try{const t=(document.getElementById('embedded-data')||{}).textContent||'';if(t.trim())IMPORT=JSON.parse(t);}catch(e){IMPORT=null;}
+const DEMO_PAR_DISC={'natation-bassin':'ex_nc','eau-libre':'ex_el','synchro':'ex_na','plongeon':'ex_pl','water-polo':'wp'};
+// Page 2 : blocs {type:'epreuve',titre} | {type:'tableau',titre,colonnes,lignes,athlete:[i],hors:[i],note} | {type:'texte',titre,texte} | {type:'html',titre,html}
+// Blocs graphiques de la page 2 importée : « barres » (phases) et « courbe » (positions tour par tour)
+const SCOL=['var(--s1)','var(--s3)','var(--s2)','var(--s4)','var(--s5)'];
+const legende=L=>`<div class="legend">${L.map((n,i)=>`<span><span class="sw" style="background:${SCOL[i%SCOL.length]}"></span>${esc(n)}</span>`).join('')}</div>`;
+const nb=v=>v===null||v===undefined||v===''?null:+String(v).replace(',','.');
+function barresSvg(ph,series){const V=ph.valeurs.map(nb),ok=V.filter(v=>v!==null&&!isNaN(v));if(!ok.length)return '';
+ const mn=Math.min(...ok)/2,mx=Math.max(...ok),H=96,base=114,w=34,g=2,x0=(300-(V.length*(w+g)-g))/2;
+ const y=v=>base-(v-mn)/((mx-mn)||1)*H;
+ return `<svg viewBox="0 0 300 120" width="100%" role="img" aria-label="${esc(ph.nom)}"><line x1="4" x2="296" y1="${base}" y2="${base}" stroke="var(--grid)"/><text x="4" y="${base-3}">${+mn.toFixed(2)}</text><line x1="4" x2="296" y1="18" y2="18" stroke="var(--grid)"/><text x="4" y="15">${mx}</text>`
+  +V.map((v,i)=>{if(v===null||isNaN(v))return '';const x=x0+i*(w+g),t=y(v);return `<g><title>${esc(series[i]||'')} : ${v}${ph.unite?' '+esc(ph.unite):''}</title><rect x="${x}" y="${t}" width="${w}" height="${base-t}" rx="4" fill="${SCOL[i%SCOL.length]}"/></g><text x="${x+w/2}" y="${t-4}" text-anchor="middle" style="fill:var(--text-primary)">${v}</text>`;}).join('')+'</svg>';}
+function blocBarres(b){const S=b.series||[];
+ const ph=p=>{const V=p.valeurs.map(nb);const a=V[0],autres=V.slice(1).filter(v=>v!==null&&!isNaN(v));let ec='';
+  if(a!==null&&!isNaN(a)&&autres.length){const best=p.plus_haut_meilleur?Math.max(...autres):Math.min(...autres);const d=a-best;const pire=p.plus_haut_meilleur?d<0:d>0;
+   ec=`<b class="${d===0?'':pire?'pos':'neg'}">${d>0?'+':d<0?'−':'±'}${Math.abs(d).toFixed(2)}${p.unite?' '+esc(p.unite):''}</b>`;}
+  return `<div class="ph"><div class="lab"><span>${esc(p.nom)}</span>${ec}</div>${barresSvg(p,S)}</div>`;};
+ return `<div class="card">${b.titre?`<h2>${esc(b.titre)}</h2>`:''}${legende(S)}<div class="lens">${(b.groupes||[]).map(G=>`<div class="len">${G.titre?`<h3>${esc(G.titre)}</h3>`:''}<div class="row3">${(G.phases||[]).map(ph).join('')}</div></div>`).join('')}</div>${b.note?`<p class="note">${esc(b.note)}</p>`:''}</div>`;}
+function blocCourbe(b){const A=b.axe||[],S=b.series||[];const all=S.flatMap(s=>(s.valeurs||[]).map(nb)).filter(v=>v!==null&&!isNaN(v));if(!A.length||!all.length)return '';
+ const inv=b.inverse!==false,mn=inv?1:Math.min(...all),mx=Math.max(...all),L=44,R=626,T=24,B=160;
+ const X=i=>L+(A.length>1?i*(R-L)/(A.length-1):0),Y=v=>inv?T+(v-mn)/((mx-mn)||1)*(B-T):B-(v-mn)/((mx-mn)||1)*(B-T);
+ const ticks=inv?[1,...[5,10,15,20,25,30,40,50,60,70,80].filter(t=>t<=mx)]:[mn,(mn+mx)/2,mx];
+ let h=`<svg viewBox="0 0 640 192" width="100%" role="img" aria-label="${esc(b.titre||'courbe')}">`+ticks.map(t=>`<line x1="${L}" x2="${R}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--grid)"/><text x="${L-6}" y="${Y(t)+4}" text-anchor="end">${+(+t).toFixed(2)}</text>`).join('')
+  +A.map((a,i)=>`<text x="${X(i)}" y="178" text-anchor="middle">${esc(a)}</text>`).join('')+(b.etiquette_axe?`<text x="${R}" y="190" text-anchor="end" style="font-size:10px">${esc(b.etiquette_axe)}</text>`:'');
+ S.forEach((s,k)=>{const c=SCOL[k%SCOL.length];const P=(s.valeurs||[]).map((v,i)=>({i,v:nb(v)})).filter(p=>p.v!==null&&!isNaN(p.v));
+  P.forEach((p,j)=>{if(j)h+=`<line x1="${X(P[j-1].i)}" y1="${Y(P[j-1].v)}" x2="${X(p.i)}" y2="${Y(p.v)}" stroke="${c}" stroke-width="2"${p.i-P[j-1].i>1?' stroke-dasharray="4 3"':''}/>`;
+   h+=`<g><title>${esc(s.nom)} — ${esc(A[p.i])} : ${p.v}</title><circle cx="${X(p.i)}" cy="${Y(p.v)}" r="3.5" fill="${c}"/></g>`;});});
+ return `<div class="card">${b.titre?`<h2>${esc(b.titre)}</h2>`:''}${legende(S.map(s=>s.nom))}${h}</svg>${b.note?`<p class="note">${esc(b.note)}</p>`:''}</div>`;}
+function blocsVersHtml(B){return (B||[]).map(b=>{
+ if(b.type==='epreuve')return `<div class="grph">${esc(b.titre)}</div>`;
+ if(b.type==='tableau'){const ath=b.athlete||[],hors=b.hors||[];
+  const rows=(b.lignes||[]).map((l,i)=>`<tr>${l.map((c,j)=>`<td>${j===0&&ath.includes(i)?'<b>'+esc(c)+'</b> (athlète)':j===0&&hors.includes(i)?esc(c)+' (hors référence)':esc(c)}</td>`).join('')}</tr>`).join('');
+  return `<div class="card"><h2>${esc(b.titre||'')}</h2><div class="tw"><table><tbody><tr>${(b.colonnes||[]).map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${rows}</tbody></table></div>${b.note?`<p class="note">${esc(b.note)}</p>`:''}</div>`;}
+ if(b.type==='barres')return blocBarres(b);
+ if(b.type==='courbe')return blocCourbe(b);
+ if(b.type==='texte')return `<div class="card">${b.titre?`<h2>${esc(b.titre)}</h2>`:''}<p style="white-space:pre-line;margin:0">${esc(b.texte)}</p></div>`;
+ if(b.type==='html')return b.titre?`<div class="card"><h2>${esc(b.titre)}</h2>${b.html||''}</div>`:(b.html||'');
+ return '';}).join('');}
+function appliquerImport(){const I=IMPORT;
+ const D2=[I.discipline,I.discipline_2].sort().join('+');DOUBLE=D2==='eau-libre+natation-bassin';
+ const k=DOUBLE?'ex_nc':(DEMO_PAR_DISC[I.discipline]||'ex_nc');cur=k;
+ const dimsDouble=DOUBLE?[...new Set([...ATH.ex_nc.dims,...ATH.ex_el.dims])]:null;
+ Object.keys(ATH).forEach(x=>{if(x!==k)delete ATH[x];});
+ const ad=I.admin||{},A=ATH[k],an=I.analyse&&I.analyse.donnees;
+ A.nom=[ad.prenom,ad.nom].filter(Boolean).join(' ')||'Athlète';
+ if(DOUBLE){A.disc='Natation course + Eau libre';A.dims=dimsDouble;}
+ const tpl=document.createElement('template');tpl.id='tpl-import';document.body.appendChild(tpl);A.tpl='tpl-import';delete A.fictif;
+ if(an){A.epr=an.epreuves||'';A.ref=I.analyse.competition_reference||'';
+  REFS[k]={saison:an.saison||{comp:A.ref,date:'',epr:'',res:''},tag:(an.reference||{}).tag,tagd:(an.reference||{}).tagd,monde:an.reference||{comp:'',date:'',epr:'',res:''},src:an.sources||[],autres:an.references_supplementaires||[]};
+  KPI[k]=an.kpi||[];EPREF[k]=an.epreuves_liste||(an.blocs||[]).filter(b=>b.type==='epreuve').map(b=>b.titre);
+  tpl.innerHTML=blocsVersHtml(an.blocs);}
+ else{A.epr=ad.epreuves||'';A.ref='';REFS[k]={saison:{comp:'Compétition de référence',q:'sur la saison écoulée',date:'à venir',epr:'',res:''},tag:'Référence',monde:{comp:'À venir',date:'',epr:'',res:''},src:[]};KPI[k]=[];EPREF[k]=[];
+  tpl.innerHTML='<div class="card"><p class="empty">Données d’analyse de la compétition de référence à venir : elles seront ajoutées par la DTN.</p></div>';}
+ const s=S();if(DOUBLE){s.perf.d1=WC27.el[0];s.perf.d2=WC27.nc[1];}Object.assign(s.adm,{lic:ad.licence||'',nom:ad.nom||'',prenom:ad.prenom||'',ddn:ad.date_naissance||'',genre:ad.genre||'',email:ad.email||'',tel:ad.telephone||'',club:ad.club||'',
+  struct:ad.structure_nom||'',ent:ad.entraineur_nom||'',entEmail:ad.entraineur_email||'',entTel:ad.entraineur_tel||'',staff:ad.staff||'',
+  etr:!!ad.entrainement_etranger,structFr:ad.structure_france||'',entFr:ad.entraineur_france||''});
+ if(I.precedent&&(I.precedent.items||[]).length)s.prec={date:I.precedent.date||'',version:I.precedent.version||'',items:I.precedent.items.map(x=>({type:x.type,libelle:x.libelle||'',cible:x.cible||'',realise:'',com:''}))};
+ document.querySelector('.athbar').style.display='none';
+ document.querySelector('.proto').textContent='Questionnaire pré-rempli'+(I.genere_le?' le '+fmtD(String(I.genere_le).slice(0,10)):'')+' · envoi par le bouton de la page « Bilan PDF »';}
+// Rappel du PPI précédent (page 2) : mesurer le réalisé
+const REAL=[['atteint','Atteint'],['partiel','Partiellement atteint'],['non','Non atteint']];
+function precCard(){const p=S().prec;if(!p)return '';
+ const row=(x,i)=>`<div class="prec-r"><div><span class="prec-t">${x.type==='action'?'Action':'Objectif'}</span> ${esc(x.libelle)}${x.cible?`<div class="prec-c">Attendu : ${esc(x.cible)}</div>`:''}</div>
+  <select data-p="prec.items.${i}.realise"><option value="">Réalisé ?</option>${REAL.map(([v,l])=>`<option value="${v}" ${x.realise===v?'selected':''}>${l}</option>`).join('')}</select>
+  <input data-p="prec.items.${i}.com" placeholder="Commentaire"></div>`;
+ return `<div class="card"><h2>Rappel du PPI précédent${p.date?' ('+esc(fmtD(String(p.date).slice(0,10)))+')':''}</h2><p class="hint">Objectifs et plan d’action de la saison écoulée : pour chacun, ce qui a été réalisé.</p>${p.items.map(row).join('')}</div>`;}
+if(IMPORT)appliquerImport();
+renderAth();render();
+</script>
+</body>
+</html>
