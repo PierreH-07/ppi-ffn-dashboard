@@ -129,11 +129,11 @@ def analyse_nc(ath, wb, sources):
                       'lignes': lignes, 'athlete': [0],
                       'note': 'Référence : les 3 meilleurs performers des saisons 2025 et 2026 dans la base Espadon '
                               '(meilleur temps de chaque nageur, bassin de 50 m).'})
+        pl_t = (place_fr(a['place']) + ' · ' if a['place'] else '') + str(a['temps'])
         epr_s.append(f"{ep_nc(ep)} ({str(a['tour'] or '').lower()})")
         if len(kpi) < 3:  # règle validée le 2026-11-26 : 3 premières épreuves, place · temps (écart 1er / 3e)
             kpi.append([f"{ep_nc(ep)} · {a['competition']}",
                         f"{pl_t} ({lignes[0][3]} / {lignes[0][4]} s)"])
-        pl_t = (place_fr(a['place']) + ' · ' if a['place'] else '') + str(a['temps'])
         res_s.append(f"{ep_nc(ep)} : {pl_t}")
         res_r.append(f"{ep_nc(ep)} : " + ' · '.join(f"{r['nageur']} {r['temps']}" for r in refs))
 
