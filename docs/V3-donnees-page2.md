@@ -230,7 +230,7 @@ Meilleur temps de chaque nageur **sur les 24 mois précédant sa course** (jusqu
 ```
 Pas de temps dans la fenêtre : `—`. Moyenne calculée sur les nageurs disponibles, nombre indiqué entre parenthèses.
 
-Les courbes de position du prototype ne sont pas reproduites par un tableau. Pour les garder, il faut un bloc `html` (voir `supabase/exemple_analyse_v3.sql`).
+Les courbes de position du prototype ne sont pas reproduites par un tableau. Pour les garder, utiliser le bloc `courbe` (section 5.2) ou un bloc `html`.
 
 ---
 
