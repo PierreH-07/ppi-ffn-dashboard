@@ -162,3 +162,9 @@ Complète et remplace les [À VÉRIFIER] correspondants ci-dessus. « Fait » = 
 - SQL RLS du 2026-06-03 : tout est passé ; vue `ppi_nageurs_derniere` : créée.
 - Version B : grille jusqu'à 23 h et règle « préparation physique seule = jour d'entraînement » : validées.
 - `competences_periode_4.md` et `competences_periode_5.md` : sans importance.
+
+## Décisions de Pierre du 2026-11-27
+- Claude peut modifier directement le dashboard (`index.html`) de ce dépôt ; plus besoin de bloc de texte à coller dans un autre chat pour les changements faits ici. Règle de la section 0 inchangée.
+- Le dépôt GitHub du dashboard est `PierreH-07/ppi-ffn-dashboard` (public, GitHub Pages) ; il contient aussi le questionnaire V3 (`PPI-V3-prototype.html`).
+- `ppi_v3_liste.categorie` : Relève et Espoir = ambition libre (CEJ chaque année ; CMJ bassin années impaires, eau libre années paires ; CM ; JO), autres catégories = CM 2027 et JO 2028 imposés.
+- Eau libre (page 2 V3) : comparaison au top 3 de la course de l'athlète (CE Paris pour les seniors, CEJ Sukoró pour les juniors), niveau en bassin de ce top 3 ; sources citées sur une ligne.
