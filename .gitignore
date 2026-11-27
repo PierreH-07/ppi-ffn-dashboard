@@ -1,0 +1,20 @@
+# Aucune donnée personnelle dans ce dépôt public (CLAUDE.md, section 0).
+# Fichiers de données : à garder hors du dépôt.
+*.xlsx
+*.xls
+*.csv
+*.mdb
+*.accdb
+*.json
+*.pdf
+*.docx
+*.pptx
+# SQL générés avec des données (fiches, liste V3, analyses)
+v3_liste_analyse_*.sql
+insert_*.sql
+*_fiches_*.sql
+supabase/.temp/
+# Sauvegardes et copies locales
+_backups/
+*.avant.html
+*copie*.html

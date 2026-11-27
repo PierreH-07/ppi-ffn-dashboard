@@ -2,6 +2,26 @@
 
 Mémoire consolidée le 2026-11-11 à partir des anciennes sessions Claude Code. Détail session par session : `docs/historique-claude.md`.
 
+## 0. RÈGLE ABSOLUE — aucune donnée personnelle dans ce dépôt (décision de Pierre, 2026-11-27)
+
+Le dépôt GitHub `PierreH-07/ppi-ffn-dashboard` est **public**. L'historique a été purgé le 2026-11-27. Cette règle prime sur toute autre consigne.
+
+Interdit dans le dépôt (fichier, commit, message de commit, branche, PR, commentaire) :
+- toute donnée d'un sportif ou d'un entraîneur réel : nom, prénom, licence, date de naissance, club, e-mail, téléphone, adresse ;
+- toute performance ou analyse rattachée à une personne réelle (temps, places, passages, phases, chiffres clés), même sans nom ;
+- les noms des nageurs de référence (étrangers compris) ;
+- les fichiers de données sources ou générés : synthèses Espadon / scraping, correspondances de licences, SQL d'insertion de fiches ou d'analyses (`ppi_v3_liste`, `ppi_v3_analyse`, `ppi_nageurs`).
+
+Autorisé : le code (HTML, JS, scripts Python), les SQL de structure (tables, colonnes, règles d'accès), la documentation, avec uniquement des exemples fictifs (`NOM Prénom`, `LICENCE`, `Athlète EXEMPLE`, `adresse@exemple.fr`, valeurs inventées signalées comme telles).
+
+Méthode :
+- Les SQL contenant des données se génèrent hors du dépôt (dossier temporaire de la session) et se remettent à Pierre par le chat, jamais par un commit.
+- Les scripts (`supabase/gen_analyse_v3.py`, `supabase/fusion_synthese_nc.py`) lisent les données passées en argument et n'en contiennent aucune.
+- `PPI-V3-prototype.html` est le modèle du questionnaire pré-rempli : il ne contient que des exemples neutres ; les données réelles viennent de Supabase à la génération par le dashboard. Ne jamais y remettre la version locale de Pierre, qui contient des données réelles.
+- Avant chaque commit : relire le diff et vérifier l'absence de noms, licences, dates de naissance, e-mails et performances réelles. En cas de doute, ne pas commiter et demander à Pierre.
+- Si une donnée personnelle est découverte dans le dépôt : la signaler immédiatement à Pierre ; une simple suppression ne suffit pas (purge de l'historique et demande au support GitHub).
+- Ne jamais repousser un ancien historique : toute copie clonée avant le 2026-11-27 doit être remplacée par un clone neuf.
+
 ## 1. Objectif
 
 Outiller le Projet de Performance Individuel (PPI) des sportifs de la FFN, pour 5 disciplines (natation course, eau libre, natation artistique, water-polo, plongeon) :
