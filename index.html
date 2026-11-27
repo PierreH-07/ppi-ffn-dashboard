@@ -1260,6 +1260,40 @@ async function genererQuestionnaireV3(n, versions) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// Bilan PDF d'une fiche V3 déjà envoyée : le questionnaire V3 est ouvert dans un nouvel onglet avec la fiche
+// (balise #embedded-data, clé « fiche ») et les données de la page 2 ; il s'ouvre sur la page « Bilan PDF », sans bouton d'envoi.
+async function ouvrirBilanV3(n) {
+  const w = window.open('', '_blank');
+  if (!w) { alert('Le navigateur a bloqué l’ouverture de l’onglet. Autorisez les fenêtres pour ce site.'); return; }
+  w.document.write('<p style="font-family:sans-serif;padding:20px">Préparation du bilan…</p>');
+  let modele;
+  try {
+    const resp = await fetch(QUESTIONNAIRE_V3, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    modele = await resp.text();
+  } catch (e) { w.close(); alert(`Questionnaire V3 introuvable (${QUESTIONNAIRE_V3}).\n\nDétail : ${e.message}`); return; }
+  const lic = licenceValide(n.licence);
+  let analyse = null;
+  if (lic) {
+    const { data, error } = await sb.from('ppi_v3_analyse').select('saison,competition_reference,donnees')
+      .eq('licence', lic).order('saison', { ascending: false });
+    if (!error && data && data.length) {
+      const r = data.find(x => x.competition_reference === n.competition_reference) || data[0];
+      analyse = { ...r, donnees: jsonCol(r.donnees, null) };
+    }
+  }
+  const dataJson = JSON.stringify({
+    discipline: n.discipline || '', discipline_2: n.discipline_2 || null, categorie: (listeV3[lic] || {}).cat || null,
+    genere_le: n.date_export || '', admin: adminPourV3(n), analyse, precedent: null, fiche: n,
+  }).replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '\\u003c!--').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  const fin = '<' + '/script>';
+  const html = modele.replace(/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/,
+    () => '<script id="embedded-data" type="application/json">' + dataJson + fin);
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  w.location.href = url;
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 function renderBilanPrecedentV3(n) {
   const b = jsonCol(n.bilan_plan_precedent, null);
   if (!b || !(b.items || []).length) return '';
@@ -1633,6 +1667,11 @@ function renderFiche(n, versions, selectedIndex) {
                font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
         📄 Questionnaire V3 pré-rempli
       </button>` : ''}
+      ${estV3(n) ? `<button id="btn-bilan-v3" title="Bilan PDF de cette version de la fiche (2 pages A4), reconstitué à partir des données envoyées"
+        style="padding:4px 10px;background:#0E1655;color:#fff;border:1px solid #0E1655;border-radius:6px;
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+        📄 Bilan PDF
+      </button>` : ''}
       <button id="btn-delete-version"
         style="padding:4px 10px;background:#FDECEA;color:var(--red);
                border:1px solid #F5C6C6;border-radius:6px;
@@ -1728,6 +1767,8 @@ function renderFiche(n, versions, selectedIndex) {
     const btnQ = document.getElementById('btn-questionnaire-prerempli');
     const btnV3 = document.getElementById('btn-questionnaire-v3');
     if (btnV3) btnV3.addEventListener('click', () => genererQuestionnaireV3(n, allVersions));
+    const btnBilan = document.getElementById('btn-bilan-v3');
+    if (btnBilan) btnBilan.addEventListener('click', () => ouvrirBilanV3(n));
     if (btnQ && estV3(n)) btnQ.remove();
     else if (btnQ) btnQ.addEventListener('click', () => genererQuestionnairePrerempli(n));
 

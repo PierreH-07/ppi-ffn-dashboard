@@ -412,10 +412,10 @@ const EXREQ={ex_nc:'15,09 m',ex_el:'Niveau requis',ex_na:'8,15 / 10',ex_pl:'91,8
 const EXIND={ex_nc:['Coulée après le virage (m)','13,69 m'],ex_el:['Écart au leader au tour 7.5','+43,76 s'],ex_na:['Moyenne des juges, éléments du duo libre','7,45 / 10'],ex_pl:['Points obtenus sur le 407C','78,20']};
 const DKEY={ex_nc:'nc',ex_el:'el',ex_na:'na',ex_pl:'pl'};
 const EXA={
- nc:{quoi:'Améliorer la sortie de virage.',org:'Un bloc virages filmé chaque mardi.',ath:'Revoit sa vidéo après chaque bloc.',ent:'Mesure les coulées sur vidéo chaque semaine.',fed:'Met à disposition l’analyse vidéo Espadon.',aut:'Préparateur physique : gainage 2 fois par semaine.',man:'Caméra sous-marine, créneau de bassin en plus.',per:'De septembre à décembre.'},
- el:{quoi:'Mieux se placer dans le peloton.',org:'Une séance en groupe serré en eau libre chaque mois.',ath:'Note après chaque course sa place aux moments clés.',ent:'Relève les écarts tour par tour sur chaque course.',fed:'Organise un stage en eau libre avec l’équipe de France.',aut:'Nutritionniste : plan de ravitaillement.',man:'Accès à un plan d’eau, bateau d’accompagnement.',per:'De janvier à juin.'},
- na:{quoi:'Gagner en hauteur sur les poussées.',org:'Un bloc hybrides filmé à chaque séance.',ath:'S’auto-note sur vidéo après chaque séance.',ent:'Note chaque hybride avec la grille des juges.',fed:'Organise une notation blanche par un juge.',aut:'Préparateur physique : travail de jambes (rétropédalage).',man:'Créneau en bassin profond.',per:'D’octobre à mars.'},
- pl:{quoi:'Fiabiliser l’entrée dans l’eau.',org:'Des séries d’entrées en fin de séance.',ath:'Revoit chaque plongeon en vidéo différée.',ent:'Compare les plongeons à ceux du podium mondial.',fed:'Finance un stage avec un juge international.',aut:'Préparateur mental : routine avant le plongeon.',man:'Vidéo en différé au bord du bassin, salle de préparation à sec.',per:'Toute la saison.'}};
+ nc:{quoi:'Améliorer la sortie de virage.',org:'Un bloc virages filmé chaque mardi.',ath:'Revoit sa vidéo après chaque bloc.',ent:'Mesure les coulées sur vidéo chaque semaine.',fed:'Met à disposition l’analyse vidéo Espadon.',aut:'Préparateur physique : gainage 2 fois par semaine. Maison régionale de la performance.',man:'Caméra sous-marine, créneau de bassin en plus.',per:'De septembre à décembre.'},
+ el:{quoi:'Mieux se placer dans le peloton.',org:'Une séance en groupe serré en eau libre chaque mois.',ath:'Note après chaque course sa place aux moments clés.',ent:'Relève les écarts tour par tour sur chaque course.',fed:'Organise un stage en eau libre avec l’équipe de France.',aut:'Nutritionniste : plan de ravitaillement. Maison régionale de la performance.',man:'Accès à un plan d’eau, bateau d’accompagnement.',per:'De janvier à juin.'},
+ na:{quoi:'Gagner en hauteur sur les poussées.',org:'Un bloc hybrides filmé à chaque séance.',ath:'S’auto-note sur vidéo après chaque séance.',ent:'Note chaque hybride avec la grille des juges.',fed:'Organise une notation blanche par un juge.',aut:'Préparateur physique : travail de jambes (rétropédalage). Maison régionale de la performance.',man:'Créneau en bassin profond.',per:'D’octobre à mars.'},
+ pl:{quoi:'Fiabiliser l’entrée dans l’eau.',org:'Des séries d’entrées en fin de séance.',ath:'Revoit chaque plongeon en vidéo différée.',ent:'Compare les plongeons à ceux du podium mondial.',fed:'Finance un stage avec un juge international.',aut:'Préparateur mental : routine avant le plongeon. Maison régionale de la performance.',man:'Vidéo en différé au bord du bassin, salle de préparation à sec.',per:'Toute la saison.'}};
 const ex=k=>'Ex. : '+EXA[DKEY[cur]][k];
 const EPR={
  nc:['50m Libre','100m Libre','200m Libre','400m Libre','800m Libre','1500m Libre','50m Dos','100m Dos','200m Dos','50m Brasse','100m Brasse','200m Brasse','50m Papillon','100m Papillon','200m Papillon','200m 4 Nages','400m 4 Nages'],
@@ -464,7 +464,7 @@ function upEc(id){const r=document.getElementById(id);if(!r||!r.querySelector('[
 const DIFF=[['portee','À portée'],['optimal','Exigeant mais atteignable'],['hors','Hors de portée cette saison']];
 EXREQ.wp='45 %';EXIND.wp=['Conversion en supériorité numérique','34 %'];DKEY.wp='wp';EPR.wp=[];
 EXREQ.wp='52 %';
-EXA.wp={quoi:'Améliorer la réussite au tir en supériorité.',org:'Un bloc de supériorité numérique filmé à chaque séance.',ath:'Tire depuis le poste 1 sous pression en fin de séance.',ent:'Compte les tirs et la réussite par poste chaque semaine.',fed:'Organise un stage avec opposition internationale.',aut:'Analyste vidéo : découpe des supériorités de chaque match.',man:'Temps de bassin en plus, opposition de niveau.',per:'De septembre à décembre.'};
+EXA.wp={quoi:'Améliorer la réussite au tir en supériorité.',org:'Un bloc de supériorité numérique filmé à chaque séance.',ath:'Tire depuis le poste 1 sous pression en fin de séance.',ent:'Compte les tirs et la réussite par poste chaque semaine.',fed:'Organise un stage avec opposition internationale.',aut:'Analyste vidéo : découpe des supériorités de chaque match. Maison régionale de la performance.',man:'Temps de bassin en plus, opposition de niveau.',per:'De septembre à décembre.'};
 const EXOBS={nc:'ex. sur la 2e longueur, la coulée de virage est plus courte que celle des meilleurs…',el:'ex. perte de nombreuses places dans le dernier tour…',na:'ex. davantage d’erreurs de synchronisation que le top 3 en duo technique…',pl:'ex. notes plus basses que le podium sur les mêmes plongeons…',wp:'ex. conversion en supériorité numérique nettement inférieure à celle de la meilleure équipe…'};
 const EXCONTRIB={pl:'ex. fiabiliser mon exécution sur le 407C pour ne pas pénaliser le duo',na:'ex. tenir le tempo commun sur les D-TRE et les transitions',wp:'ex. réussite au tir depuis le poste 1 en supériorité numérique'};
 const EXCIND={pl:['Exécution sur le 407C (note des juges)','3','6,5'],na:['Note moyenne des D-TRE','8,0 / 10','8,3 / 10'],wp:['Réussite au tir en supériorité','25 %','45 %']};
@@ -611,7 +611,7 @@ const PAGES=[
  <div><label>E-mail de l’entraîneur</label><input type="email" data-p="adm.entEmail"></div><div><label>Téléphone de l’entraîneur</label><input type="tel" data-p="adm.entTel"></div></div></div>`;},
 // 8 Bilan PDF (2 pages A4, style du résumé V2)
 ()=>head('8. Bilan','Document de référence en 2 pages : de l’analyse au plan d’action. Le bouton ouvre directement l’impression en PDF.')+cadrage('Bilan PDF','Relire le bilan avant de le télécharger. Ce document de 2 pages, de l’analyse au plan d’action, est la référence partagée du projet pour la saison : il est transmis à toutes les parties.')+
- `<div class="buttons" style="margin-top:0"><button class="pdf-btn" onclick="printBilan()">Télécharger le bilan PDF</button> <button class="pdf-btn" onclick="printFrise()">Télécharger la frise athlète (PDF)</button> <button class="pdf-btn" style="background:#E2001A" onclick="envoyerV3(this)">Envoyer la fiche à la FFN</button></div><div class="rz-wrap"><div class="rz" id="rz">${buildBilan()}</div></div>`
+ `<div class="buttons" style="margin-top:0"><button class="pdf-btn" onclick="printBilan()">Télécharger le bilan PDF</button> <button class="pdf-btn" onclick="printFrise()">Télécharger la frise athlète (PDF)</button> ${IMPORT&&IMPORT.fiche?'':'<button class="pdf-btn" style="background:#E2001A" onclick="envoyerV3(this)">Envoyer la fiche à la FFN</button>'}</div><div class="rz-wrap"><div class="rz" id="rz">${buildBilan()}</div></div>`
 ,
 // 9 Mon rôle dans le collectif
 ()=>rolePage(),
@@ -755,10 +755,12 @@ function buildBilan(){CTX=null;
     <div class="kpis">${KPI[cur].map(([l,v])=>`<div class="kpi"><span class="l">${l}</span><span class="v">${v}</span></div>`).join('')}</div>
     <div class="sat">Satisfaction de l’athlète sur ce bilan : <b>${esc(s.sat)} / 10</b></div></div>
   </div>
+  ${s.bq&&(s.bq.ok||s.bq.ko)?`<div class="card"><div class="card-head"><span class="t">Bilan <span class="acc">qualitatif</span></span><span class="meta">compétition de référence</span></div>
+   <div class="pa-g" style="grid-template-columns:1fr 1fr"><div class="pa-c"><span class="l">Ce qui s’est bien passé, ce qui a bien fonctionné</span>${esc(s.bq.ok).replace(/\n/g,'<br>')||'<span class="rz-empty">—</span>'}</div><div class="pa-c"><span class="l">Ce qui n’a pas fonctionné</span>${esc(s.bq.ko).replace(/\n/g,'<br>')||'<span class="rz-empty">—</span>'}</div></div></div>`:''}
   <div class="card"><div class="card-head"><span class="t">${ATH[cur].coll?'De l’analyse collective <span class="acc">au plan d’action individuel</span>':'De l’analyse <span class="acc">au plan d’action</span>'}</span><span class="meta">${acts.filter(x=>x.a.st==='prio').length} prioritaire(s) · ${acts.filter(x=>x.a.st==='mener').length} à mener</span></div>
    <div class="fil-h"><span>${ATH[cur].coll?'Axe d’amélioration collectif → mon rôle':MIX()?'Ce qui est observé (collectif → mon rôle)':'Ce qui est observé'}</span><span></span><span>Ce qui va être fait</span><span></span><span>Comment on saura que ça marche</span></div>
    ${acts.length?G.map(g=>(multi&&g.t?`<div class="grp-h">${esc(g.t)}</div>`:'')+g.items.map(({c,i,a:x})=>`<div class="fil-r">
-    <div class="fc obs"><div><b>${cLab(c)}</b> · ${esc(c.dim)||'—'}${multi?' '+epTags(c):''}${c.diff?` <span class="dbadge ${c.diff}">${DIFF.find(z=>z[0]===c.diff)[1]}</span>`:''}<br>${esc(c.txt)}${c.inds.filter(d=>d.l).map(d=>`<span class="ind">${esc(d.l)} : <b>${esc(fmtV(d,d.v))}</b>${d.q?` → ${esc(fmtV(d,d.q))}${ecartT(d.t,d.v,d.q,d.u)?' ('+ecartT(d.t,d.v,d.q,d.u)+')':''}`:''}</span>`).join('')}${c.sep?`<div class="sep">Progression attendue : ${esc(c.sep)}</div>`:''}${isCollC(c)&&(c.contrib||(c.cinds||[]).some(d=>d.l))?`<div class="contr"><b>Mon rôle</b> : ${esc(c.contrib)}${(c.cinds||[]).filter(d=>d.l).map(d=>`<span class="ind">${esc(d.l)} : <b>${esc(fmtV(d,d.v))}</b>${d.q?` → ${esc(fmtV(d,d.q))}${ecartT(d.t,d.v,d.q,d.u)?' ('+ecartT(d.t,d.v,d.q,d.u)+')':''}`:''}</span>`).join('')}</div>`:''}</div></div>
+    <div class="fc obs"><div><b>${cLab(c)}</b> · ${esc(c.dim)||'—'}${multi?' '+epTags(c):''}${c.diff?` <span class="dbadge ${c.diff}">${DIFF.find(z=>z[0]===c.diff)[1]}</span>`:''}<br>${esc(c.txt)}${c.inds.filter(d=>d.l).map(d=>`<span class="ind">${esc(d.l)} : <b>${esc(fmtV(d,d.v))}</b>${d.q?` → ${esc(fmtV(d,d.q))}${ecartT(d.t,d.v,d.q,d.u)?' ('+ecartT(d.t,d.v,d.q,d.u)+')':''}`:''}</span>`).join('')}${c.sep?`<div class="sep">Objectif de progression : ${esc(c.sep)}</div>`:''}${isCollC(c)&&(c.contrib||(c.cinds||[]).some(d=>d.l))?`<div class="contr"><b>Mon rôle</b> : ${esc(c.contrib)}${(c.cinds||[]).filter(d=>d.l).map(d=>`<span class="ind">${esc(d.l)} : <b>${esc(fmtV(d,d.v))}</b>${d.q?` → ${esc(fmtV(d,d.q))}${ecartT(d.t,d.v,d.q,d.u)?' ('+ecartT(d.t,d.v,d.q,d.u)+')':''}`:''}</span>`).join('')}</div>`:''}</div></div>
     <div class="fa">→</div>
     <div class="fc act"><span class="an">${x.st==='prio'?'Priorité '+(x.rang||'?'):'À mener'}</span> ${esc(x.quoi)||vide('—')}<div class="dim">${esc(x.levier||c.dim)||''}${x.per?' · '+esc(x.per):''}</div></div>
     <div class="fa">→</div>
@@ -1024,7 +1026,27 @@ function precCard(){const p=S().prec;if(!p)return '';
   <select data-p="prec.items.${i}.realise"><option value="">Réalisé ?</option>${REAL.map(([v,l])=>`<option value="${v}" ${x.realise===v?'selected':''}>${l}</option>`).join('')}</select>
   <input data-p="prec.items.${i}.com" placeholder="Commentaire"></div>`;
  return `<div class="card"><h2>Rappel du PPI précédent${p.date?' ('+esc(fmtD(String(p.date).slice(0,10)))+')':''}</h2><p class="hint">Objectifs et plan d’action de la saison écoulée : pour chacun, ce qui a été réalisé.</p>${p.items.map(row).join('')}</div>`;}
-if(IMPORT)appliquerImport();
+// Bilan d'une fiche déjà envoyée (bouton « Bilan PDF » du dashboard) : état reconstitué à partir de la ligne ppi_nageurs (inverse de payloadV3)
+function restaurerFiche(F){const J=v=>{if(typeof v==='string'){try{return JSON.parse(v);}catch(e){return null;}}return v;};const T=v=>v==null?'':String(v);const s=S();
+ s.sat=T(F.bq_satisfaction||'5');s.bq={ok:T(F.bq_points_forts),ko:T(F.bq_points_ameliorer)};
+ s.amb=(J(F.objectifs_pluriannuels)||[]).map(a=>{const h=T(a.saison),c=T(a.competition);const fx=!RELEVE&&((h==='2027'&&c==='Championnats du monde')||(h==='2028'&&c==='Jeux olympiques'));
+  return {h,c,r:T(a.objectif),f:T(a.format),ep:(a.epreuves||[]).map(e=>T(e&&e.epreuve!==undefined?e.epreuve:e)).filter(Boolean),...(fx?{fixed:true}:{}),...(fx&&h==='2028'?{req:true}:{})};});
+ const epS=L=>(L||[]).map(e=>({e:T(e.epreuve),r:T(e.perf),top:T(e.classement)}));
+ const pv=J(F.performance_visee);if(pv)s.perf={c:T(pv.competition)||s.perf.c,d1:T(pv.debut)||s.perf.d1,d2:T(pv.fin)||s.perf.d2,ep:epS(pv.epreuves)};
+ s.comps=(J(F.objectifs_saison)||[]).map(c=>({n:T(c.nom),t:c.priorite==='developpement'?'dev':'res',d1:T(c.debut),d2:T(c.fin),prog:T(c.commentaire),ep:epS(c.epreuves)}));
+ const ind=L=>(L||[]).map(d=>({l:T(d.libelle),t:d.type||'num',u:T(d.unite),v:T(d.actuel),q:T(d.requis)}));
+ s.constats=(J(F.axes_amelioration)||[]).map(a=>{const x=a.action||{};return {id:a.id||nid(),k:a.type==='coll'?'coll':'ind',ep:a.epreuves&&a.epreuves.length?a.epreuves:['*'],txt:T(a.observation),dim:T(a.dimension),
+  inds:ind(a.indicateurs),sep:T(a.progression_attendue),diff:T(a.difficulte),prio:T(a.priorite),contrib:T(a.contribution),cinds:ind(a.indicateurs_individuels),
+  a:{...newAct(),st:T(x.statut),rang:T(x.rang),quoi:T(x.quoi),org:T(x.organisation),ath:T(x.athlete),ent:T(x.entraineur),fed:T(x.federation),aut:T(x.autres),man:T(x.manque),per:T(x.periode),levier:T(x.dimension),
+   ind:T(x.indicateur),it:x.type_indicateur||'num',u:T(x.unite),actuel:T(x.valeur_actuelle),cible:T(x.cible),date:T(x.date_verification),ou:T(x.ou_traite),pq:T(x.raison_pas_prioritaire)}};});
+ s.eng={entc:T(F.engagement_entraineur),entn:T(F.nom_entraineur_signe),entd:T(F.date_entraineur),nagc:T(F.engagement_nageur),nagn:T(F.nom_nageur_signe),nagd:T(F.date_nageur),fedc:T(F.engagement_federation),fedn:T(F.nom_federation),fedd:T(F.date_federation)};
+ Object.assign(s.adm,{lic:T(F.licence).startsWith('SANS_LICENCE')?'':T(F.licence),nom:T(F.nom),prenom:T(F.prenom),ddn:T(F.date_naissance),genre:T(F.genre),email:T(F.email),tel:T(F.telephone),club:T(F.club),
+  struct:T(F.structure_nom),ent:T(F.entraineur_nom),entEmail:T(F.entraineur_email),entTel:T(F.entraineur_tel),staff:T(F.staff_complementaire),etr:!!F.entrainement_etranger,structFr:T(F.structure_france),entFr:T(F.entraineur_france)});
+ const b=J(F.bilan_plan_precedent);s.prec=b&&(b.items||[]).length?{date:T(b.date_fiche),version:T(b.version),items:b.items.map(x=>({type:x.type,libelle:T(x.libelle),cible:T(x.cible),realise:T(x.realise),com:T(x.commentaire)}))}:null;
+ ATH[cur].nom=[F.prenom,F.nom].filter(Boolean).join(' ')||ATH[cur].nom;
+ step=Math.max(0,ORDER().indexOf(7));
+ document.querySelector('.proto').textContent='Bilan de la fiche envoyée'+(F.date_export?' le '+fmtD(String(F.date_export).slice(0,10)):'')+' · consultation, pas de nouvel envoi';}
+if(IMPORT){appliquerImport();if(IMPORT.fiche)restaurerFiche(IMPORT.fiche);}
 renderAth();render();
 </script>
 </body>
