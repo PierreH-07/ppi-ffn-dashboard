@@ -3,6 +3,7 @@
 
 Usage : python3 gen_analyse_v3.py synthese_NC.xlsx synthese_EL.xlsx correspondance_licences.csv sortie.sql [saison]
         [--double=LICENCE,LICENCE]   athlètes en double projet natation course + eau libre
+        [--juniors=LICENCE,...] [--ref-juniors=reference_juniors.xlsx]   référence podium juniors (CEJ / CMJ)
 Aucune donnée nominative dans ce script : tout vient des fichiers passés en argument.
 """
 import csv, json, re, sys, unicodedata
@@ -92,8 +93,31 @@ def nom_ligne(r):
 
 
 # ---------------------------------------------------------------- natation course
-def analyse_nc(ath, wb, sources):
+# Référence juniors (décision du 2026-11-27) : Relève et Espoir de moins de 18 ans au 31 décembre de la saison
+# (liste --juniors=LICENCE,...) comparés au podium de la plus haute compétition juniors de la saison (CEJ ou CMJ),
+# fichier --ref-juniors=reference_juniors.xlsx (feuilles resultats, par50, phases). Pas de repli sur les performers.
+JUN = {'lic': set(), 'wb': None}
+
+
+def lignes_ref_juniors(nom):
+    return [r for r in feuille(JUN['wb'], nom) if r['type_ligne'] == 'reference'] if JUN['wb'] else []
+
+
+def moyenne_txt(vals):
+    if not vals:
+        return None, '—'
+    moy = sum(vals) / len(vals)
+    m, s_ = divmod(moy, 60)
+    return moy, (f"{int(m)}:{s_:05.2f}" if m else f"{s_:.2f}")
+
+
+def analyse_nc(ath, wb, sources, lic=None):
     res, p50, ph = feuille(wb, 'resultats'), feuille(wb, 'par50'), feuille(wb, 'phases')
+    junior = lic in JUN['lic'] and JUN['wb'] is not None
+    if junior:
+        res = [r for r in res if r['type_ligne'] == 'athlete'] + lignes_ref_juniors('resultats')
+        p50 = [r for r in p50 if r['type_ligne'] == 'athlete'] + lignes_ref_juniors('par50')
+        ph = [r for r in ph if r['type_ligne'] == 'athlete'] + lignes_ref_juniors('phases')
     nom = f"{ath['nom']} {ath['prenom']}"
     nk = norm(nom)
     mine = [r for r in res if r['type_ligne'] == 'athlete' and norm(r['nageur']) == nk]
@@ -125,10 +149,13 @@ def analyse_nc(ath, wb, sources):
             lab = nom_ligne(r) + (f", {str(r['tour']).lower()}" if r['tour'] else '')
             lignes.append([lab, txt(r['place']), txt(r['temps']), e1, e3])
         blocs.append({'type': 'tableau', 'titre': f'1. Résultat — {ep_nc(ep)}',
-                      'colonnes': ['Nageur', 'Place dans sa course', 'Temps', 'Écart au 1er performer', 'Écart au 3e performer'],
+                      'colonnes': ['Nageur', 'Place dans sa course', 'Temps'] +
+                                  (['Écart au 1er', 'Écart au 3e'] if junior else ['Écart au 1er performer', 'Écart au 3e performer']),
                       'lignes': lignes, 'athlete': [0],
-                      'note': 'Référence : les 3 meilleurs performers des saisons 2025 et 2026 dans la base Espadon '
-                              '(meilleur temps de chaque nageur, bassin de 50 m).'})
+                      'note': ((f"Référence : podium de la finale — {refs[0]['competition']}." if refs
+                                else 'Podium juniors non fourni pour cette épreuve.') if junior else
+                               'Référence : les 3 meilleurs performers des saisons 2025 et 2026 dans la base Espadon '
+                               '(meilleur temps de chaque nageur, bassin de 50 m).')})
         pl_t = (place_fr(a['place']) + ' · ' if a['place'] else '') + str(a['temps'])
         epr_s.append(f"{ep_nc(ep)} ({str(a['tour'] or '').lower()})")
         if len(kpi) < 3:  # règle validée le 2026-11-26 : 3 premières épreuves, place · temps (écart 1er / 3e)
@@ -244,7 +271,11 @@ def analyse_nc(ath, wb, sources):
         ('epreuves', eps), ('epreuves_liste', epl),
         ('saison', {'comp': ath['competition_reference'], 'date': ath['dates'] or '',
                     'epr': ' · '.join(epr_s), 'res': ' — '.join(res_s)}),
-        ('reference', {'tag': 'Référence : top 3 des performers 2025-2026',
+        ('reference', {'tag': 'Référence : podium juniors', 'tagd': 'plus haute compétition juniors de la saison',
+                       'comp': 'Podium — ' + (' / '.join(sorted({r['competition'] for r in res if r['type_ligne'] == 'reference'}))
+                                              or 'compétition juniors à venir'),
+                       'date': 'finales', 'epr': eps + ' · bassin de 50 m', 'res': ' — '.join(res_r)} if junior else
+                      {'tag': 'Référence : top 3 des performers 2025-2026',
                        'tagd': 'meilleur temps de chaque nageur, base Espadon',
                        'comp': 'Top 3 des performers — saisons 2025-2026', 'date': 'meilleur temps de chaque nageur',
                        'epr': eps + ' · bassin de 50 m', 'res': ' — '.join(res_r)}),
@@ -253,7 +284,7 @@ def analyse_nc(ath, wb, sources):
 
 
 # ---------------------------------------------------------------- eau libre
-def analyse_el(ath, wb, sources):
+def analyse_el(ath, wb, sources, lic_=None):
     res, tours, bas = feuille(wb, 'resultats'), feuille(wb, 'tours'), feuille(wb, 'bassin')
     lic = str(ath['licence'])
     sexe = ath['sexe']
@@ -359,6 +390,10 @@ def analyse_el(ath, wb, sources):
         BR = [b for b in bas if b['type_ligne'] == 'reference' and b['sexe'] == sexe
               and b['epreuve'] == main_r['epreuve'] and b['competition'] == main_r['competition']]
         cell = lambda b: f"{b['temps']} ({str(b['date'])[:7]})" if b and b['temps'] else '—'
+        junior = lic in JUN['lic'] and JUN['wb'] is not None
+        RJ = lignes_ref_juniors('resultats') if junior else []
+        nom_nc = {'400 NL': '400m Nage libre', '800 NL': '800m Nage libre', '1500 NL': '1500m Nage libre'}
+        note_j = []
         lignes = []
         for e in ['400 NL', '800 NL', '1500 NL']:
             a = next((b for b in B if b['epreuve_bassin'] == e), None)
@@ -372,17 +407,28 @@ def analyse_el(ath, wb, sources):
                 moy_txt = '—'
             ta = sec(a['temps']) if a and a['temps'] else None
             ecp = '—' if ta is None or moy is None else ('+' if ta >= moy else '−') + f'{abs(ta - moy) / moy * 100:.2f} %'
-            lignes.append([e, cell(a)] + [cell(b) for b in pr] + [moy_txt, ecp])
+            ligne = [e, cell(a)] + [cell(b) for b in pr] + [moy_txt, ecp]
+            if junior:
+                pj = sorted([x for x in RJ if x['epreuve'] == nom_nc[e] and x['sexe'] == sexe], key=lambda x: x['rang_reference'])
+                mj, mj_txt = moyenne_txt([sec(x['temps']) for x in pj if x['temps']])
+                ligne.append(mj_txt if mj is None or ta is None else
+                             f"{mj_txt} ({'+' if ta >= mj else '−'}{abs(ta - mj) / mj * 100:.2f} %)")
+                if pj:
+                    note_j.append(f"{e} : " + ' · '.join(f"{x['nageur']} {x['temps']}" for x in pj) + f" ({pj[0]['competition']})")
+            lignes.append(ligne)
         fa = B[0]
         if len(eps) > 1:
             blocs.append({'type': 'epreuve', 'titre': 'Niveau en bassin'})
         blocs.append({'type': 'tableau',
                       'titre': f"Niveau en bassin (50 m) — athlète et 3 premiers du {main_r['epreuve']} — {main_r['competition']}",
                       'colonnes': ['Épreuve', ath['nom']] + [p['nageur'] for p in podium] +
-                                  ['Moyenne du top 3 (hors athlète)', 'Écart de l’athlète à la moyenne'],
+                                  ['Moyenne du top 3 (hors athlète)', 'Écart de l’athlète à la moyenne'] +
+                                  (['Podium juniors en bassin (moyenne, écart de l’athlète)'] if junior else []),
                       'lignes': lignes,
                       'note': f"Meilleurs temps sur les 24 mois précédant la course (du {fa['fenetre_debut']} au {fa['fenetre_fin']})."
-                              + ('' if BR else ' Temps des 3 premiers non fournis dans la synthèse.')})
+                              + ('' if BR else ' Temps des 3 premiers non fournis dans la synthèse.')
+                              + (' Podium juniors en bassin : ' + ' ; '.join(note_j) + '.' if note_j else
+                                 (' Podium juniors en bassin non fourni.' if junior else ''))})
 
     kpi = []  # règle validée le 2026-11-26 ; écart au 3e de la course (décision du 2026-11-27)
     if main_r:
@@ -459,6 +505,10 @@ def main():
     for a in sys.argv[1:]:
         if a.startswith('--double='):
             double = {x.strip().upper() for x in a.split('=', 1)[1].split(',') if x.strip()}
+        if a.startswith('--juniors='):
+            JUN['lic'] = {x.strip().upper() for x in a.split('=', 1)[1].split(',') if x.strip()}
+        if a.startswith('--ref-juniors='):
+            JUN['wb'] = openpyxl.load_workbook(a.split('=', 1)[1], data_only=True)
     f_nc, f_el, f_lic, f_out = args[:4]
     lic, officiel = {}, {}
     with open(f_lic, encoding='utf-8-sig') as fh:
@@ -492,7 +542,7 @@ def main():
             if a['statut'] == 'introuvable' or not a['competition_reference']:
                 notes.append(f"pas d'analyse {disc} : {a['nom']} {a['prenom']} ({a['statut']})")
                 continue
-            par_disc[disc][l] = (a['competition_reference'], fn(a, wb, sources))
+            par_disc[disc][l] = (a['competition_reference'], fn(a, wb, sources, l))
 
     liste, analyses = [], []
     for l, (nom, prenom, disc) in ident.items():
