@@ -259,11 +259,21 @@ def analyse_el(ath, wb, sources):
     def tours_of(nageur_ok, ep, comp):
         return [t for t in tours if nageur_ok(t) and t['epreuve'] == ep and t['competition'] == comp]
 
-    def top3(r):
+    def top3(r, complet=False):
         """Top 3 de la course de l'athlète (même épreuve, même compétition, même sexe) ; décision du 2026-11-27."""
-        return sorted([x for x in res if x['type_ligne'] == 'reference' and x['epreuve'] == r['epreuve']
-                       and x['competition'] == r['competition'] and x['sexe'] == sexe],
-                      key=lambda x: x['rang_reference'])
+        cand = [x for x in res if x['type_ligne'] == 'reference' and x['epreuve'] == r['epreuve']
+                and x['competition'] == r['competition'] and x['sexe'] in (sexe, 'X')]
+        groupes = []  # plusieurs manches (KO) : un groupe par série de rangs 1, 2, 3
+        for x in cand:
+            if not groupes or x['rang_reference'] <= groupes[-1][-1]['rang_reference']:
+                groupes.append([])
+            groupes[-1].append(x)
+        if len(groupes) > 1:
+            groupes = [g for g in groupes if sec(g[0]['temps']) == sec(r['temps_vainqueur'])]
+        if len(groupes) != 1:
+            return []
+        g = sorted(groupes[0], key=lambda x: x['rang_reference'])
+        return g if complet else [x for x in g if str(x['licence'] or '') != lic]
 
     def ec_v(r):
         return '—' if not r['ecart_vainqueur_s'] else f"+{r['ecart_vainqueur_s']:.2f} s (+{r['ecart_vainqueur_pct']:.2f} %)"
@@ -318,6 +328,7 @@ def analyse_el(ath, wb, sources):
                 and r['competition'].split()[-1] in ref_comp]
     main_r = next((r for r in ref_rows if r['epreuve'] == '10km'), ref_rows[0] if ref_rows else None)
     podium = top3(main_r) if main_r else []
+    podium_complet = top3(main_r, True) if main_r else []
 
     # niveau en bassin : athlète et 3 premiers de sa course principale de référence
     B = [b for b in bas if b['type_ligne'] == 'athlete' and str(b['licence']) == lic]
@@ -345,7 +356,7 @@ def analyse_el(ath, wb, sources):
         blocs.append({'type': 'tableau',
                       'titre': f"Niveau en bassin (50 m) — athlète et 3 premiers du {main_r['epreuve']} — {main_r['competition']}",
                       'colonnes': ['Épreuve', ath['nom']] + [p['nageur'] for p in podium] +
-                                  ['Moyenne des 3 premiers', 'Écart de l’athlète à la moyenne'],
+                                  ['Moyenne du top 3 (hors athlète)', 'Écart de l’athlète à la moyenne'],
                       'lignes': lignes,
                       'note': f"Meilleurs temps sur les 24 mois précédant la course (du {fa['fenetre_debut']} au {fa['fenetre_fin']})."
                               + ('' if BR else ' Temps des 3 premiers non fournis dans la synthèse.')})
@@ -355,8 +366,8 @@ def analyse_el(ath, wb, sources):
         nb = f" / {main_r['nb_classes']}" if main_r['nb_classes'] else ''
         kpi.append([f"{main_r['epreuve']} · {main_r['competition']}", f"{place_fr(main_r['place'])}{nb} · {main_r['temps']}"])
         kpi.append(['Écart au vainqueur', ec_v(main_r) if main_r['ecart_vainqueur_s'] else 'vainqueur'])
-        if len(podium) >= 3 and podium[-1]['ecart_vainqueur_pct'] is not None:
-            kpi.append([f"3e du {main_r['epreuve']}", f"+{podium[-1]['ecart_vainqueur_pct']:.2f} % du vainqueur"])
+        if len(podium_complet) >= 3 and podium_complet[-1]['ecart_vainqueur_pct'] is not None:
+            kpi.append([f"3e du {main_r['epreuve']}", f"+{podium_complet[-1]['ecart_vainqueur_pct']:.2f} % du vainqueur"])
     donnees = OrderedDict([
         ('epreuves', ', '.join(eps)), ('epreuves_liste', eps),
         ('saison', {'comp': ref_comp, 'date': date_fr(ath['dates']),
@@ -369,7 +380,7 @@ def analyse_el(ath, wb, sources):
                        'comp': f"Top 3 — {ref_comp}",
                        'date': date_fr(main_r['date']) if main_r else '',
                        'epr': main_r['epreuve'] if main_r else '',
-                       'res': ('Top 3 : ' + ' · '.join(f"{p['nageur']} {p['temps']}" for p in podium)) if podium
+                       'res': ('Top 3 : ' + ' · '.join(f"{p['nageur']} {p['temps']}" for p in podium_complet)) if podium_complet
                               else 'Top 3 à venir'}),
         ('sources', sources), ('kpi', kpi), ('blocs', blocs)])
     return donnees
