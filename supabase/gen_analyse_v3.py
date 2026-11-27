@@ -132,8 +132,9 @@ def analyse_nc(ath, wb, sources):
         epr_s.append(f"{ep_nc(ep)} ({str(a['tour'] or '').lower()})")
         if len(kpi) < 3:  # règle validée le 2026-11-26 : 3 premières épreuves, place · temps (écart 1er / 3e)
             kpi.append([f"{ep_nc(ep)} · {a['competition']}",
-                        f"{place_fr(a['place'])} · {a['temps']} ({lignes[0][3]} / {lignes[0][4]} s)"])
-        res_s.append(f"{ep_nc(ep)} : {place_fr(a['place'])} · {a['temps']}")
+                        f"{pl_t} ({lignes[0][3]} / {lignes[0][4]} s)"])
+        pl_t = (place_fr(a['place']) + ' · ' if a['place'] else '') + str(a['temps'])
+        res_s.append(f"{ep_nc(ep)} : {pl_t}")
         res_r.append(f"{ep_nc(ep)} : " + ' · '.join(f"{r['nageur']} {r['temps']}" for r in refs))
 
         series_rows = [a] + refs
