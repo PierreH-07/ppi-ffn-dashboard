@@ -152,17 +152,22 @@ def analyse_nc(ath, wb, sources):
         if a50:
             dist = int(re.match(r'\d+', ep).group())
             if dist == 50:
-                lignes = []
-                for r in series_rows:
-                    s = P.get((r['type_ligne'], key(r)), [])
-                    if s:
-                        s = s[0]
-                        lignes.append([nom_ligne(r), txt(s['passage']), txt(r['reaction']), txt(s['frequence_c_min']),
-                                       txt(s['coups_bras']), txt(s['dpc_m_cycle'])])
+                # 50 m : nageurs côte à côte, une ligne par indicateur (décision du 2026-11-27)
+                par = [(r, P.get((r['type_ligne'], key(r)), [])) for r in series_rows]
+                par = [(r, x[0]) for r, x in par if x]
+                t_a = sec(par[0][1]['passage']) if par and par[0][0] is a else None
+                ind = [('Temps (s)', lambda r, x: txt(x['passage']) if r is a else
+                        f"{txt(x['passage'])} ({ecart(t_a, sec(x['passage']))})"),
+                       ('Réaction (s)', lambda r, x: txt(r['reaction'])),
+                       ('Fréquence (c/min)', lambda r, x: txt(x['frequence_c_min'])),
+                       ('Coups de bras', lambda r, x: txt(x['coups_bras'])),
+                       ('DPC (m/cycle)', lambda r, x: txt(x['dpc_m_cycle']))]
                 blocs.append({'type': 'tableau', 'titre': '2. Course (0-50 m)',
-                              'colonnes': ['Nageur', 'Temps', 'Réaction', 'Fréquence (c/min)', 'Coups de bras', 'DPC (m/cycle)'],
-                              'lignes': lignes, 'athlete': [0]})
-            elif dist >= 400:
+                              'colonnes': ['Indicateur'] + [f"{r['nageur']}{' (athlète)' if r is a else ''}" for r, x in par],
+                              'lignes': [[lab] + [f(r, x) for r, x in par] for lab, f in ind],
+                              'note': 'Entre parenthèses : écart de l’athlète au nageur de la colonne (+ = athlète plus lent). '
+                                      'Nageurs : ' + ' · '.join(nom_ligne(r) for r, x in par) + '.'})
+            else:  # 100 m et plus : nageurs côte à côte (décision du 2026-11-27)
                 # Demi-fond (décision du 2026-11-27) : nageurs côte à côte, un tableau des passages
                 # et trois courbes (temps par 50 m, fréquence, DPC) au lieu d'un long tableau.
                 segs = [x['segment'] for x in a50]
@@ -197,23 +202,6 @@ def analyse_nc(ath, wb, sources):
                                   'series': [{'nom': nom_ligne(r), 'valeurs': [num(sec(d[sg][champ]) if champ == 'temps_segment'
                                                                                  and d.get(sg) else (d[sg][champ] if d.get(sg) else None))
                                                                              for sg in segs]} for r, d in par]})
-            else:
-                apass = {x['segment']: sec(x['passage']) for x in a50}
-                lignes, ath_idx = [], []
-                for r in series_rows:
-                    for s in P.get((r['type_ligne'], key(r)), []):
-                        if r is a:
-                            ath_idx.append(len(lignes))
-                        ec = '—' if r is a else ecart(apass.get(s['segment']), sec(s['passage']))
-                        lignes.append([nom_ligne(r), s['segment'], txt(s['passage']), txt(s['temps_segment']), ec,
-                                       txt(s['frequence_c_min']), txt(s['coups_bras']), txt(s['dpc_m_cycle'])])
-                blocs.append({'type': 'tableau', 'titre': '2. Par 50 m',
-                              'colonnes': ['Nageur', 'Segment', 'Passage', 'Temps segment', 'Écart cumulé de l’athlète',
-                                           'Fréquence (c/min)', 'Coups de bras', 'DPC (m/cycle)'],
-                              'lignes': lignes, 'athlete': ath_idx,
-                              'note': 'Écart cumulé de l’athlète : écart de l’athlète au nageur de la ligne, au passage '
-                                      '(+ = athlète plus lent).'})
-
         # phases
         Q = defaultdict(dict)
         for r in ph:
