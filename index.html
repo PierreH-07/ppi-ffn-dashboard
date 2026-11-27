@@ -1445,7 +1445,15 @@ async function loadNageurs() {
 const anneeNaissance = n => (String(n.date_naissance || '').match(/\d{4}/) || [''])[0];
 
 const LIBELLES_DISCIPLINE = { 'natation-bassin':'Natation course', 'eau-libre':'Eau libre', 'synchro':'Natation artistique', 'water-polo':'Water-polo', 'plongeon':'Plongeon' };
-const disciplinesDe = n => [n.discipline, n.discipline_2].filter(Boolean);
+// Disciplines d'une fiche, complétées par celles de la liste V3 (double projet déclaré après la création de la fiche)
+const disciplinesDe = n => {
+  const e = listeV3[licenceValide(n.licence)] || {};
+  return [...new Set([n.discipline, n.discipline_2, e.d, e.d2].filter(Boolean))];
+};
+const libelleFiche = n => {
+  const D = disciplinesDe(n);
+  return D.length > 1 && !n.discipline_2 ? D.map(libelleDiscipline).join(' + ') : (n.discipline_label || '');
+};
 function libelleDiscipline(code) {
   return LIBELLES_DISCIPLINE[code] || allNageurs.find(n => n.discipline === code && !n.discipline_2)?.discipline_label || code;
 }
@@ -1551,7 +1559,7 @@ function renderList(nageurs) {
         <div class="name">${n.prenom || ''} ${n.nom || ''}</div>
         <div class="sub">${getEntraineursPrincipaux(n).map(e => e.nom).filter(Boolean).join(' · ') || 'Entraîneur non renseigné'}</div>
         <div class="badges">
-          ${n.discipline_label ? `<span class="badge badge-disc">${n.discipline_label}</span>` : ''}
+          ${libelleFiche(n) ? `<span class="badge badge-disc">${libelleFiche(n)}</span>` : ''}
           ${n.club ? `<span class="badge badge-club">${n.club}</span>` : ''}
           ${vCount > 1 ? `<span class="badge" style="background:#EEF4FF;color:var(--navy-2)">${vCount} versions</span>` : ''}
           ${estPreremplieDTN(n) ? BADGE_PREREMPLIE : ''}
@@ -1688,7 +1696,7 @@ function renderFiche(n, versions, selectedIndex) {
     <div class="identity-avatar" style="background:${color}">${initials}</div>
     <div>
       <div class="identity-name">${n.prenom || ''} ${n.nom || ''}</div>
-      ${n.discipline_label ? `<span class="identity-disc">${n.discipline_label}</span>` : ''}
+      ${libelleFiche(n) ? `<span class="identity-disc">${libelleFiche(n)}</span>` : ''}
       ${estPreremplieDTN(n) ? `<span style="margin-left:6px">${BADGE_PREREMPLIE}</span>` : ''}
       ${estV3(n) ? `<span class="badge badge-v3" style="margin-left:6px" title="Fiche du questionnaire V3 (Élite)">PPI V3</span>` : ''}
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">
