@@ -122,6 +122,7 @@ def analyse_nc(ath, wb, sources, lic=None):
     nk = norm(nom)
     mine = [r for r in res if r['type_ligne'] == 'athlete' and norm(r['nageur']) == nk]
     blocs, epl, res_s, res_r, epr_s, kpi = [], [], [], [], [], []
+    comps_ref = set()
 
     def refs_of(rows, ep, sexe):
         seen, out = set(), []
@@ -137,6 +138,7 @@ def analyse_nc(ath, wb, sources, lic=None):
         ep, sexe = a['epreuve'], a['sexe']
         epl.append(ep_nc(ep))
         refs = sorted(refs_of(res, ep, sexe), key=lambda r: (r['rang_reference'], sec(r['temps'])))
+        comps_ref.update(r['competition'] for r in refs)
         if len(mine) > 1:
             blocs.append({'type': 'epreuve', 'titre': ep_nc(ep)})
         t1 = sec(refs[0]['temps']) if refs else None
@@ -272,7 +274,7 @@ def analyse_nc(ath, wb, sources, lic=None):
         ('saison', {'comp': ath['competition_reference'], 'date': ath['dates'] or '',
                     'epr': ' · '.join(epr_s), 'res': ' — '.join(res_s)}),
         ('reference', {'tag': 'Référence : podium juniors', 'tagd': 'plus haute compétition juniors de la saison',
-                       'comp': 'Podium — ' + (' / '.join(sorted({r['competition'] for r in res if r['type_ligne'] == 'reference'}))
+                       'comp': 'Podium — ' + (' / '.join(sorted(comps_ref))
                                               or 'compétition juniors à venir'),
                        'date': 'finales', 'epr': eps + ' · bassin de 50 m', 'res': ' — '.join(res_r)} if junior else
                       {'tag': 'Référence : top 3 des performers 2025-2026',
