@@ -255,7 +255,7 @@ Une seule ligne dans `ppi_v3_analyse` pour l'athlète, avec `discipline` = l'une
 ## 6. Noms d'épreuves (`epreuves_liste`)
 
 Écrire exactement :
-- natation course : `50m Libre`, `100m Libre`, `200m Libre`, `400m Libre`, `800m Libre`, `1500m Libre`, `50m Dos`, `100m Dos`, `200m Dos`, `50m Brasse`, `100m Brasse`, `200m Brasse`, `50m Papillon`, `100m Papillon`, `200m Papillon`, `200m 4 Nages`, `400m 4 Nages` ;
+- natation course : `50m Libre`, `100m Libre`, `200m Libre`, `400m Libre`, `800m Libre`, `1500m Libre`, `50m Dos`, `100m Dos`, `200m Dos`, `50m Brasse`, `100m Brasse`, `200m Brasse`, `50m Papillon`, `100m Papillon`, `200m Papillon`, `200m 4 Nages`, `400m 4 Nages`, `4x100m Libre`, `4x200m Libre`, `4x100m 4 Nages` ;
 - eau libre : `5km`, `10km`, `25km`, `Knock-out (KO)`, `4x1500m`.
 
 Le `titre` des blocs `epreuve` peut reprendre les mêmes noms.
