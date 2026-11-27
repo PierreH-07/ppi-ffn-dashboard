@@ -162,6 +162,41 @@ def analyse_nc(ath, wb, sources):
                 blocs.append({'type': 'tableau', 'titre': '2. Course (0-50 m)',
                               'colonnes': ['Nageur', 'Temps', 'Réaction', 'Fréquence (c/min)', 'Coups de bras', 'DPC (m/cycle)'],
                               'lignes': lignes, 'athlete': [0]})
+            elif dist >= 400:
+                # Demi-fond (décision du 2026-11-27) : nageurs côte à côte, un tableau des passages
+                # et trois courbes (temps par 50 m, fréquence, DPC) au lieu d'un long tableau.
+                segs = [x['segment'] for x in a50]
+                par = [(r, {x['segment']: x for x in P.get((r['type_ligne'], key(r)), [])}) for r in series_rows]
+                par = [(r, d) for r, d in par if d]
+                apass = {x['segment']: sec(x['passage']) for x in a50}
+                lignes = []
+                for sg in segs:
+                    l = [sg]
+                    for r, d in par:
+                        x = d.get(sg)
+                        if not x:
+                            l.append('—')
+                        elif r is a:
+                            l.append(txt(x['passage']))
+                        else:
+                            l.append(f"{txt(x['passage'])} ({ecart(apass.get(sg), sec(x['passage']))})")
+                    lignes.append(l)
+                blocs.append({'type': 'tableau', 'titre': '2. Passages par 50 m',
+                              'colonnes': ['Segment'] + [f"{r['nageur']}{' (athlète)' if r is a else ''}" for r, d in par],
+                              'lignes': lignes,
+                              'note': 'Passage cumulé ; entre parenthèses, écart de l’athlète au nageur de la colonne '
+                                      '(+ = athlète plus lent). Nageurs : ' + ' · '.join(nom_ligne(r) for r, d in par) + '.'})
+                axe = [sg.split('-')[-1].replace(' m', '') for sg in segs]
+                for titre, champ, unite in [('Temps par 50 m', 'temps_segment', 's'), ('Fréquence', 'frequence_c_min', 'c/min'),
+                                            ('Distance par cycle', 'dpc_m_cycle', 'm/cycle')]:
+                    blocs.append({'type': 'courbe', 'titre': f'2. {titre} ({unite})', 'axe': axe, 'etiquette_axe': 'm',
+                                  'inverse': False,
+                                  'note': {'temps_segment': 'Temps de chaque 50 m : plus haut = plus lent.',
+                                           'frequence_c_min': 'Cycles de bras par minute.',
+                                           'dpc_m_cycle': 'Distance parcourue par cycle de bras : plus haut = plus ample.'}[champ],
+                                  'series': [{'nom': nom_ligne(r), 'valeurs': [num(sec(d[sg][champ]) if champ == 'temps_segment'
+                                                                                 and d.get(sg) else (d[sg][champ] if d.get(sg) else None))
+                                                                             for sg in segs]} for r, d in par]})
             else:
                 apass = {x['segment']: sec(x['passage']) for x in a50}
                 lignes, ath_idx = [], []
