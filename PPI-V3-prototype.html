@@ -1046,8 +1046,16 @@ function restaurerFiche(F){const J=v=>{if(typeof v==='string'){try{return JSON.p
  ATH[cur].nom=[F.prenom,F.nom].filter(Boolean).join(' ')||ATH[cur].nom;
  step=Math.max(0,ORDER().indexOf(7));
  document.querySelector('.proto').textContent='Bilan de la fiche envoyée'+(F.date_export?' le '+fmtD(String(F.date_export).slice(0,10)):'')+' · consultation, pas de nouvel envoi';}
+// Frise seule (bouton « Frise athlète » du dashboard) : la page devient la frise et l'impression se lance
+function afficherFriseSeule(){document.title='Frise PPI '+ATH[cur].nom;
+ document.querySelectorAll('style,link[rel="stylesheet"]').forEach(x=>x.remove());
+ const st=document.createElement('style');st.textContent=FRISE_CSS;document.head.appendChild(st);
+ const ln=document.createElement('link');ln.rel='stylesheet';ln.href='https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap';
+ document.body.removeAttribute('style');document.body.className='';document.body.innerHTML=buildFrise();
+ let done=false;const go=()=>{if(done)return;done=true;fitFrise(document);window.print();};
+ ln.onload=()=>{(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>setTimeout(go,200));};ln.onerror=go;document.head.appendChild(ln);setTimeout(go,2500);}
 if(IMPORT){appliquerImport();if(IMPORT.fiche)restaurerFiche(IMPORT.fiche);}
-renderAth();render();
+if(IMPORT&&IMPORT.fiche&&IMPORT.mode==='frise')afficherFriseSeule();else{renderAth();render();}
 </script>
 </body>
 </html>
