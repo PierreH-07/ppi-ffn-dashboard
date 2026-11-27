@@ -1780,7 +1780,10 @@ function renderReferenceV3(n) {
   return `<div class="grid-3">
     ${field('Compétition de référence', e3(n.competition_reference))}
     ${field('Satisfaction globale', rempli(n.bq_satisfaction) ? `<b>${e3(n.bq_satisfaction)}</b> / 10` : '')}
-  </div>` + renderBilanPrecedentV3(n);
+  </div>` + (rempli(n.bq_points_forts) || rempli(n.bq_points_ameliorer) ? `<div class="grid-2">
+    ${field('Ce qui s’est bien passé, ce qui a bien fonctionné', e3(n.bq_points_forts))}
+    ${field('Ce qui n’a pas fonctionné', e3(n.bq_points_ameliorer))}
+  </div>` : '') + renderBilanPrecedentV3(n);
 }
 
 function indTable3(L, tete) {

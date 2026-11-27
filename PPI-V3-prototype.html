@@ -223,11 +223,12 @@ table.grp2 .dd{border-left:2px solid #e3eaf2;color:#555}
 .fictif{background:#FFF4E0;border:2px dashed #C98A3C;color:#8a5a12;font-weight:700;text-align:center;border-radius:8px;padding:8px;margin:0 0 14px;text-transform:uppercase;letter-spacing:.5px;font-size:13px}
 .warn{color:#a35a00;font-size:13px;margin:6px 0 0}
 .ind5{display:grid;grid-template-columns:1.5fr .9fr .6fr 1fr 1fr .7fr 28px;gap:6px;margin-top:6px;align-items:center}
+.ind5.b{grid-template-columns:1.5fr .9fr .6fr 1fr 28px}
 .ind5.hd{font-size:11px;font-weight:600;color:#0E1655;margin-top:2px}
 .ind5 .ec{font-weight:700;color:#0E1655;text-align:center;font-size:13px}
 .ind5 button{border:0;background:none;color:#999;cursor:pointer;font-size:16px}
 .ind5 select{padding:8px 6px}
-@media(max-width:700px){.ind5{grid-template-columns:1fr 1fr}.ind5.hd{display:none}.ind5 input:first-child{grid-column:1/-1}}
+@media(max-width:700px){.ind5,.ind5.b{grid-template-columns:1fr 1fr}.ind5.hd{display:none}.ind5 input:first-child{grid-column:1/-1}}
 .hint{font-size:12px;color:#666;margin:0 0 4px}
 .grph{font-weight:800;color:#0E1655;text-transform:uppercase;letter-spacing:.5px;font-size:13px;background:#eef2fb;border-left:5px solid #0E1655;border-radius:6px;padding:8px 12px;margin:16px 0 10px}
 .eptag{display:inline-block;background:#E8F6FD;color:#0B4F8A;border-radius:999px;padding:0 8px;font-size:11px;font-weight:700;margin-right:4px}
@@ -448,13 +449,18 @@ const ITYPES=[['num','Chiffré'],['ech','Échelle 1 à 5'],['desc','Descriptif']
 const ECH=['1 · très insuffisant','2 · insuffisant','3 · moyen','4 · bon','5 · très bon'];
 function ecartT(t,a,q,u){if(t==='desc')return '';if(t==='ech'){const A=+a,Q=+q;if(!A||!Q)return '';const d=A-Q;return (d>0?'+':d<0?'−':'±')+Math.abs(d)+' niveau'+(Math.abs(d)>1?'x':'');}return ecart(a,q,u);}
 function fmtV(d,x){if(!x)return x;if(d.t==='ech')return x+'/5';if((d.t||'num')==='num'&&/^[+-]?\d*[.,]?\d*$/.test(String(x)))return String(x).replace('.',',')+(d.u?' '+d.u:'');return x;}
-function indRow(path,id,d,ex){if(!d.t)d.t='num';const t=d.t;const P=path;
+function indRow(path,id,d,ex,mode){if(!d.t)d.t='num';const t=d.t;const P=path;
   const val=(k,ph)=>t==='ech'?`<select data-k="${k}" data-p="${P}.${k}" onchange="upEc('${id}')"><option value="">—</option>${ECH.map((l,n)=>`<option value="${n+1}" ${String(n+1)===String(d[k])?'selected':''}>${l}</option>`).join('')}</select>`
     :`<input data-k="${k}" data-p="${P}.${k}" ${t==='num'?'class="num-input" inputmode="decimal"':''} placeholder="${t==='desc'?(k==='v'?'ex. raideur en fin de mouvement':'ex. amplitude complète, sans compensation'):'ex. '+esc(String(ph).replace(/[^0-9.,+\-]/g,''))}" oninput="upEc('${id}')">`;
   const uni=t==='num'?`<input data-k="u" data-p="${P}.u" placeholder="ex. ${esc((String(ex[1]).match(/[a-zA-Zµ%°/]+$/)||['m'])[0])}" title="Unité (libre)" oninput="upEc('${id}')">`:'<span></span>';
+  const rm=`<button title="Retirer" onclick="${'S()'+P.split('.').slice(0,-1).map(x=>isNaN(x)?'.'+x:`[${x}]`).join('')}.splice(${P.split('.').pop()},1);render()">×</button>`;
+  const lib=`<input data-p="${P}.l" placeholder="ex. ${esc(t==='num'?ex[0]:(t==='ech'?'Compréhension tactique (évaluation entraîneur)':'Souplesse des épaules'))}"><select data-p="${P}.t" data-rr="1">${ITYPES.map(([v,l])=>`<option value="${v}" ${v===t?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(mode==='b')return `<div class="ind5 b" id="${id}" data-t="${t}">${lib}${uni}${val('v',ex[1])}${rm}</div>`;
+  if(mode==='a')return `<div class="ind5" id="${id}" data-t="${t}" data-u="${esc(d.u||'')}"><span>${esc(d.l)}</span><span>${(ITYPES.find(x=>x[0]===t)||['',''])[1]}</span><span>${t==='num'?esc(d.u||''):''}</span><span><b>${esc(fmtV(d,d.v))||'—'}</b><input type="hidden" data-k="v" value="${esc(d.v||'')}"></span>${val('q',ex[2])}<span class="ec">${ecartT(t,d.v,d.q,d.u)||(t==='desc'?'qualitatif':'—')}</span><span></span></div>`;
   return `<div class="ind5" id="${id}" data-t="${t}"><input data-p="${P}.l" placeholder="ex. ${esc(t==='num'?ex[0]:(t==='ech'?'Compréhension tactique (évaluation entraîneur)':'Souplesse des épaules'))}"><select data-p="${P}.t" data-rr="1">${ITYPES.map(([v,l])=>`<option value="${v}" ${v===t?'selected':''}>${l}</option>`).join('')}</select>${uni}${val('v',ex[1])}${val('q',ex[2])}<span class="ec">${ecartT(t,d.v,d.q,d.u)||(t==='desc'?'qualitatif':'—')}</span><button title="Retirer" onclick="${'S()'+P.split('.').slice(0,-1).map(x=>isNaN(x)?'.'+x:`[${x}]`).join('')}.splice(${P.split('.').pop()},1);render()">×</button></div>`;}
+const IND_HEAD_B=`<div class="ind5 b hd"><span>Indicateur</span><span>Type</span><span>Unité</span><span>Valeur actuelle</span><span></span></div>`;
 const IND_HEAD=(l1,l3)=>`<div class="ind5 hd"><span>${l1}</span><span>Type</span><span>Unité</span><span>Valeur actuelle</span><span>${l3}</span><span>Écart</span><span></span></div>`;
-function upEc(id){const r=document.getElementById(id);if(!r)return;const t=r.dataset.t||'num';const v=r.querySelector('[data-k="v"]').value,q=r.querySelector('[data-k="q"]').value,uq=r.querySelector('[data-k="u"]'),u=uq?uq.value:(r.dataset.u||'');r.querySelector('.ec').textContent=ecartT(t,v,q,u)||(t==='desc'?'qualitatif':'—');}
+function upEc(id){const r=document.getElementById(id);if(!r||!r.querySelector('[data-k="q"]'))return;const t=r.dataset.t||'num';const v=r.querySelector('[data-k="v"]').value,q=r.querySelector('[data-k="q"]').value,uq=r.querySelector('[data-k="u"]'),u=uq?uq.value:(r.dataset.u||'');r.querySelector('.ec').textContent=ecartT(t,v,q,u)||(t==='desc'?'qualitatif':'—');}
 const DIFF=[['portee','À portée'],['optimal','Exigeant mais atteignable'],['hors','Hors de portée cette saison']];
 EXREQ.wp='45 %';EXIND.wp=['Conversion en supériorité numérique','34 %'];DKEY.wp='wp';EPR.wp=[];
 EXREQ.wp='52 %';
@@ -471,12 +477,12 @@ let CTX=null; // 'coll' : partie collective · 'ind' : analyse individuelle · n
 const kindOk=c=>CTX==='coll'?isCollC(c):CTX==='ind'?!isCollC(c):true;
 function cNum(c){return S().constats.filter(x=>isCollC(x)===isCollC(c)).indexOf(c)+1;}
 function cLab(c){return (isCollC(c)?'Axe d’amélioration collectif ':(MIX()?'Axe d’amélioration individuel ':'Axe d’amélioration '))+cNum(c);}
-function epList(){let L=[...(EPREF[cur]||[])];S().perf.ep.forEach(e=>{if(e.e&&!L.includes(e.e))L.push(e.e);});const ce=ATH[cur].collEp;
+function epList(){let L=[...(EPREF[cur]||[])];S().amb.forEach(a=>(a.ep||[]).forEach(e=>{if(!L.includes(e))L.push(e);}));S().perf.ep.forEach(e=>{if(e.e&&!L.includes(e.e))L.push(e.e);});const ce=ATH[cur].collEp;
   if(ce&&CTX==='coll')L=L.filter(e=>ce.includes(e));else if(ce&&CTX==='ind')L=L.filter(e=>!ce.includes(e));return L;}
 let EPT='*', BT={};
 function isCom(c){return !c.ep||c.ep.includes('*')||c.ep.length!==1;}
 function inTab(c){if(!kindOk(c))return false;if(epList().length<=1)return true;return EPT==='*'?isCom(c):(!isCom(c)&&c.ep[0]===EPT);}
-const cFilled=c=>!!(c.txt||c.inds.some(d=>d.l));
+const cFilled=c=>!!(c.dim||c.sep||c.diff);
 const aFilled=c=>!!(c.a&&c.a.st&&((c.a.st!=='prio'&&c.a.st!=='mener')||actOk(c.a)));
 function epTabs(step){const L=epList();if(L.length<=1)return '';if(EPT!=='*'&&!L.includes(EPT))EPT='*';
   const T=[['*','Toutes épreuves / communs'],...L.map(e=>[e,e])];
@@ -484,8 +490,8 @@ function epTabs(step){const L=epList();if(L.length<=1)return '';if(EPT!=='*'&&!L
    return `<button type="button" data-v="${esc(v)}" class="eptab ${ok?'done':(v==='*'&&!it.length?'neutral':'todo')} ${EPT===v?'on':''}" onclick="EPT='${v.replace(/'/g,"\\'")}';render()">${esc(l)}<span class="dot"></span></button>`;}).join('')}</div><p class="hint">Orange : rien de rempli pour cette épreuve. Vert : au moins ${step===3?'un axe d’amélioration':'une action'} renseigné${step===3?'':'e'}.</p>`;}
 function refreshTabs(){const bar=document.querySelector('.eptabs[data-step]');if(!bar)return;const step=+bar.dataset.step;
   bar.querySelectorAll('.eptab').forEach(b=>{const v=b.dataset.v;const it=S().constats.filter(c=>kindOk(c)&&(v==='*'?isCom(c):(!isCom(c)&&c.ep[0]===v)));const ok=it.some(step===3?cFilled:aFilled);const nt=v==='*'&&!it.length;b.classList.toggle('done',ok);b.classList.toggle('todo',!ok&&!nt);b.classList.toggle('neutral',!ok&&nt);});}
-function tabifyBilan(m){const hs=[...m.querySelectorAll('.grph')];if(hs.length<2)return;const bar=document.createElement('div');bar.className='eptabs';hs[0].parentNode.insertBefore(bar,hs[0]);
-  const panels=hs.map(h=>{const pn=document.createElement('div');pn.className='eppanel';let n=h.nextSibling;const nodes=[];while(n&&!(n.classList&&n.classList.contains('grph'))){nodes.push(n);n=n.nextSibling;}h.parentNode.insertBefore(pn,h);nodes.forEach(x=>pn.appendChild(x));const t=h.textContent;h.remove();return {t,pn};});
+function tabifyBilan(m){placeBax(m);const hs=[...m.querySelectorAll('.grph')];if(hs.length<2)return;const bar=document.createElement('div');bar.className='eptabs';hs[0].parentNode.insertBefore(bar,hs[0]);
+  const panels=hs.map(h=>{const pn=document.createElement('div');pn.className='eppanel';let n=h.nextSibling;const nodes=[];while(n&&!(n.classList&&(n.classList.contains('grph')||n.classList.contains('bax-rest')))){nodes.push(n);n=n.nextSibling;}h.parentNode.insertBefore(pn,h);nodes.forEach(x=>pn.appendChild(x));const t=h.textContent;h.remove();return {t,pn};});
   const show=i=>{BT[cur]=i;panels.forEach((p,k)=>p.pn.style.display=k===i?'':'none');[...bar.children].forEach((b,k)=>b.classList.toggle('on',k===i));};
   panels.forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.className='eptab neutral';b.textContent=p.t;b.onclick=()=>show(i);bar.appendChild(b);});show(BT[cur]||0);}
 const newAct=()=>({st:'',rang:'',quoi:'',org:'',ath:'',ent:'',fed:'',aut:'',man:'',per:'',levier:'',ind:'',it:'num',actuel:'',cible:'',date:'',ou:'',pq:''});
@@ -515,7 +521,7 @@ const lab=id=>id===2&&(ATH[cur].coll||MIX())?'Analyse collective':id===8?'Mon r�
 const store={}; let cur='ex_nc', step=0;
 // Championnats du monde Budapest 2027 : dates par discipline (annonce officielle World Aquatics du 29 janvier 2026)
 const WC27={nc:['2027-07-10','2027-07-18'],el:['2027-07-03','2027-07-08'],na:['2027-07-10','2027-07-17'],pl:['2027-06-26','2027-07-04'],wp:['2027-06-26','2027-07-09']};
-const S=()=>store[cur]||(store[cur]={sat:'5',amb:[{h:'2027',c:'Championnats du monde',r:'',fixed:true},{h:'2028',c:'Jeux olympiques',r:'',fixed:true,req:true}],constats:[],perf:{c:'Championnats du monde — Budapest 2027',d1:WC27[DKEY[cur]][0],d2:WC27[DKEY[cur]][1],ep:[{e:'',r:'',top:''}]},actions:[{},{},{}].map(()=>({quoi:'',org:'',ath:'',ent:'',fed:'',aut:'',man:'',per:'',levier:'',constats:[],ind:'',actuel:'',cible:'',date:''})),comps:[],eng:{},adm:{etr:false}});
+const S=()=>store[cur]||(store[cur]={sat:'5',bq:{ok:'',ko:''},amb:[{h:'2027',c:'Championnats du monde',r:'',fixed:true},{h:'2028',c:'Jeux olympiques',r:'',fixed:true,req:true}],constats:[],perf:{c:'Championnats du monde — Budapest 2027',d1:WC27[DKEY[cur]][0],d2:WC27[DKEY[cur]][1],ep:[{e:'',r:'',top:''}]},actions:[{},{},{}].map(()=>({quoi:'',org:'',ath:'',ent:'',fed:'',aut:'',man:'',per:'',levier:'',constats:[],ind:'',actuel:'',cible:'',date:''})),comps:[],eng:{},adm:{etr:false}});
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let uid=1; const nid=()=> 'c'+(Date.now().toString(36))+(uid++);
 
@@ -569,10 +575,10 @@ const PAGES=[
  <button class="add" onclick="S().amb.push({h:'',c:'',r:''});render()">+ Ajouter une ${RELEVE?'ambition':'ambition à plus long terme'}</button></div>`;},
 // 2 Bilan de la compétition de référence
 ()=>head('2. Bilan de la compétition de référence')+
- methode('Bilan de la compétition de référence',['Qu\'est-ce qui sépare l\'athlète des meilleurs ?','Quels points forts et quels axes d\'amélioration l\'analyse de la performance permet-elle de détecter ?','Qu\'est-ce que l\'analyse chiffrée ne dit pas de la performance : que manque-t-il, quels éléments de contexte ajouter ?'],['Des indicateurs d\'analyse précis','Un bilan sincère sur la saison écoulée et les performances réalisées lors de la compétition de référence','Une prise en compte de tous les paramètres ayant influencé cette performance'])+precCard()+`<div class="card note10"><div class="q">Globalement, quel est ton niveau de satisfaction sur ton bilan ${REFS[cur].saison.q||('aux '+REFS[cur].saison.comp.split(' — ')[0]+' de '+REFS[cur].saison.comp.split(' — ')[1])} ?</div><label for="bq_sat">Satisfaction globale : <b id="satv">${S().sat}</b> / 10</label>
+ methode('Bilan de la compétition de référence',['Qu\'est-ce qui sépare l\'athlète des meilleurs ?','Quels points forts et quels axes d\'amélioration l\'analyse de la performance permet-elle de détecter ?','Quel indicateur (chiffré, qualitatif, etc.) l’explique ?','Qu\'est-ce que l\'analyse chiffrée ne dit pas de la performance : que manque-t-il, quels éléments de contexte ajouter ?'],['Des indicateurs d\'analyse précis','Un bilan sincère sur la saison écoulée et les performances réalisées lors de la compétition de référence','Une prise en compte de tous les paramètres ayant influencé cette performance','Les axes d’amélioration formalisés avec les clés d’analyse qui ont servi à les définir et les indicateurs permettant de les objectiver'])+precCard()+`<div class="card note10"><div class="q">Globalement, quel est ton niveau de satisfaction sur ton bilan ${REFS[cur].saison.q||('aux '+REFS[cur].saison.comp.split(' — ')[0]+' de '+REFS[cur].saison.comp.split(' — ')[1])} ?</div><label for="bq_sat">Satisfaction globale : <b id="satv">${S().sat}</b> / 10</label>
  <input type="range" id="bq_sat" min="1" max="10" data-p="sat" oninput="document.getElementById('satv').textContent=this.value">
- <div class="slab"><span>Très insatisfait</span><span>Très satisfait</span></div></div>`+refBanner()+
- document.getElementById(ATH[cur].tpl).innerHTML,
+ <div class="slab"><span>Très insatisfait</span><span>Très satisfait</span></div></div>`+bilanQual()+refBanner()+
+ document.getElementById(ATH[cur].tpl).innerHTML+bilanAxesEp(),
 // 3 Analyse conjointe / collective (page 10 = analyse individuelle des athlètes mixtes)
 ()=>anaPage(),
 // 4 Plan d'action
@@ -613,31 +619,53 @@ const PAGES=[
 ()=>anaPage()
 ];
 
-const Q_CONSTAT=['À quelle dimension de la performance se rapporte cet axe d’amélioration ?','Quel indicateur (chiffré, qualitatif, etc.) l’explique ?','Quel est l’écart, sur cet indicateur, entre ce qui doit être obtenu et le niveau actuel ?','Quelle est la difficulté de l’objectif ?'];
+// ===== Bilan : bilan qualitatif global + axes d'amélioration (globaux et par épreuve), observation et indicateurs (valeur actuelle) =====
+const epKind=e=>ATH[cur].coll?'coll':(ATH[cur].collEp||[]).includes(e)?'coll':'ind';
+function addAxe(ep,k){S().constats.push({id:nid(),dim:'',prio:'',txt:'',sep:'',diff:'',k,ep,a:newAct(),inds:[{l:'',v:'',q:''}]});render();}
+function axeBilan({c,i}){const nom=ATH[cur].collNom;
+ return `<div class="item"><button class="rm" title="Supprimer" onclick="delConstat(${i})">×</button><h3>${cLab(c)}</h3>
+ ${MIX()&&isCom(c)?`<div class="diff">${[['coll','Collectif ('+esc(nom)+')'],['ind','Individuel']].map(([v,l])=>`<label class="dopt"><input type="radio" name="k-${i}" ${(c.k||'ind')===v?'checked':''} onchange="S().constats[${i}].k='${v}';render()"> ${l}</label>`).join('')}</div>`:''}
+ <label>Ce que j’ai observé</label><textarea data-p="constats.${i}.txt" placeholder="${EXOBS[DKEY[cur]]}"></textarea>
+ <label>Indicateurs : pourquoi choisir cet axe</label><p class="hint">Chiffré (temps, distance, note…), échelle de 1 à 5 évaluée par l’entraîneur, ou descriptif. Le niveau requis se fixe dans l’analyse conjointe.</p>
+ ${IND_HEAD_B}${c.inds.map((d,j)=>indRow(`constats.${i}.inds.${j}`,`ind-${i}-${j}`,d,[EXIND[cur][0],EXIND[cur][1],EXREQ[cur]],'b')).join('')}
+ <button class="add" style="margin-top:6px" onclick="S().constats[${i}].inds.push({l:'',v:'',q:''});render()">+ Indicateur</button></div>`;}
+function bilanQual(){const s=S();if(!s.bq)s.bq={ok:'',ko:''};const G=s.constats.map((c,i)=>({c,i})).filter(({c})=>isCom(c));
+ return `<div class="card"><h2>Bilan qualitatif de la compétition</h2>
+ <div class="grid g2"><div><label>Ce qui s’est bien passé, ce qui a bien fonctionné</label><textarea data-p="bq.ok"></textarea></div><div><label>Ce qui n’a pas fonctionné</label><textarea data-p="bq.ko"></textarea></div></div>
+ <div class="sub">Axes d’amélioration globaux</div><p class="hint">Axes communs à toutes les épreuves. Les axes propres à une épreuve se saisissent en bas du bilan de l’épreuve.</p>
+ ${G.map(axeBilan).join('')}<button class="add" onclick="addAxe(['*'],'${ATH[cur].coll?'coll':'ind'}')">+ Ajouter un axe d’amélioration global</button></div>`;}
+// Une section par épreuve (compétition de référence, ambitions, performance visée) ; placée en bas du bilan de l'épreuve quand il existe
+function bilanAxesEp(){const L=epList();if(!L.length)return '';const s=S();
+ return '<div class="bax-rest"></div>'+L.map((e,n)=>{const A=s.constats.map((c,i)=>({c,i})).filter(({c})=>!isCom(c)&&c.ep[0]===e);
+  return `<div class="card bax" data-ep="${esc(e)}"><h2>Axes d’amélioration — ${esc(e)}</h2>${(EPREF[cur]||[]).includes(e)?'':'<p class="hint">Épreuve visée, sans résultat à la compétition de référence.</p>'}${A.map(axeBilan).join('')}<button class="add" onclick="addAxe([epList()[${n}]],epKind(epList()[${n}]))">+ Ajouter un axe d’amélioration pour cette épreuve</button></div>`;}).join('');}
+function placeBax(m){const hs=[...m.querySelectorAll('.grph')];m.querySelectorAll('.bax').forEach(b=>{const h=hs.find(x=>x.textContent.trim()===b.dataset.ep);if(!h)return;
+ let n=h.nextElementSibling;while(n&&n!==b&&!['grph','bax-rest','bax'].some(k=>n.classList.contains(k)))n=n.nextElementSibling;h.parentNode.insertBefore(b,n);});}
+const Q_CONSTAT=['À quelle dimension de la performance se rapporte cet axe d’amélioration ?','Quel est l’écart, sur cet indicateur, entre ce qui doit être obtenu et le niveau actuel ?','Quelle est la difficulté de l’objectif ?'];
 function anaMethode(C,I){
- if(C)return methode('Analyse collective',['Que doit mieux faire le collectif pour atteindre les meilleurs ?',{t:'Pour chaque axe d’amélioration :',l:Q_CONSTAT}],['Les axes d’amélioration collectifs formalisés, avec leurs clés d’analyse']);
- return methode(I?'Analyse individuelle':'Analyse conjointe',Q_CONSTAT,['Les axes d’amélioration identifiés suite à l’analyse précédente, formalisés','Pour chaque axe d’amélioration, les clés d’analyse qui ont servi à le définir'],I?'pour chaque axe d’amélioration, sur les épreuves individuelles':'pour chaque axe d’amélioration');}
-function anaPage(){const s=S();const C=CTX==='coll';const I=CTX==='ind';const nom=ATH[cur].collNom;
+ return methode(C?'Analyse collective':I?'Analyse individuelle':'Analyse conjointe',Q_CONSTAT,['La progression attendue sur des objectifs de compétences, qui tiennent compte du temps nécessaire pour se transformer : le résultat en émergera.','Pour chaque action, un indicateur de progrès : ce qui montrera que l’athlète a changé.','L’identification de la difficulté de l’objectif'],'pour chaque axe d’amélioration');}
+function mesBlock(c,i){const a=c.a,P=`constats.${i}.a`;
+ const indOpts='<option value="">— choisir parmi les indicateurs '+(isCollC(c)?'de mon rôle':'de l’axe d’amélioration')+' —</option>'+srcInd(c).filter(d=>d.l).map(d=>`<option ${d.l===a.ind?'selected':''}>${esc(d.l)}</option>`).join('');
+ const req=(()=>{for(const d of srcInd(c))if(d.l===a.ind&&d.q)return d.q;return '';})();
+ return `<div class="mes" id="mes-${i}" data-t="${a.it||'num'}" data-u="${esc(a.u||'')}"><div><label>Indicateur suivi</label><select onchange="setInd(${i},this)">${indOpts}</select></div>${mesFields(a,P,'mes-'+i,req)}<div><label>Date de vérification</label><input type="date" data-p="${P}.date"></div></div>`;}
+function anaAxe(c,i,C){const nom=ATH[cur].collNom;const I=c.inds.filter(d=>d.l||d.v);
+ return `<div class="item"><h3>${cLab(c)} ${epTags(c)}</h3>
+ <div class="fil" style="margin-top:0"><span class="fk">Ce que j’ai observé</span> ${esc(c.txt)||'<span class=empty>non renseigné dans le bilan</span>'}</div>
+ <label>1. Dimension de la performance concernée</label><select data-p="constats.${i}.dim" data-rr="1">${dimOpts(c.dim)}</select>
+ <label>2. Écart entre le niveau actuel et ce qui doit être obtenu</label><p class="hint">Indicateurs saisis dans le bilan (à modifier dans le bilan) ; indiquer pour chacun le niveau requis pour l’objectif.</p>
+ ${I.length?IND_HEAD('Indicateur','Niveau requis pour l’objectif')+c.inds.map((d,j)=>!(d.l||d.v)?'':indRow(`constats.${i}.inds.${j}`,`ind-${i}-${j}`,d,[EXIND[cur][0],EXIND[cur][1],EXREQ[cur]],'a')).join(''):'<p class="warn">Aucun indicateur saisi dans le bilan pour cet axe d’amélioration.</p>'}
+ <label style="margin-top:10px">3. Objectif de progression</label><textarea class="sm" data-p="constats.${i}.sep" placeholder="Ce que l’on cherche à faire progresser cette saison, de la valeur actuelle vers le niveau requis"></textarea>
+ <label>4. Indicateur de progrès : ce qui montrera que ${C?'l’athlète':'l’athlète'} a changé</label>${isCollC(c)?`<p class="hint">Pour un axe collectif, l’indicateur de progrès se choisit dans « ${esc(lab(8))} », parmi les indicateurs individuels.</p>`:mesBlock(c,i)}
+ <label style="margin-top:10px">5. Difficulté de l’objectif : cet écart, pour cette saison, est…</label><div class="diff">${DIFF.map(([v,l])=>`<label class="dopt ${v}"><input type="radio" name="diff-${i}" value="${v}" ${c.diff===v?'checked':''} onchange="S().constats[${i}].diff='${v}';render()"> ${l}</label>`).join('')}</div></div>`;}
+function anaPage(){initActs();const s=S();const C=CTX==='coll';const I=CTX==='ind';const nom=ATH[cur].collNom;
  const T=C?'Analyse collective':I?'Analyse individuelle':'Analyse conjointe';
- const lead=(C?'Partie 1 — à remplir en séance avec le collectif (entraîneur et athlètes). Les axes d’amélioration portent sur '+nom+(MIX()?' (épreuve synchronisée)':'')+' ; ils sont repris tels quels dans le projet individuel de chaque athlète.':I?'Épreuves individuelles — analyse menée par l’entraîneur et l’athlète, à partir du bilan de la compétition de référence.':'Analyse menée ensemble par l’entraîneur et l’athlète.')+' Chaque axe d’amélioration part de ce que l’on observe, est rattaché à une dimension, justifié par des indicateurs précis (valeur actuelle et niveau requis pour l’objectif), puis précise la progression attendue et la difficulté de l’écart pour la saison. La priorité classe les axes d’amélioration.';
+ const lead=(C?'Partie 1 — à remplir en séance avec le collectif (entraîneur et athlètes). Les axes d’amélioration portent sur '+nom+(MIX()?' (épreuve synchronisée)':'')+' ; ils sont repris tels quels dans le projet individuel de chaque athlète. ':I?'Épreuves individuelles — analyse menée par l’entraîneur et l’athlète. ':'Analyse menée ensemble par l’entraîneur et l’athlète. ')+'Reprend les axes d’amélioration identifiés dans le bilan (globaux et par épreuve) : ils se saisissent et se modifient dans le bilan. Pour chaque axe : la dimension, le niveau requis sur chaque indicateur, l’objectif de progression, l’indicateur de progrès et la difficulté. La priorisation se fait dans le plan d’action.';
  return head(T,lead)+anaMethode(C,I)+
- `<div class="card"><h2>Ce qu’il faut améliorer pour atteindre l’objectif${C?' — collectif':I?' — épreuves individuelles':''}</h2>${epTabs(3)}${s.constats.filter(inTab).length?'':'<p class="empty">Aucun axe d’amélioration '+(epList().length>1?(EPT==='*'?'commun ou global':'pour cette épreuve'):'pour l’instant')+'.</p>'}${s.constats.map((c,i)=>!inTab(c)?'':`<div class="item"><button class="rm" title="Supprimer" onclick="delConstat(${i})">×</button>
- <h3>${cLab(c)}</h3>
- ${epList().length>1?`<label>Épreuve(s) concernée(s)</label><div class="checks eps">${[['*','Toutes (axe d’amélioration global)'],...epList().map(e=>[e,e])].map(([v,l])=>`<label><input type="checkbox" ${(c.ep||['*']).includes(v)?'checked':''} onchange="setEp(${i},'${v}',this.checked)"> ${esc(l)}</label>`).join('')}</div>`:''}
- <label>1. Ce qui est observé, et pourquoi c’est important pour la performance</label><textarea data-p="constats.${i}.txt" placeholder="${EXOBS[DKEY[cur]]}"></textarea>
- <label>2. Dimension de la performance concernée</label><select data-p="constats.${i}.dim" data-rr="1">${dimOpts(c.dim)}</select>
- <label>3. Indicateurs : où en est ${C?nom:'l’athlète'}, et ce que demande l’objectif</label><p class="hint">Chiffré (temps, distance, note…), échelle de 1 à 5 évaluée par l’entraîneur, ou descriptif pour ce qui se mesure mal (souplesse, compréhension tactique…).</p>
- ${IND_HEAD('Indicateur','Niveau requis pour l’objectif')}
- ${c.inds.map((d,j)=>indRow(`constats.${i}.inds.${j}`,`ind-${i}-${j}`,d,[EXIND[cur][0],EXIND[cur][1],EXREQ[cur]])).join('')}
- <button class="add" style="margin-top:6px" onclick="S().constats[${i}].inds.push({l:'',v:'',q:''});render()">+ Indicateur</button>
- <label style="margin-top:10px">4. Progression attendue</label><textarea class="sm" data-p="constats.${i}.sep" placeholder="Ce que l’on cherche à faire progresser cette saison, de la valeur actuelle vers le niveau requis"></textarea>
- <label>5. Cet écart, pour cette saison, est…</label><div class="diff">${DIFF.map(([v,l])=>`<label class="dopt ${v}"><input type="radio" name="diff-${i}" value="${v}" ${c.diff===v?'checked':''} onchange="S().constats[${i}].diff='${v}';render()"> ${l}</label>`).join('')}</div>
- <div style="margin-top:8px"><div class="grid g2"><div><label>Priorité</label><select data-p="constats.${i}.prio" data-rr="1"><option value="">—</option>${s.constats.map((_,k)=>`<option ${String(k+1)===c.prio?'selected':''}>${k+1}</option>`).join('')}</select></div><div></div></div></div></div>`).join('')}
- <button class="add" onclick="S().constats.push({id:nid(),dim:'',prio:'',txt:'',sep:'',diff:'',k:CTX==='coll'?'coll':'ind',ep:(epList().length===1&&MIX()?[epList()[0]]:EPT==='*'||epList().length<=1?['*']:[EPT]),a:newAct(),inds:[{l:'',v:'',q:''}]});render()">+ Ajouter un axe d’amélioration</button></div>`;;}
+ `<div class="card"><h2>Objectifs de progression${C?' — collectif':I?' — épreuves individuelles':''}</h2>${epTabs(3)}${s.constats.filter(inTab).length?'':'<p class="empty">Aucun axe d’amélioration '+(epList().length>1?(EPT==='*'?'global':'pour cette épreuve'):'pour l’instant')+'.</p>'}${s.constats.map((c,i)=>!inTab(c)?'':anaAxe(c,i,C)).join('')}
+ <button class="add" onclick="go(1)">← Ajouter un axe d’amélioration dans le bilan</button></div>`;}
 
 // ===== Actions : rôle dans le collectif, plan d'action, priorisation =====
 const chipsI=L=>L.filter(d=>d.l).map(d=>` <span class="chip">${esc(d.l)} : ${esc(fmtV(d,d.v))}${d.q?' → '+esc(fmtV(d,d.q)):''}</span>`).join('');
-function rappel(c){return `<div class="fil" style="margin-top:0"><span class="fk">${cLab(c)}</span> ${epTags(c)}${c.diff?` <span class="dbadge ${c.diff}">${DIFF.find(x=>x[0]===c.diff)[1]}</span>`:''} ${esc(c.txt)||'<span class=empty>sans texte</span>'}${chipsI(c.inds)}</div>`;}
+function rappel(c){return `<div class="fil" style="margin-top:0"><span class="fk">${cLab(c)}</span> ${epTags(c)}${c.diff?` <span class="dbadge ${c.diff}">${DIFF.find(x=>x[0]===c.diff)[1]}</span>`:''} ${esc(c.txt)||'<span class=empty>sans texte</span>'}${chipsI(c.inds)}${c.sep?`<div style="margin-top:4px"><span class="fk">Objectif de progression</span> ${esc(c.sep)}</div>`:''}</div>`;}
 function roleSum(c){return `<div class="fil rolesum"><span class="fk">Mon rôle</span> ${esc(c.contrib)||'<span class=empty>non renseigné</span>'}${chipsI(c.cinds||[])}</div>`;}
 function roleFields(c,i){const k=DKEY[cur];const ex=EXCIND[k]||['Indicateur individuel','Valeur actuelle','Niveau requis'];if(!c.cinds)c.cinds=[{l:'',v:'',q:''}];const ok=c.cinds.some(d=>d.l);
  return `<div class="qq"><span class="qn">1</span><div class="qb"><div class="qt">Mon rôle dans ${esc(ATH[cur].collNom)}</div>
@@ -647,20 +675,20 @@ function roleFields(c,i){const k=DKEY[cur];const ex=EXCIND[k]||['Indicateur indi
  ${c.cinds.map((d,j)=>indRow(`constats.${i}.cinds.${j}`,`cind-${i}-${j}`,d,ex)).join('')}
  <button class="add" style="margin-top:6px" onclick="S().constats[${i}].cinds.push({l:'',v:'',q:''});render()">+ Indicateur individuel</button>
  ${ok?'':'<p class="warn">Aucun indicateur individuel renseigné pour cet axe d’amélioration.</p>'}</div></div>`;}
-function actFields(c,i,n0){const a=c.a,P=`constats.${i}.a`;
+function actFields(c,i,n0,role){const a=c.a,P=`constats.${i}.a`;
  const f=(k,lab)=>`<div class="sq"><label>${lab}</label><textarea class="sm" data-p="${P}.${k}" placeholder="${esc(ex(k))}"></textarea></div>`;
- const indOpts='<option value="">— choisir parmi les indicateurs '+(isCollC(c)?'de mon rôle':'de l’axe d’amélioration')+' —</option>'+srcInd(c).filter(d=>d.l).map(d=>`<option ${d.l===a.ind?'selected':''}>${esc(d.l)}</option>`).join('');
- const req=(()=>{for(const d of srcInd(c))if(d.l===a.ind&&d.q)return d.q;return '';})();
+ const t=a.it||'num',fv=x=>esc(fmtV({t,u:a.u},x));
+ const mes=a.ind?`<b>${esc(a.ind)}</b>${a.actuel||a.cible?' : '+(fv(a.actuel)||'—')+' → <b>'+(fv(a.cible)||'—')+'</b>':''}${a.date?' · vérification le '+fmtD(a.date):''}`:'<span class="empty">non choisi</span>';
  return `<div class="qq"><span class="qn">${n0}</span><div class="qb"><div class="qt">Organisation de l’action</div>
    <div class="sq"><label>L’action, en une phrase</label><input data-p="${P}.quoi" placeholder="${esc(ex('quoi'))}"></div>
    <div class="sub">Ce qui change par rapport à d’habitude…</div>
    <div class="grid g2">${f('org','… dans l’organisation')}${f('ath','… dans ce que fait l’athlète')}${f('ent','… dans ce que fait l’entraîneur')}${f('fed','… dans ce que fait la Fédération')}</div>
    <div class="grid g2">${f('aut','Qui d’autre intervient, et pour quoi')}${f('man','Ce qui manque aujourd’hui')}</div>
-   <div class="grid g2"><div class="sq"><label>Quand (période)</label><input data-p="${P}.per" placeholder="${esc(ex('per'))}"></div><div class="sq"><label>Dimension travaillée</label><select data-p="${P}.levier">${dimOpts(a.levier||c.dim)}</select></div></div></div></div>
-  <div class="qq"><span class="qn">${n0+1}</span><div class="qb"><div class="qt">Mesure de la réussite</div>
-   <div class="mes" id="mes-${i}" data-t="${a.it||'num'}" data-u="${esc(a.u||'')}"><div><label>Indicateur suivi</label><select onchange="setInd(${i},this)">${indOpts}</select></div>${mesFields(a,P,'mes-'+i,req)}<div><label>Date de vérification</label><input type="date" data-p="${P}.date"></div></div></div></div>`;}
+   <div class="grid g2"><div class="sq"><label>Quand (période)</label><input data-p="${P}.per" placeholder="${esc(ex('per'))}"></div><div></div></div></div></div>
+  ${role?`<div class="qq"><span class="qn">${n0+1}</span><div class="qb"><div class="qt">Indicateur de progrès</div>${mesBlock(c,i)}</div></div>`
+   :`<div class="fil"><span class="fk">Indicateur de progrès</span> ${mes} <span class="hint">(${isCollC(c)?'fixé dans « '+esc(lab(8))+' »':'fixé dans l’analyse'})</span></div>`}`;}
 // o.role : saisie du rôle (page « Mon rôle ») · o.st : statut et rang (arbitrage)
-function actCard({c,i},o){const a=c.a,P=`constats.${i}.a`;if(!a.levier&&c.dim)a.levier=c.dim;const on=a.st==='prio'||a.st==='mener';const svc=isCollC(c)&&MIX();
+function actCard({c,i},o){const a=c.a,P=`constats.${i}.a`;if(c.dim)a.levier=c.dim;const on=a.st==='prio'||a.st==='mener';const svc=isCollC(c)&&MIX();
  const nP=S().constats.filter(x=>x.a&&x.a.st==='prio').length;
  return `<div class="item ${a.st==='prio'?'act':a.st==='traite'||a.st==='cote'?'off':''}" id="act-${i}"><h3>${o.role?cLab(c):'Action — '+cLab(c).toLowerCase()}${a.st==='prio'&&a.rang?` <span class="rk">priorité ${a.rang}</span>`:''}${svc?' <span class="svc">au service du collectif</span>':''}</h3>${rappel(c)}
   ${o.role?roleFields(c,i):isCollC(c)?roleSum(c):''}
@@ -670,7 +698,7 @@ function actCard({c,i},o){const a=c.a,P=`constats.${i}.a`;if(!a.levier&&c.dim)a.
   ${a.st==='cote'?`<div class="sq"><label>Pourquoi cette action n’est-elle pas prioritaire ? (à justifier)</label><textarea class="sm" data-p="${P}.pq"></textarea>${a.pq?'':'<p class="warn">Justification attendue.</p>'}</div>`:''}
   ${!a.st?'<p class="hint" style="margin-top:6px">Choisir un statut pour construire l’action, l’écarter, ou la garder pour plus tard.</p>':''}`
   :(a.st&&a.st!=='mener'?`<p class="hint" style="margin-top:6px">Arbitrage dans le plan d’action : <b>${STL[a.st]}${a.st==='prio'&&a.rang?' '+a.rang:''}</b></p>`:'')}
-  ${on||!o.st?actFields(c,i,o.role?2:1):''}
+  ${on||!o.st?actFields(c,i,o.role?2:1,o.role):''}
   </div>`;}
 function normRang(){const P=S().constats.map((c,i)=>({c,i})).filter(x=>x.c.a&&x.c.a.st==='prio').sort((x,y)=>(+x.c.a.rang||999)-(+y.c.a.rang||999)||x.i-y.i);P.forEach((x,n)=>x.c.a.rang=String(n+1));return P;}
 function setSt(i,v){const a=S().constats[i].a;a.st=v;a.rang=v==='prio'?(a.rang||'999'):'';normRang();render();}
@@ -696,9 +724,9 @@ function initActs(){S().constats.forEach(c=>{if(!c.a)c.a=newAct();if(!c.ep)c.ep=
 const STLEAD='Pour chaque action, un statut : prioritaire (avec un rang sur l’ensemble du projet), à mener, déjà traité ailleurs, ou pas prioritaire (à justifier). Rien n’est obligatoire.';
 function actsCard(o,filt){const cs=S().constats;const L=cs.map((c,i)=>({c,i})).filter(({c})=>filt(c));
  return `<div class="card"><h2>${o.role?'Mon rôle et les actions associées':'Actions'}</h2>${L.length?epTabs(4)+(L.filter(({c})=>inTab(c)).map(x=>actCard(x,o)).join('')||'<p class="empty">Aucun axe d’amélioration pour cet onglet.</p>'):'<p class="empty">Ajouter d’abord des axes d’amélioration '+(o.role||MIX()?'collectifs ':'')+'à l’étape « '+lab(2)+' »'+(MIX()?' ou « '+lab(9)+' »':'')+'.</p>'}</div>`;}
-const PLAN_METHODE=()=>methode('Plan d’action',['Quelles actions traiter en priorité, et lesquelles peuvent attendre ?','Quel est le prochain pas, directement accessible depuis le diagnostic ?','Quelle compétence chaque action vise-t-elle à construire, et en combien de temps ?','À quel indicateur verra-t-on que l’athlète a progressé ?'],['<b>Une hiérarchie des actions</b> : toutes les compétences ne peuvent pas être travaillées en même temps.','<b>Le prochain pas en ligne de mire</b> : l’étape directement accessible, parce que située à un niveau de difficulté optimal.','<b>Des objectifs de compétences</b>, qui tiennent compte du temps nécessaire pour se transformer : le résultat en émergera.','<b>Pour chaque action, un indicateur de progrès</b> : ce qui montrera que l’athlète a changé.']);
+const PLAN_METHODE=()=>methode('Plan d’action',['Quel sera le rôle de chacun dans la mise en œuvre des actions ?','Quelles actions traiter en priorité, et lesquelles peuvent attendre ?','Quel est le prochain pas, directement accessible depuis le diagnostic ?','Quelle compétence chaque action vise-t-elle à construire, et en combien de temps ?'],['<b>Une hiérarchie des actions</b> : toutes les compétences ne peuvent pas être travaillées en même temps.','<b>Le prochain pas en ligne de mire</b> : l’étape directement accessible, parce que située à un niveau de difficulté optimal.','<b>Une vision claire de qui fait quoi</b> et des ressources nécessaires à chaque action']);
 function planPage(){initActs();
- return head(lab(3),(MIX()?'Reprend les actions définies dans « '+lab(8)+' » (au service du collectif) et ajoute une action par axe d’amélioration individuel. C’est ici que l’on arbitre : une action au service du collectif peut être modifiée, ou écartée comme « pas prioritaire ». ':'Une action par axe d’amélioration. ')+STLEAD)+
+ return head(lab(3),(MIX()?'Reprend les actions définies dans « '+lab(8)+' » (au service du collectif) et ajoute une action par axe d’amélioration individuel. C’est ici que l’on arbitre : une action au service du collectif peut être modifiée, ou écartée comme « pas prioritaire ». ':'Une action par axe d’amélioration, à partir des objectifs de progression fixés dans l’analyse : comment, avec qui, quand. ')+STLEAD)+
  PLAN_METHODE()+perfCard()+actsCard({st:true},()=>true)+prioBoard();}
 function rolePage(){initActs();const C=ATH[cur].coll;
  if(!C)S().constats.forEach(c=>{if(isCollC(c)&&!c.a.st)c.a.st='mener';});
@@ -862,6 +890,7 @@ function payloadV3(){initActs();const s=S(),a=ATH[cur],k=DKEY[cur],adm=s.adm||{}
   entrainement_etranger:!!adm.etr, structure_france:adm.etr?nul(adm.structFr):null, entraineur_france:adm.etr?nul(adm.entFr):null,
   staff_complementaire:nul(adm.staff),
   bq_satisfaction:parseInt(s.sat)||null,
+  bq_points_forts:nul((s.bq||{}).ok), bq_points_ameliorer:nul((s.bq||{}).ko),
   competition_reference:REFS[cur]?REFS[cur].saison.comp:null,
   objectifs_pluriannuels:s.amb.filter(x=>x.h&&x.c).map(x=>({saison:x.h,competition:x.c,isJO:x.c==='Jeux olympiques',objectif:x.r||'',format:x.f||'',epreuves:(x.ep||[]).map(e=>({epreuve:e}))})),
   performance_visee:{competition:s.perf.c,debut:s.perf.d1,fin:s.perf.d2,epreuves:epV3(s.perf.ep)},
