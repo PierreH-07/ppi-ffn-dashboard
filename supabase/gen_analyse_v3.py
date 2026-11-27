@@ -93,7 +93,7 @@ def nom_ligne(r):
 
 
 # ---------------------------------------------------------------- natation course
-# Référence juniors (décision du 2026-11-27) : Relève et Espoir de moins de 18 ans au 31 décembre de la saison
+# Référence juniors (décision du 2026-11-27) : moins de 18 ans au 31 décembre de la saison, sauf catégories Elite et Senior
 # (liste --juniors=LICENCE,...) comparés au podium de la plus haute compétition juniors de la saison (CEJ ou CMJ),
 # fichier --ref-juniors=reference_juniors.xlsx (feuilles resultats, par50, phases). Pas de repli sur les performers.
 JUN = {'lic': set(), 'wb': None}
