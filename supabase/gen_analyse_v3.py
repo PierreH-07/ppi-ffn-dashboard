@@ -368,16 +368,15 @@ def analyse_el(ath, wb, sources, lic_=None):
                 axe, ser = pos_courbe(series, comp)
                 if len(axe) > 1:
                     blocs.append({'type': 'courbe', 'titre': f"{n}. Position tour par tour — {comp}",
-                                  'axe': axe, 'etiquette_axe': 'passage', 'series': ser,
+                                  'axe': axe, 'etiquette_axe': 'passage', 'series': ser, 'libelles': True,
                                   'note': note_retires(ep, comp, 'Position : 1 en haut. Athlète et 3 premiers de la course. '
                                                                  'Trait pointillé = passage non publié.')})
-                blocs.append({'type': 'tableau', 'titre': f"{n}. Tour par tour — {comp}",
-                              'colonnes': ['Nageur', 'Passage', 'Position', 'Temps de passage', 'Écart au leader (s)',
-                                           'Coups de bras/min'],
-                              'lignes': [[a, str(t['passage']), txt(t['position']), txt(t['temps_passage']),
-                                          txt(t['ecart_leader_s']), txt(t['coups_bras_min'])] for a, T in series for t in T],
-                              'athlete': list(range(len(series[0][1]))),
-                              'note': note_retires(ep, comp, 'Passage non publié : « non publié ».')})
+                # Écart au leader de l'athlète suivi, passage par passage (la courbe donne déjà les positions)
+                A = series[0][1]
+                blocs.append({'type': 'tableau', 'titre': f"{n}. Écart au leader, tour par tour — {comp}",
+                              'colonnes': ['Passage'] + [str(t['passage']) for t in A],
+                              'lignes': [['Écart au leader (s)'] + [txt(t['ecart_leader_s']) for t in A]],
+                              'note': note_retires(ep, comp, 'Athlète suivi. Passage non publié : « non publié ».')})
                 n += 1
 
     ref_rows = [r for r in mine if r['competition'] and ref_comp and r['competition'].split()[0] in ('CE', 'CEJ')

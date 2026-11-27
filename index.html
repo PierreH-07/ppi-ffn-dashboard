@@ -73,7 +73,7 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 }
 
 /* ── APP LAYOUT ── */
-#app {display:none;min-height:100vh;flex-direction:column}
+#app {display:none;min-height:100vh;height:100vh;flex-direction:column}
 
 /* Header */
 .app-header {
@@ -123,7 +123,7 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 .logout-btn:hover{background:rgba(255,255,255,.1)}
 
 /* Main body */
-.app-body {flex:1;display:flex;overflow:hidden;height:calc(100vh - 67px)}
+.app-body {flex:1;display:flex;overflow:hidden;min-height:0;height:calc(100vh - 67px)}
 
 /* ── NAGEUR LIST ── */
 .nageur-list {
@@ -142,6 +142,7 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
   padding:2px 8px;border-radius:999px;
 }
 .list-filters {padding:10px 16px;border-bottom:1px solid var(--line);background:var(--line-2);display:flex;flex-direction:column;gap:6px}
+.list-filters .lf-search {width:100%;padding:7px 10px;border:1.5px solid var(--blue);border-radius:6px;font-size:13px;background:#fff;color:var(--text);outline:none}
 .list-filters select {width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff;color:var(--text)}
 .list-filters .lf-row {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-2)}
 .list-filters .lf-reset {background:none;border:none;color:var(--blue-d);font-size:11px;font-weight:700;cursor:pointer;padding:0}
@@ -182,9 +183,10 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
   .disc-filter {order:11;flex:1 1 100%;overflow-x:auto;padding-bottom:2px}
   .disc-chip {flex-shrink:0}
   #user-role-label {display:none}
+  #app {height:auto}
   .app-body {display:block;height:auto;overflow:visible}
   .nageur-list {width:100%;border-right:none;overflow:visible}
-  .list-filters select {font-size:16px}
+  .list-filters select, .list-filters .lf-search {font-size:16px}
   .app-body:not(.fiche-ouverte) .fiche-container {display:none}
   .app-body.fiche-ouverte .nageur-list {display:none}
   .fiche-container {padding:12px 16px 32px;overflow:visible}
@@ -205,6 +207,8 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
 }
 
 /* ── FICHE NAGEUR ── */
+.fiche-toolbar {position:sticky;top:-24px;z-index:50;flex-wrap:wrap;box-shadow:0 4px 10px rgba(11,31,92,.08)}
+@media (max-width: 820px) { .fiche-toolbar {top:0} }
 .fiche-container {
   flex:1;overflow-y:auto;padding:24px 28px;
   background:var(--bg);
@@ -604,10 +608,6 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
       <div class="eyebrow">Direction Technique Nationale</div>
       <h1>Plans de Performance Individuels</h1>
     </div>
-    <div class="search-bar">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="search-input" placeholder="Rechercher un nageur..." oninput="filterNageurs()">
-    </div>
     <div class="disc-filter" id="disc-filter">
       <button class="disc-chip active" data-disc="all" onclick="setDiscFilter(this,'all')">Tous</button>
     </div>
@@ -630,6 +630,7 @@ html,body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text)
         <span id="list-genre-count" style="margin-left:auto;margin-right:8px;font-size:10px;letter-spacing:.06em;text-transform:none;font-weight:600"></span>
       </div>
       <div class="list-filters" id="list-filters">
+        <input type="search" id="search-input" class="lf-search" placeholder="🔍 Filtrer par nom, prénom, club, entraîneur…" oninput="filterNageurs()" autocomplete="off">
         <select id="lf-disc" onchange="setDiscFromSelect(this.value)"><option value="all">Toutes disciplines</option></select>
         <select id="lf-genre" onchange="filterNageurs()">
           <option value="">Tous genres</option>
@@ -1261,11 +1262,12 @@ async function genererQuestionnaireV3(n, versions) {
 }
 
 // Bilan PDF d'une fiche V3 déjà envoyée : le questionnaire V3 est ouvert dans un nouvel onglet avec la fiche
-// (balise #embedded-data, clé « fiche ») et les données de la page 2 ; il s'ouvre sur la page « Bilan PDF », sans bouton d'envoi.
-async function ouvrirBilanV3(n) {
+// (balise #embedded-data, clé « fiche ») et les données de la page 2 ; mode « bilan » : page « Bilan PDF », sans bouton d'envoi ;
+// mode « frise » : la frise seule, impression lancée directement.
+async function ouvrirBilanV3(n, mode) {
   const w = window.open('', '_blank');
   if (!w) { alert('Le navigateur a bloqué l’ouverture de l’onglet. Autorisez les fenêtres pour ce site.'); return; }
-  w.document.write('<p style="font-family:sans-serif;padding:20px">Préparation du bilan…</p>');
+  w.document.write(`<p style="font-family:sans-serif;padding:20px">Préparation ${mode === 'frise' ? 'de la frise' : 'du bilan'}…</p>`);
   let modele;
   try {
     const resp = await fetch(QUESTIONNAIRE_V3, { cache: 'no-store' });
@@ -1284,7 +1286,7 @@ async function ouvrirBilanV3(n) {
   }
   const dataJson = JSON.stringify({
     discipline: n.discipline || '', discipline_2: n.discipline_2 || null, categorie: (listeV3[lic] || {}).cat || null,
-    genere_le: n.date_export || '', admin: adminPourV3(n), analyse, precedent: null, fiche: n,
+    genere_le: n.date_export || '', admin: adminPourV3(n), analyse, precedent: null, fiche: n, mode: mode || 'bilan',
   }).replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '\\u003c!--').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const fin = '<' + '/script>';
   const html = modele.replace(/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/,
@@ -1511,11 +1513,12 @@ function setDiscFilter(btn, disc) {
 }
 
 function filterNageurs() {
-  const q = document.getElementById('search-input').value.toLowerCase();
+  const mots = norm(document.getElementById('search-input').value).split(' ').filter(Boolean);
   const filtered = allNageurs.filter(n => {
     const matchDisc = currentDisc === 'all' || disciplinesDe(n).includes(currentDisc);
     const entraineurs = getEntraineursPrincipaux(n).map(e => e.nom || '').join(' ');
-    const matchQ = !q || `${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''} ${entraineurs}`.toLowerCase().includes(q);
+    const texte = norm(`${n.nom} ${n.prenom} ${n.club || ''} ${n.entraineur_nom || ''} ${entraineurs}`);
+    const matchQ = mots.every(m => texte.includes(m));
     const val = id => document.getElementById(id)?.value || '';
     const genre = val('lf-genre');
     const club = val('lf-club'), structure = val('lf-structure'), entr = val('lf-entraineur'), annee = val('lf-annee');
@@ -1644,7 +1647,7 @@ function renderFiche(n, versions, selectedIndex) {
   const allVersions = versions || allNagueursByKey[nageurKey] || [n];
 
   const versionsBar = allVersions.length >= 1 ? `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;
+    <div class="fiche-toolbar" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;
                 padding:10px 14px;background:var(--line-2);border-radius:8px;
                 border:1px solid var(--line)">
       ${allVersions.length > 1 ? `
@@ -1675,10 +1678,15 @@ function renderFiche(n, versions, selectedIndex) {
                font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
         📄 Questionnaire V3 pré-rempli
       </button>` : ''}
-      ${estV3(n) ? `<button id="btn-bilan-v3" title="Bilan PDF (2 pages A4) et frise athlète de cette version de la fiche, reconstitués à partir des données envoyées"
+      ${estV3(n) ? `<button id="btn-bilan-v3" title="Bilan PDF (2 pages A4) de cette version de la fiche, reconstitué à partir des données envoyées"
         style="padding:4px 10px;background:#0E1655;color:#fff;border:1px solid #0E1655;border-radius:6px;
                font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-        📄 Bilan PDF / frise
+        📄 Bilan PDF
+      </button>
+      <button id="btn-frise-v3" title="Frise athlète (A4 paysage) de cette version de la fiche, reconstituée à partir des données envoyées"
+        style="padding:4px 10px;background:#0E1655;color:#fff;border:1px solid #0E1655;border-radius:6px;
+               font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+        📄 Frise athlète
       </button>` : ''}
       <button id="btn-delete-version"
         style="padding:4px 10px;background:#FDECEA;color:var(--red);
@@ -1776,7 +1784,9 @@ function renderFiche(n, versions, selectedIndex) {
     const btnV3 = document.getElementById('btn-questionnaire-v3');
     if (btnV3) btnV3.addEventListener('click', () => genererQuestionnaireV3(n, allVersions));
     const btnBilan = document.getElementById('btn-bilan-v3');
-    if (btnBilan) btnBilan.addEventListener('click', () => ouvrirBilanV3(n));
+    if (btnBilan) btnBilan.addEventListener('click', () => ouvrirBilanV3(n, 'bilan'));
+    const btnFrise = document.getElementById('btn-frise-v3');
+    if (btnFrise) btnFrise.addEventListener('click', () => ouvrirBilanV3(n, 'frise'));
     if (btnQ && estV3(n)) btnQ.remove();
     else if (btnQ) btnQ.addEventListener('click', () => genererQuestionnairePrerempli(n));
 

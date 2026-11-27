@@ -977,7 +977,7 @@ function blocBarres(b){const S=b.series||[];
    ec=`<b class="${d===0?'':pire?'pos':'neg'}">${d>0?'+':d<0?'−':'±'}${Math.abs(d).toFixed(2)}${p.unite?' '+esc(p.unite):''}</b>`;}
   return `<div class="ph"><div class="lab"><span>${esc(p.nom)}</span>${ec}</div>${barresSvg(p,S)}</div>`;};
  return `<div class="card">${b.titre?`<h2>${esc(b.titre)}</h2>`:''}${legende(S)}<div class="lens">${(b.groupes||[]).map(G=>`<div class="len">${G.titre?`<h3>${esc(G.titre)}</h3>`:''}<div class="row3">${(G.phases||[]).map(ph).join('')}</div></div>`).join('')}</div>${b.note?`<p class="note">${esc(b.note)}</p>`:''}</div>`;}
-function blocCourbe(b){const A=b.axe||[],S=b.series||[];const all=S.flatMap(s=>(s.valeurs||[]).map(nb)).filter(v=>v!==null&&!isNaN(v));if(!A.length||!all.length)return '';
+function blocCourbe(b){const A=b.axe||[],S=b.series||[];const lib=b.libelles||b.etiquette_axe==='passage';/* libellés de données : eau libre (positions tour par tour) */const all=S.flatMap(s=>(s.valeurs||[]).map(nb)).filter(v=>v!==null&&!isNaN(v));if(!A.length||!all.length)return '';
  const inv=b.inverse!==false,mn=inv?1:Math.min(...all),mx=Math.max(...all),L=44,R=626,T=24,B=160;
  const X=i=>L+(A.length>1?i*(R-L)/(A.length-1):0),Y=v=>inv?T+(v-mn)/((mx-mn)||1)*(B-T):B-(v-mn)/((mx-mn)||1)*(B-T);
  const ticks=inv?[1,...[5,10,15,20,25,30,40,50,60,70,80].filter(t=>t<=mx)]:[mn,(mn+mx)/2,mx];
@@ -985,9 +985,14 @@ function blocCourbe(b){const A=b.axe||[],S=b.series||[];const all=S.flatMap(s=>(
   +A.map((a,i)=>`<text x="${X(i)}" y="178" text-anchor="middle">${esc(a)}</text>`).join('')+(b.etiquette_axe?`<text x="${R}" y="190" text-anchor="end" style="font-size:10px">${esc(b.etiquette_axe)}</text>`:'');
  S.forEach((s,k)=>{const c=SCOL[k%SCOL.length];const P=(s.valeurs||[]).map((v,i)=>({i,v:nb(v)})).filter(p=>p.v!==null&&!isNaN(p.v));
   P.forEach((p,j)=>{if(j)h+=`<line x1="${X(P[j-1].i)}" y1="${Y(P[j-1].v)}" x2="${X(p.i)}" y2="${Y(p.v)}" stroke="${c}" stroke-width="2"${p.i-P[j-1].i>1?' stroke-dasharray="4 3"':''}/>`;
-   h+=`<g><title>${esc(s.nom)} — ${esc(A[p.i])} : ${p.v}</title><circle cx="${X(p.i)}" cy="${Y(p.v)}" r="3.5" fill="${c}"/></g>`;});});
+   h+=`<g><title>${esc(s.nom)} — ${esc(A[p.i])} : ${p.v}</title><circle cx="${X(p.i)}" cy="${Y(p.v)}" r="3.5" fill="${c}"/></g>`+(lib?`<text x="${X(p.i)}" y="${Y(p.v)-6}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:${c}">${p.v}</text>`:'');});});
  return `<div class="card">${b.titre?`<h2>${esc(b.titre)}</h2>`:''}${legende(S.map(s=>s.nom))}${h}</svg>${b.note?`<p class="note">${esc(b.note)}</p>`:''}</div>`;}
-function blocsVersHtml(B){return (B||[]).map(b=>{
+// Eau libre : l'ancien tableau « Tour par tour » (tous les nageurs, toutes les colonnes) doublonnait la courbe des positions ;
+// il est résumé à l'écart au leader, passage par passage, pour l'athlète suivi (fiches générées avant le 2026-11-27)
+function resumeTourParTour(b){const C=b.colonnes||[],iP=C.indexOf('Passage'),iE=C.indexOf('Écart au leader (s)');
+ if(b.type!=='tableau'||iP<0||iE<0)return b;const R=(b.athlete||[]).map(i=>(b.lignes||[])[i]).filter(Boolean);if(!R.length)return b;
+ return {type:'tableau',titre:String(b.titre||'').replace('Tour par tour','Écart au leader, tour par tour'),colonnes:['Passage',...R.map(r=>r[iP])],lignes:[['Écart au leader (s)',...R.map(r=>r[iE])]],note:b.note};}
+function blocsVersHtml(B){return (B||[]).map(resumeTourParTour).map(b=>{
  if(b.type==='epreuve')return `<div class="grph">${esc(b.titre)}</div>`;
  if(b.type==='tableau'){const ath=b.athlete||[],hors=b.hors||[];
   const rows=(b.lignes||[]).map((l,i)=>`<tr>${l.map((c,j)=>`<td>${j===0&&ath.includes(i)?'<b>'+esc(c)+'</b> (athlète)':j===0&&hors.includes(i)?esc(c)+' (hors référence)':esc(c)}</td>`).join('')}</tr>`).join('');
@@ -1046,8 +1051,16 @@ function restaurerFiche(F){const J=v=>{if(typeof v==='string'){try{return JSON.p
  ATH[cur].nom=[F.prenom,F.nom].filter(Boolean).join(' ')||ATH[cur].nom;
  step=Math.max(0,ORDER().indexOf(7));
  document.querySelector('.proto').textContent='Bilan de la fiche envoyée'+(F.date_export?' le '+fmtD(String(F.date_export).slice(0,10)):'')+' · consultation, pas de nouvel envoi';}
+// Frise seule (bouton « Frise athlète » du dashboard) : la page devient la frise et l'impression se lance
+function afficherFriseSeule(){document.title='Frise PPI '+ATH[cur].nom;
+ document.querySelectorAll('style,link[rel="stylesheet"]').forEach(x=>x.remove());
+ const st=document.createElement('style');st.textContent=FRISE_CSS;document.head.appendChild(st);
+ const ln=document.createElement('link');ln.rel='stylesheet';ln.href='https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap';
+ document.body.removeAttribute('style');document.body.className='';document.body.innerHTML=buildFrise();
+ let done=false;const go=()=>{if(done)return;done=true;fitFrise(document);window.print();};
+ ln.onload=()=>{(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>setTimeout(go,200));};ln.onerror=go;document.head.appendChild(ln);setTimeout(go,2500);}
 if(IMPORT){appliquerImport();if(IMPORT.fiche)restaurerFiche(IMPORT.fiche);}
-renderAth();render();
+if(IMPORT&&IMPORT.fiche&&IMPORT.mode==='frise')afficherFriseSeule();else{renderAth();render();}
 </script>
 </body>
 </html>
